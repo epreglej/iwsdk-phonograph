@@ -7,16 +7,15 @@ import {
   OneHandGrabbable,
 } from "@iwsdk/core";
 import { Task, ActiveTask, CompletedTask } from "../task.js";
-import { PopIn, PopOut } from "../animations/animation.js";
+import { PopIn, PopOut, SnapAnimation } from "../animations/animation.js";
 import { Highlight } from "../utils/highlight.js";
 import {
-  InSnapZone,
   Snappable,
   SnapGhost,
   Snapped,
-  TrackSnapZone,
 } from "../utils/snap.js";
-import { Unmounting } from "../utils/unmounting.js";
+import { Unmounting, UNMOUNT_HIGHLIGHT_COLOR } from "../utils/unmounting.js";
+import { playPop } from "../audio/sfx.js";
 
 export const RecordingDiaphragm = createComponent("RecordingDiaphragm", {});
 export const PlaybackDiaphragm = createComponent("PlaybackDiaphragm", {});
@@ -39,13 +38,9 @@ export class DiaphragmSystem extends createSystem({
   },
   recordingDiaphragm: { required: [RecordingDiaphragm] },
   snappedRecordingDiaphragm: { required: [RecordingDiaphragm, Snapped] },
-  recordingDiaphragmLeftSnapZoneWhileUnmounting: {
-    required: [RecordingDiaphragm, Unmounting, Snappable, Grabbed],
-    excluded: [Snapped, InSnapZone],
-  },
-  recordingDiaphragmReleasedWhileUnmounting: {
-    required: [RecordingDiaphragm, Unmounting],
-    excluded: [Snapped, Grabbed],
+  recordingDiaphragmGrabbedWhileUnmounting: {
+    required: [RecordingDiaphragm, Unmounting, Grabbed],
+    excluded: [PopOut],
   },
   recordingDiaphragmUnmountPopOut: {
     required: [RecordingDiaphragm, Unmounting, PopOut],
@@ -80,31 +75,23 @@ export class DiaphragmSystem extends createSystem({
         recordingDiaphragm.object3D!.visible = true;
         recordingDiaphragm
           .addComponent(Unmounting)
-          .addComponent(TrackSnapZone)
+          .removeComponent(SnapGhost)
+          .removeComponent(Snappable)
           .addComponent(OneHandGrabbable)
-          .addComponent(Highlight);
+          .addComponent(Highlight, { color: UNMOUNT_HIGHLIGHT_COLOR });
       }),
 
       this.queries.activeRecordingDiaphragmUnmountTask.subscribe(
         "disqualify",
         () => {
-          recordingDiaphragm.removeComponent(Unmounting).removeComponent(
-            TrackSnapZone,
-          );
+          recordingDiaphragm.removeComponent(Unmounting);
         },
       ),
 
-      this.queries.recordingDiaphragmLeftSnapZoneWhileUnmounting.subscribe(
+      this.queries.recordingDiaphragmGrabbedWhileUnmounting.subscribe(
         "qualify",
-        () => {
-          this.finishUnmount(recordingDiaphragm);
-        },
-      ),
-
-      this.queries.recordingDiaphragmReleasedWhileUnmounting.subscribe(
-        "qualify",
-        () => {
-          this.finishUnmount(recordingDiaphragm);
+        (entity) => {
+          this.finishUnmount(entity);
         },
       ),
 
@@ -141,16 +128,18 @@ export class DiaphragmSystem extends createSystem({
 
     recordingDiaphragm
       .removeComponent(Highlight)
-      .removeComponent(TrackSnapZone)
       .removeComponent(Snappable)
-      .removeComponent(InSnapZone)
+      .removeComponent(SnapGhost)
+      .removeComponent(Snapped)
+      .removeComponent(SnapAnimation)
+      .removeComponent(OneHandGrabbable)
       .addComponent(PopOut);
+
+    playPop();
   }
 
   private completeUnmount(recordingDiaphragm: Entity) {
-    recordingDiaphragm
-      .removeComponent(OneHandGrabbable)
-      .removeComponent(Unmounting);
+    recordingDiaphragm.removeComponent(Unmounting);
 
     const obj = recordingDiaphragm.object3D;
     if (obj) {

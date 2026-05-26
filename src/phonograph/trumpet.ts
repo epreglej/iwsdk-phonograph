@@ -9,14 +9,13 @@ import {
 import { Task, ActiveTask, CompletedTask } from "../task.js";
 import { Highlight } from "../utils/highlight.js";
 import {
-  InSnapZone,
   Snappable,
   SnapGhost,
   Snapped,
-  TrackSnapZone,
 } from "../utils/snap.js";
-import { Unmounting } from "../utils/unmounting.js";
-import { PopIn, PopOut } from "../animations/animation.js";
+import { Unmounting, UNMOUNT_HIGHLIGHT_COLOR } from "../utils/unmounting.js";
+import { PopIn, PopOut, SnapAnimation } from "../animations/animation.js";
+import { playPop } from "../audio/sfx.js";
 
 export const RecordingTrumpet = createComponent("RecordingTrumpet", {});
 export const PlaybackTrumpet = createComponent("PlaybackTrumpet", {});
@@ -39,13 +38,9 @@ export class TrumpetSystem extends createSystem({
   },
   recordingTrumpet: { required: [RecordingTrumpet] },
   snappedRecordingTrumpet: { required: [RecordingTrumpet, Snapped] },
-  recordingTrumpetLeftSnapZoneWhileUnmounting: {
-    required: [RecordingTrumpet, Unmounting, Snappable, Grabbed],
-    excluded: [Snapped, InSnapZone],
-  },
-  recordingTrumpetReleasedWhileUnmounting: {
-    required: [RecordingTrumpet, Unmounting],
-    excluded: [Snapped, Grabbed],
+  recordingTrumpetGrabbedWhileUnmounting: {
+    required: [RecordingTrumpet, Unmounting, Grabbed],
+    excluded: [PopOut],
   },
   recordingTrumpetUnmountPopOut: {
     required: [RecordingTrumpet, Unmounting, PopOut],
@@ -76,35 +71,30 @@ export class TrumpetSystem extends createSystem({
         }
       }),
 
-      this.queries.activeRecordingTrumpetUnmountTask.subscribe("qualify", () => {
-        recordingTrumpet.object3D!.visible = true;
-        recordingTrumpet
-          .addComponent(Unmounting)
-          .addComponent(TrackSnapZone)
-          .addComponent(OneHandGrabbable)
-          .addComponent(Highlight);
-      }),
+      this.queries.activeRecordingTrumpetUnmountTask.subscribe(
+        "qualify",
+        () => {
+          recordingTrumpet.object3D!.visible = true;
+          recordingTrumpet
+            .addComponent(Unmounting)
+            .removeComponent(SnapGhost)
+            .removeComponent(Snappable)
+            .addComponent(OneHandGrabbable)
+            .addComponent(Highlight, { color: UNMOUNT_HIGHLIGHT_COLOR });
+        },
+      ),
 
       this.queries.activeRecordingTrumpetUnmountTask.subscribe(
         "disqualify",
         () => {
-          recordingTrumpet.removeComponent(Unmounting).removeComponent(
-            TrackSnapZone,
-          );
+          recordingTrumpet.removeComponent(Unmounting);
         },
       ),
 
-      this.queries.recordingTrumpetLeftSnapZoneWhileUnmounting.subscribe(
+      this.queries.recordingTrumpetGrabbedWhileUnmounting.subscribe(
         "qualify",
-        () => {
-          this.finishUnmount(recordingTrumpet);
-        },
-      ),
-
-      this.queries.recordingTrumpetReleasedWhileUnmounting.subscribe(
-        "qualify",
-        () => {
-          this.finishUnmount(recordingTrumpet);
+        (entity) => {
+          this.finishUnmount(entity);
         },
       ),
 
@@ -141,16 +131,18 @@ export class TrumpetSystem extends createSystem({
 
     recordingTrumpet
       .removeComponent(Highlight)
-      .removeComponent(TrackSnapZone)
       .removeComponent(Snappable)
-      .removeComponent(InSnapZone)
+      .removeComponent(SnapGhost)
+      .removeComponent(Snapped)
+      .removeComponent(SnapAnimation)
+      .removeComponent(OneHandGrabbable)
       .addComponent(PopOut);
+
+    playPop();
   }
 
   private completeUnmount(recordingTrumpet: Entity) {
-    recordingTrumpet
-      .removeComponent(OneHandGrabbable)
-      .removeComponent(Unmounting);
+    recordingTrumpet.removeComponent(Unmounting);
 
     const obj = recordingTrumpet.object3D;
     if (obj) {

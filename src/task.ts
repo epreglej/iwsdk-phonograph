@@ -1,4 +1,5 @@
 import { createComponent, createSystem, eq, Types } from "@iwsdk/core";
+import { playTaskChime } from "./audio/sfx.js";
 
 export const Task = createComponent("Task", {
   id: { type: Types.String, default: "introduction_welcome" },
@@ -32,6 +33,7 @@ export class TaskSystem extends createSystem({
     this.cleanupFuncs.push(
       this.queries.completedActiveTask.subscribe("qualify", (entity) => {
         const lastId = entity.getValue(Task, "id")!;
+        playTaskChime();
         this.transition(lastId);
         entity.dispose();
       }),

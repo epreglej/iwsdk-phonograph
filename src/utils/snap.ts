@@ -9,6 +9,8 @@ import {
   Vector3,
 } from "@iwsdk/core";
 import { SnapAnimation } from "../animations/animation.js";
+import { playSnap } from "../audio/sfx.js";
+import { Unmounting } from "./unmounting.js";
 
 export const Snappable = createComponent("Snappable", {
   snapRadius: { type: Types.Float32, default: 0.15 },
@@ -21,13 +23,27 @@ export const Snapped = createComponent("Snapped", {
   snapPointId: { type: Types.String, default: "" },
 });
 
+/** Find a snap-point entity by id (query `entities` is a Set, not an array). */
+export function findSnapPointById(
+  snapPoints: Iterable<Entity>,
+  id: string,
+): Entity | undefined {
+  for (const point of snapPoints) {
+    if (point.getValue(SnapPoint, "id") === id) return point;
+  }
+  return undefined;
+}
+
 export const SnapGhost = createComponent("SnapGhost", {});
 /** Opt in — SnapSystem maintains InSnapZone enter/leave on this entity. */
 export const TrackSnapZone = createComponent("TrackSnapZone", {});
 export const InSnapZone = createComponent("InSnapZone", {});
 
 export class SnapSystem extends createSystem({
-  snappables: { required: [Snappable], excluded: [Snapped, Grabbed] },
+  snappables: {
+    required: [Snappable],
+    excluded: [Snapped, Grabbed, Unmounting],
+  },
   snappedAndGrabbed: { required: [Snappable, Snapped, Grabbed] },
   snapPoints: { required: [SnapPoint] },
   zoneTracked: { required: [Snappable, TrackSnapZone] },
@@ -92,6 +108,8 @@ export class SnapSystem extends createSystem({
       targetQW: targetQuat.w,
       duration: 300,
     });
+
+    playSnap();
   }
 
   update() {

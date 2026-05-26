@@ -12,6 +12,7 @@ import {
 import { Task, ActiveTask, CompletedTask } from "../task.js";
 import { Highlight } from "../utils/highlight.js";
 import { PopIn } from "../animations/animation.js";
+import { playCrankTick } from "../audio/sfx.js";
 
 export const Crank = createComponent("Crank", {
   requiredRotations: {
@@ -56,6 +57,7 @@ export class CrankSystem extends createSystem(
   private _firstFrame = new Map<number, boolean>();
   private _lastAngle = new Map<number, number>();
   private _totalRotation = new Map<number, number>();
+  private _lastTickProgress = new Map<number, number>();
   private _pivot = new Map<number, Object3D>();
 
   init() {
@@ -91,6 +93,7 @@ export class CrankSystem extends createSystem(
 
         this._pivot.set(crankEntity.index, pivot);
         this._totalRotation.set(crankEntity.index, 0);
+        this._lastTickProgress.set(crankEntity.index, 0);
       }),
 
       this.queries.activeCrankCrankingTask.subscribe("disqualify", () => {
@@ -102,6 +105,7 @@ export class CrankSystem extends createSystem(
         this._firstFrame.delete(crankEntity.index);
         this._lastAngle.delete(crankEntity.index);
         this._totalRotation.delete(crankEntity.index);
+        this._lastTickProgress.delete(crankEntity.index);
         this._pivot.delete(crankEntity.index);
       }),
 
@@ -174,6 +178,16 @@ export class CrankSystem extends createSystem(
       this._totalRotation.set(entity.index, total);
 
       const required = entity.getValue(Crank, "requiredRotations") ?? 3;
+
+      // “Ratchet” feedback: play ticks as the crank advances.
+      const progress = -total;
+      const tickStepRadians = Math.PI / 8; // ~22.5°
+      let last = this._lastTickProgress.get(entity.index) ?? 0;
+      while (progress - last >= tickStepRadians) {
+        playCrankTick();
+        last += tickStepRadians;
+      }
+      this._lastTickProgress.set(entity.index, last);
 
       if (total <= required * -Math.PI * 2) {
         entity

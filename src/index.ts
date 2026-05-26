@@ -6,16 +6,6 @@ import { AnimationSystem } from "./animations/animation.js";
 import { IntroductionWelcomePanelSystem } from "./panels/introductions/welcome.js";
 import { IntroductionContentPanelSystem } from "./panels/introductions/content.js";
 import { IntroductionInteractionSystem } from "./panels/introductions/interaction.js";
-import { CylinderMountInstructionPanelSystem } from "./panels/instructions/cylinder-mount.js";
-import { RecordingDiaphragmMountInstructionPanelSystem } from "./panels/instructions/recording-diaphragm-mount.js";
-import { RecordingDiaphragmUnmountInstructionPanelSystem } from "./panels/instructions/recording-diaphragm-unmount.js";
-import { RecordingTrumpetMountInstructionPanelSystem } from "./panels/instructions/recording-trumpet-mount.js";
-import { RecordingTrumpetUnmountInstructionPanelSystem } from "./panels/instructions/recording-trumpet-unmount.js";
-import { CrankCrankingInstructionPanelSystem } from "./panels/instructions/crank-cranking.js";
-import { RecordingInstructionPanelSystem } from "./panels/instructions/recording.js";
-import { PlaybackDiaphragmMountInstructionPanelSystem } from "./panels/instructions/playback-diaphragm-mount.js";
-import { PlaybackTrumpetMountInstructionPanelSystem } from "./panels/instructions/playback-trumpet-mount.js";
-import { PlaybackInstructionPanelSystem } from "./panels/instructions/playback.js";
 import { PhonographSystem } from "./phonograph/phonograph.js";
 import { BillboardSystem } from "./utils/billboard.js";
 import { CylinderSystem } from "./phonograph/cylinder.js";
@@ -103,16 +93,6 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
     .registerSystem(IntroductionWelcomePanelSystem)
     .registerSystem(IntroductionContentPanelSystem)
     .registerSystem(IntroductionInteractionSystem)
-    .registerSystem(CylinderMountInstructionPanelSystem)
-    .registerSystem(RecordingDiaphragmMountInstructionPanelSystem)
-    .registerSystem(RecordingDiaphragmUnmountInstructionPanelSystem)
-    .registerSystem(RecordingTrumpetMountInstructionPanelSystem)
-    .registerSystem(RecordingTrumpetUnmountInstructionPanelSystem)
-    .registerSystem(CrankCrankingInstructionPanelSystem)
-    .registerSystem(RecordingInstructionPanelSystem)
-    .registerSystem(PlaybackDiaphragmMountInstructionPanelSystem)
-    .registerSystem(PlaybackTrumpetMountInstructionPanelSystem)
-    .registerSystem(PlaybackInstructionPanelSystem)
     .registerSystem(HighlightSystem)
     .registerSystem(SnapSystem)
     .registerSystem(SnapGhostSystem)

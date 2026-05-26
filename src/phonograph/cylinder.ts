@@ -9,6 +9,7 @@ import { Highlight } from "../utils/highlight.js";
 import { Snappable, SnapGhost, Snapped } from "../utils/snap.js";
 import { PopIn, Spin } from "../animations/animation.js";
 import { PlacardTarget } from "../utils/object-placard.js";
+import { RecordingArmed } from "../utils/instruction.js";
 
 export const Cylinder = createComponent("Cylinder", {});
 
@@ -19,7 +20,7 @@ export class CylinderSystem extends createSystem({
     where: [eq(Task, "id", "cylinder_mount")],
   },
   activeRecordingTask: {
-    required: [Task, ActiveTask],
+    required: [Task, ActiveTask, RecordingArmed],
     excluded: [CompletedTask],
     where: [eq(Task, "id", "recording")],
   },

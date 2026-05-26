@@ -4,10 +4,11 @@ import {
   getRecordedAudio,
   setRecordedAudio,
 } from "../audio/recording-store.js";
+import { RecordingArmed } from "./instruction.js";
 
 export class RecordingSystem extends createSystem({
   activeRecordingTask: {
-    required: [Task, ActiveTask],
+    required: [Task, ActiveTask, RecordingArmed],
     excluded: [CompletedTask],
     where: [eq(Task, "id", "recording")],
   },

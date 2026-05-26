@@ -16,6 +16,7 @@ import { TrumpetSystem } from "./phonograph/trumpet.js";
 import { DiaphragmSystem } from "./phonograph/diaphragm.js";
 import { CrankSystem } from "./phonograph/crank.js";
 import { RecordingSystem } from "./utils/recording.js";
+import { InstructionSystem } from "./utils/instruction.js";
 
 const assets: AssetManifest = {
   chimeSound: {
@@ -93,6 +94,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
     .registerSystem(ObjectPlacardSystem)
     .registerSystem(IntroductionWelcomePanelSystem)
     .registerSystem(IntroductionContentPanelSystem)
+    .registerSystem(InstructionSystem)
     .registerSystem(HighlightSystem)
     .registerSystem(SnapSystem)
     .registerSystem(SnapGhostSystem)

@@ -10,7 +10,6 @@ export const CompletedTask = createComponent("CompletedTask", {});
 const INTRO_SEQUENCE = [
   "introduction_welcome",
   "introduction_content",
-  "introduction_interaction",
 ] as const;
 
 const TASK_SEQUENCE = [
@@ -51,7 +50,7 @@ export class TaskSystem extends createSystem({
       return;
     }
 
-    if (lastId === "introduction_interaction") {
+    if (lastId === "introduction_content") {
       next.addComponent(Task, { id: "cylinder_mount" });
       return;
     }

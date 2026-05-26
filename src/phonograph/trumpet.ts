@@ -8,14 +8,16 @@ import {
 } from "@iwsdk/core";
 import { Task, ActiveTask, CompletedTask } from "../task.js";
 import { Highlight } from "../utils/highlight.js";
+import { Snappable, SnapGhost, Snapped } from "../utils/snap.js";
 import {
-  Snappable,
-  SnapGhost,
-  Snapped,
-} from "../utils/snap.js";
-import { Unmounting, UNMOUNT_HIGHLIGHT_COLOR } from "../utils/unmounting.js";
+  Unmounting,
+  UnmountPopping,
+  UNMOUNT_HIGHLIGHT_COLOR,
+} from "../utils/unmounting.js";
+import { forceReleaseGrab } from "../utils/grab-release.js";
 import { PopIn, PopOut, SnapAnimation } from "../animations/animation.js";
 import { playPop } from "../audio/sfx.js";
+import { addPlacardTarget } from "../utils/object-placard.js";
 
 export const RecordingTrumpet = createComponent("RecordingTrumpet", {});
 export const PlaybackTrumpet = createComponent("PlaybackTrumpet", {});
@@ -40,7 +42,7 @@ export class TrumpetSystem extends createSystem({
   snappedRecordingTrumpet: { required: [RecordingTrumpet, Snapped] },
   recordingTrumpetGrabbedWhileUnmounting: {
     required: [RecordingTrumpet, Unmounting, Grabbed],
-    excluded: [PopOut],
+    excluded: [PopOut, UnmountPopping],
   },
   recordingTrumpetUnmountPopOut: {
     required: [RecordingTrumpet, Unmounting, PopOut],
@@ -61,6 +63,9 @@ export class TrumpetSystem extends createSystem({
           .addComponent(Snappable, { snapPointId: "trumpet_snap_point" })
           .addComponent(SnapGhost)
           .addComponent(Highlight);
+        addPlacardTarget(recordingTrumpet, {
+          panelConfig: "./ui/recording-trumpet-mount-instruction.json",
+        });
       }),
 
       this.queries.snappedRecordingTrumpet.subscribe("qualify", (entity) => {
@@ -81,6 +86,11 @@ export class TrumpetSystem extends createSystem({
             .removeComponent(Snappable)
             .addComponent(OneHandGrabbable)
             .addComponent(Highlight, { color: UNMOUNT_HIGHLIGHT_COLOR });
+          addPlacardTarget(recordingTrumpet, {
+            panelConfig: "./ui/recording-trumpet-unmount-instruction.json",
+            dismissOnGrab: true,
+            dismissOnSnap: false,
+          });
         },
       ),
 
@@ -113,6 +123,9 @@ export class TrumpetSystem extends createSystem({
           .addComponent(Snappable, { snapPointId: "trumpet_snap_point" })
           .addComponent(SnapGhost)
           .addComponent(Highlight);
+        addPlacardTarget(playbackTrumpet, {
+          panelConfig: "./ui/playback-trumpet-mount-instruction.json",
+        });
       }),
 
       this.queries.snappedPlaybackTrumpet.subscribe("qualify", (entity) => {
@@ -127,7 +140,10 @@ export class TrumpetSystem extends createSystem({
 
   private finishUnmount(recordingTrumpet: Entity) {
     if (!recordingTrumpet.hasComponent(Unmounting)) return;
-    if (recordingTrumpet.hasComponent(PopOut)) return;
+    if (recordingTrumpet.hasComponent(UnmountPopping)) return;
+
+    recordingTrumpet.addComponent(UnmountPopping);
+    forceReleaseGrab(recordingTrumpet);
 
     recordingTrumpet
       .removeComponent(Highlight)
@@ -135,14 +151,16 @@ export class TrumpetSystem extends createSystem({
       .removeComponent(SnapGhost)
       .removeComponent(Snapped)
       .removeComponent(SnapAnimation)
-      .removeComponent(OneHandGrabbable)
       .addComponent(PopOut);
 
     playPop();
   }
 
   private completeUnmount(recordingTrumpet: Entity) {
-    recordingTrumpet.removeComponent(Unmounting);
+    forceReleaseGrab(recordingTrumpet);
+    recordingTrumpet
+      .removeComponent(Unmounting)
+      .removeComponent(UnmountPopping);
 
     const obj = recordingTrumpet.object3D;
     if (obj) {

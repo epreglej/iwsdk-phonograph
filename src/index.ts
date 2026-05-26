@@ -5,9 +5,9 @@ import { SpawnSystem } from "./spawn.js";
 import { AnimationSystem } from "./animations/animation.js";
 import { IntroductionWelcomePanelSystem } from "./panels/introductions/welcome.js";
 import { IntroductionContentPanelSystem } from "./panels/introductions/content.js";
-import { IntroductionInteractionSystem } from "./panels/introductions/interaction.js";
 import { PhonographSystem } from "./phonograph/phonograph.js";
 import { BillboardSystem } from "./utils/billboard.js";
+import { ObjectPlacardSystem } from "./utils/object-placard.js";
 import { CylinderSystem } from "./phonograph/cylinder.js";
 import { HighlightSystem } from "./utils/highlight.js";
 import { SnapSystem } from "./utils/snap.js";
@@ -90,9 +90,9 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
     .registerSystem(TaskSystem)
     .registerSystem(AnimationSystem)
     .registerSystem(BillboardSystem)
+    .registerSystem(ObjectPlacardSystem)
     .registerSystem(IntroductionWelcomePanelSystem)
     .registerSystem(IntroductionContentPanelSystem)
-    .registerSystem(IntroductionInteractionSystem)
     .registerSystem(HighlightSystem)
     .registerSystem(SnapSystem)
     .registerSystem(SnapGhostSystem)

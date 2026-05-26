@@ -32,7 +32,7 @@ export class IntroductionWelcomePanelSystem extends createSystem({
         panelEntity.addComponent(Billboard).addComponent(PopIn2D);
         panelEntity.object3D!.visible = true;
 
-        await delay(2000);
+        await delay(3000);
         panelEntity.addComponent(PopOut2D);
 
         await delay(1200);

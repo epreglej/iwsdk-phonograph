@@ -8,6 +8,7 @@ import { Task, ActiveTask, CompletedTask } from "../task.js";
 import { Highlight } from "../utils/highlight.js";
 import { Snappable, SnapGhost, Snapped } from "../utils/snap.js";
 import { PopIn, Spin } from "../animations/animation.js";
+import { addPlacardTarget } from "../utils/object-placard.js";
 
 export const Cylinder = createComponent("Cylinder", {});
 
@@ -42,6 +43,10 @@ export class CylinderSystem extends createSystem({
           .addComponent(Snappable, { snapPointId: "cylinder_snap_point" })
           .addComponent(SnapGhost)
           .addComponent(Highlight);
+        addPlacardTarget(cylinderEntity, {
+          panelConfig: "./ui/cylinder-mount-instruction.json",
+          offsetY: 0.2,
+        });
       }),
 
       this.queries.snappedCylinder.subscribe("qualify", (entity) => {

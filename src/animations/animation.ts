@@ -132,9 +132,10 @@ export class AnimationSystem extends createSystem({
 
     this.queries.popOut.subscribe("qualify", (entity) => {
       const obj = entity.object3D!;
+      const fromScale = obj.scale.x;
       startTween(
         this.tweens,
-        { scale: 1 },
+        { scale: fromScale },
         { scale: 0.001 },
         550,
         Easing.Cubic.In,

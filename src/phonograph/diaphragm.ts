@@ -9,13 +9,15 @@ import {
 import { Task, ActiveTask, CompletedTask } from "../task.js";
 import { PopIn, PopOut, SnapAnimation } from "../animations/animation.js";
 import { Highlight } from "../utils/highlight.js";
+import { Snappable, SnapGhost, Snapped } from "../utils/snap.js";
 import {
-  Snappable,
-  SnapGhost,
-  Snapped,
-} from "../utils/snap.js";
-import { Unmounting, UNMOUNT_HIGHLIGHT_COLOR } from "../utils/unmounting.js";
+  Unmounting,
+  UnmountPopping,
+  UNMOUNT_HIGHLIGHT_COLOR,
+} from "../utils/unmounting.js";
+import { forceReleaseGrab } from "../utils/grab-release.js";
 import { playPop } from "../audio/sfx.js";
+import { addPlacardTarget } from "../utils/object-placard.js";
 
 export const RecordingDiaphragm = createComponent("RecordingDiaphragm", {});
 export const PlaybackDiaphragm = createComponent("PlaybackDiaphragm", {});
@@ -40,7 +42,7 @@ export class DiaphragmSystem extends createSystem({
   snappedRecordingDiaphragm: { required: [RecordingDiaphragm, Snapped] },
   recordingDiaphragmGrabbedWhileUnmounting: {
     required: [RecordingDiaphragm, Unmounting, Grabbed],
-    excluded: [PopOut],
+    excluded: [PopOut, UnmountPopping],
   },
   recordingDiaphragmUnmountPopOut: {
     required: [RecordingDiaphragm, Unmounting, PopOut],
@@ -53,15 +55,22 @@ export class DiaphragmSystem extends createSystem({
     const [playbackDiaphragm] = this.queries.playbackDiaphragm.entities;
 
     this.cleanupFuncs.push(
-      this.queries.activeRecordingDiaphragmMountTask.subscribe("qualify", () => {
-        recordingDiaphragm.object3D!.visible = true;
-        recordingDiaphragm.addComponent(PopIn);
-        recordingDiaphragm
-          .addComponent(OneHandGrabbable)
-          .addComponent(Snappable, { snapPointId: "diaphragm_snap_point" })
-          .addComponent(SnapGhost)
-          .addComponent(Highlight);
-      }),
+      this.queries.activeRecordingDiaphragmMountTask.subscribe(
+        "qualify",
+        () => {
+          recordingDiaphragm.object3D!.visible = true;
+          recordingDiaphragm.addComponent(PopIn);
+          recordingDiaphragm
+            .addComponent(OneHandGrabbable)
+            .addComponent(Snappable, { snapPointId: "diaphragm_snap_point" })
+            .addComponent(SnapGhost)
+            .addComponent(Highlight);
+          addPlacardTarget(recordingDiaphragm, {
+            panelConfig: "./ui/recording-diaphragm-mount-instruction.json",
+            offsetY: 0.2,
+          });
+        },
+      ),
 
       this.queries.snappedRecordingDiaphragm.subscribe("qualify", (entity) => {
         entity.removeComponent(Highlight).removeComponent(SnapGhost);
@@ -71,15 +80,24 @@ export class DiaphragmSystem extends createSystem({
         }
       }),
 
-      this.queries.activeRecordingDiaphragmUnmountTask.subscribe("qualify", () => {
-        recordingDiaphragm.object3D!.visible = true;
-        recordingDiaphragm
-          .addComponent(Unmounting)
-          .removeComponent(SnapGhost)
-          .removeComponent(Snappable)
-          .addComponent(OneHandGrabbable)
-          .addComponent(Highlight, { color: UNMOUNT_HIGHLIGHT_COLOR });
-      }),
+      this.queries.activeRecordingDiaphragmUnmountTask.subscribe(
+        "qualify",
+        () => {
+          recordingDiaphragm.object3D!.visible = true;
+          recordingDiaphragm
+            .addComponent(Unmounting)
+            .removeComponent(SnapGhost)
+            .removeComponent(Snappable)
+            .addComponent(OneHandGrabbable)
+            .addComponent(Highlight, { color: UNMOUNT_HIGHLIGHT_COLOR });
+          addPlacardTarget(recordingDiaphragm, {
+            panelConfig: "./ui/recording-diaphragm-unmount-instruction.json",
+            offsetY: 0.2,
+            dismissOnGrab: true,
+            dismissOnSnap: false,
+          });
+        },
+      ),
 
       this.queries.activeRecordingDiaphragmUnmountTask.subscribe(
         "disqualify",
@@ -110,6 +128,10 @@ export class DiaphragmSystem extends createSystem({
           .addComponent(Snappable, { snapPointId: "diaphragm_snap_point" })
           .addComponent(SnapGhost)
           .addComponent(Highlight);
+        addPlacardTarget(playbackDiaphragm, {
+          panelConfig: "./ui/playback-diaphragm-mount-instruction.json",
+          offsetY: 0.2,
+        });
       }),
 
       this.queries.snappedPlaybackDiaphragm.subscribe("qualify", (entity) => {
@@ -124,7 +146,10 @@ export class DiaphragmSystem extends createSystem({
 
   private finishUnmount(recordingDiaphragm: Entity) {
     if (!recordingDiaphragm.hasComponent(Unmounting)) return;
-    if (recordingDiaphragm.hasComponent(PopOut)) return;
+    if (recordingDiaphragm.hasComponent(UnmountPopping)) return;
+
+    recordingDiaphragm.addComponent(UnmountPopping);
+    forceReleaseGrab(recordingDiaphragm);
 
     recordingDiaphragm
       .removeComponent(Highlight)
@@ -132,14 +157,16 @@ export class DiaphragmSystem extends createSystem({
       .removeComponent(SnapGhost)
       .removeComponent(Snapped)
       .removeComponent(SnapAnimation)
-      .removeComponent(OneHandGrabbable)
       .addComponent(PopOut);
 
     playPop();
   }
 
   private completeUnmount(recordingDiaphragm: Entity) {
-    recordingDiaphragm.removeComponent(Unmounting);
+    forceReleaseGrab(recordingDiaphragm);
+    recordingDiaphragm
+      .removeComponent(Unmounting)
+      .removeComponent(UnmountPopping);
 
     const obj = recordingDiaphragm.object3D;
     if (obj) {

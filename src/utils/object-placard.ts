@@ -10,7 +10,6 @@ import {
 } from "@iwsdk/core";
 import { PopIn2D, PopOut2D } from "../animations/animation.js";
 import { Billboard } from "./billboard.js";
-import { ActiveTask, CompletedTask, Task } from "../task.js";
 import { Snapped } from "./snap.js";
 
 /** Marks an object that has a museum placard following it in space. */
@@ -22,46 +21,14 @@ export const PlacardTarget = createComponent("PlacardTarget", {
   dismissOnGrab: { type: Types.Boolean, default: false },
   dismissOnSnap: { type: Types.Boolean, default: true },
   autoDismissMs: { type: Types.Float32, default: 0 },
-  completeTaskOnDismiss: { type: Types.String, default: "" },
 });
 
 export const PlacardDismissed = createComponent("PlacardDismissed", {});
-
-export type PlacardTargetOptions = {
-  panelConfig: string;
-  offsetX?: number;
-  offsetY?: number;
-  offsetZ?: number;
-  dismissOnGrab?: boolean;
-  dismissOnSnap?: boolean;
-  autoDismissMs?: number;
-  completeTaskOnDismiss?: string;
-};
-
-export function addPlacardTarget(
-  entity: Entity,
-  options: PlacardTargetOptions,
-): void {
-  entity.addComponent(PlacardTarget, {
-    panelConfig: options.panelConfig,
-    offsetX: options.offsetX ?? 0,
-    offsetY: options.offsetY ?? 0,
-    offsetZ: options.offsetZ ?? 0,
-    dismissOnGrab: options.dismissOnGrab ?? false,
-    dismissOnSnap: options.dismissOnSnap ?? true,
-    autoDismissMs: options.autoDismissMs ?? 0,
-    completeTaskOnDismiss: options.completeTaskOnDismiss ?? "",
-  });
-}
 
 export class ObjectPlacardSystem extends createSystem({
   targets: { required: [PlacardTarget], excluded: [PlacardDismissed] },
   targetGrabbed: { required: [PlacardTarget, Grabbed] },
   targetSnapped: { required: [PlacardTarget, Snapped] },
-  activeTasks: {
-    required: [Task, ActiveTask],
-    excluded: [CompletedTask],
-  },
 }) {
   private placards = new Map<number, Entity>();
   private dismissTimers = new Map<number, ReturnType<typeof setTimeout>>();
@@ -167,14 +134,6 @@ export class ObjectPlacardSystem extends createSystem({
       this.placards.delete(target.index);
     }
 
-    const taskId = target.getValue(PlacardTarget, "completeTaskOnDismiss");
-    if (taskId) {
-      for (const task of this.queries.activeTasks.entities) {
-        if (task.getValue(Task, "id") === taskId) {
-          task.addComponent(CompletedTask);
-        }
-      }
-    }
   }
 
   private destroyPlacard(targetIndex: number): void {

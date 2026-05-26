@@ -1,0 +1,80 @@
+<style>
+    .card {
+        width: 200px;
+        border-radius: 24px;
+        background-color: rgba(255, 255, 255, 0.35);
+        border-width: 1px;
+        border-color: rgba(255, 255, 255, 0.45);
+        flex-direction: column;
+    }
+    .divider {
+        height: 1px;
+        background-color: rgba(255, 255, 255, 0.1);
+        margin-left: 20px;
+        margin-right: 20px;
+    }
+    .card-content {
+        flex-direction: column;
+        padding-top: 14px;
+        padding-left: 20px;
+        padding-right: 20px;
+        padding-bottom: 20px;
+    }
+    .card-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.95);
+        margin-bottom: 4px;
+    }
+    .card-subtitle {
+        font-size: 11px;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.4);
+        margin-bottom: 8px;
+    }
+    .card-text {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.9);
+    }
+    .continue-button {
+        margin-top: 4px;
+        margin-left: 20px;
+        margin-right: 20px;
+        margin-bottom: 16px;
+        background-color: rgba(255, 255, 255, 0.1);
+        border-radius: 100px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+        align-items: center;
+        justify-content: center;
+        border-width: 1px;
+        border-color: rgba(255, 255, 255, 0.15);
+    }
+    .continue-button:hover {
+        background-color: rgba(255, 255, 255, 0.18);
+    }
+    .continue-button:active {
+        background-color: rgba(255, 255, 255, 0.06);
+    }
+    .continue-button-label {
+        font-size: 13px;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.9);
+    }
+</style>
+
+<div id="panel-root" class="card">
+    <div class="card-content">
+        <div id="info-title" class="card-title">Description Panel</div>
+        <div id="info-subtitle" class="card-subtitle">Utility</div>
+        <div id="info-body" class="card-text">
+            Panels like this one will provide valuable information during this experience.
+
+            Use your finger to tap "Continue" to dismiss this panel.
+        </div>
+    </div>
+    <div class="divider"></div>
+    <button id="continue-button" class="continue-button">
+        <span class="continue-button-label">Continue</span>
+    </button>
+</div>

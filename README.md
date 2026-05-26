@@ -1,14 +1,18 @@
-# IWSDK Starter Template
+# Phonograph (IWSDK 0.4.1)
 
-This folder is a source template used by `scripts/generate-starters.cjs` to produce 8 runnable variants:
+Simplified AR phonograph experience: a short intro welcomes the user, then mount parts, record, and play back audio. Instruction panels float above the phonograph during each step—no historic description panels.
 
-- `starter-<vr|ar>-<manual|metaspatial>-<ts|js>`
+## Run
 
-Do not run this template directly. The generator will:
+```bash
+npm install
+npm run dev
+```
 
-- Copy a variant-specific `src/index.ts` (see `src/index-*.ts`).
-- Install the matching Vite config from `configs/`.
-- Keep only the required metaspatial folder (renamed to `metaspatial`).
-- Prune unused assets and dev dependencies.
+Open `https://localhost:8081` and enter AR.
 
-UI is defined in `ui/welcome.uikitml`; the Vite UIKitML plugin compiles it to `public/ui/welcome.json` during build in generated variants.
+## Stack
+
+- `@iwsdk/core` 0.4.1 — built-in `Grabbed` tag from `GrabSystem` (no custom grab sync)
+- Custom tween-free `AnimationSystem` in `src/animations/animation.ts`
+- Task flow: intro (`introduction_welcome` → `introduction_content` → `introduction_interaction`) then phonograph steps (see `src/task.ts`)

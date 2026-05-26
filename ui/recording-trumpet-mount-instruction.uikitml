@@ -1,0 +1,18 @@
+<style>
+  .instruction {
+        width: 300px;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .instruction-text {
+        font-size: 24px;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.95);
+        text-align: center;
+    }
+</style>
+
+<div id="panel-root" class="instruction">
+    <p class="instruction-text">Grab the trumpet and snap it into place</p>
+</div>

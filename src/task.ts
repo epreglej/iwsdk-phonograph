@@ -13,15 +13,19 @@ const INTRO_SEQUENCE = [
 ] as const;
 
 const TASK_SEQUENCE = [
+  "recording_setup_info",
   "cylinder_mount",
   "recording_diaphragm_mount",
   "recording_trumpet_mount",
   "crank_cranking",
+  "recording_ready_info",
   "recording",
+  "playback_setup_info",
   "recording_trumpet_unmount",
   "recording_diaphragm_unmount",
   "playback_diaphragm_mount",
   "playback_trumpet_mount",
+  "playback_ready_info",
   "playback",
 ] as const;
 
@@ -51,7 +55,7 @@ export class TaskSystem extends createSystem({
     }
 
     if (lastId === "introduction_content") {
-      next.addComponent(Task, { id: "cylinder_mount" });
+      next.addComponent(Task, { id: "recording_setup_info" });
       return;
     }
 

@@ -1,5 +1,4 @@
 import {
-  createComponent,
   createSystem,
   Entity,
   eq,
@@ -16,134 +15,207 @@ import { Phonograph } from "../phonograph/phonograph.js";
 import { Billboard } from "./billboard.js";
 import { PopIn2D, PopOut2D } from "../animations/animation.js";
 
-const RECORDING_READY_PANEL_CONFIG = "./ui/interactive-recording-ready.json";
+const INTERACTIVE_RECORDING_READY_PANEL_CONFIG =
+  "./ui/interactive-recording-ready.json";
 const POP_OUT_MS = 560;
 
-/** Added when the user confirms the active task's interactive panel. */
-export const InteractivePanelConfirmed = createComponent(
-  "InteractivePanelConfirmed",
-  {},
-);
+type InteractivePanelCopy = {
+  title: string;
+  body: string;
+};
 
 export class InteractivePanelSystem extends createSystem({
+  recordingSetupInfoTask: {
+    required: [Task, ActiveTask],
+    excluded: [CompletedTask],
+    where: [eq(Task, "id", "recording_setup_info")],
+  },
+  recordingReadyInfoTask: {
+    required: [Task, ActiveTask],
+    excluded: [CompletedTask],
+    where: [eq(Task, "id", "recording_ready_info")],
+  },
+  playbackSetupInfoTask: {
+    required: [Task, ActiveTask],
+    excluded: [CompletedTask],
+    where: [eq(Task, "id", "playback_setup_info")],
+  },
+  playbackReadyInfoTask: {
+    required: [Task, ActiveTask],
+    excluded: [CompletedTask],
+    where: [eq(Task, "id", "playback_ready_info")],
+  },
   recordingTask: {
     required: [Task, ActiveTask],
-    excluded: [CompletedTask, InteractivePanelConfirmed],
+    excluded: [CompletedTask],
     where: [eq(Task, "id", "recording")],
   },
   phonograph: { required: [Phonograph] },
-  recordingReadyPanel: {
+  panel: {
     required: [PanelUI, PanelDocument],
-    where: [eq(PanelUI, "config", RECORDING_READY_PANEL_CONFIG)],
+    where: [eq(PanelUI, "config", INTERACTIVE_RECORDING_READY_PANEL_CONFIG)],
   },
 }) {
-  private recordingReadyPanelEntity!: Entity;
-  private recordingReadyDocReady = false;
-  private recordingReadyWanted = false;
-  private recordingReadyButtonWired = false;
-  private recordingReadyHideTimer: ReturnType<typeof setTimeout> | null = null;
+  private panelEntity!: Entity;
+  private doc: UIKitDocument | null = null;
+  private panelWanted = false;
+  private buttonWired = false;
+  private hideTimer: ReturnType<typeof setTimeout> | null = null;
+  private currentTaskEntity: Entity | null = null;
+  private currentTaskId: string | null = null;
 
   init() {
     const [phonographEntity] = this.queries.phonograph.entities;
 
-    this.recordingReadyPanelEntity = this.world
+    this.panelEntity = this.world
       .createTransformEntity(undefined, { parent: this.world.sceneEntity })
       .addComponent(PanelUI, {
-        config: RECORDING_READY_PANEL_CONFIG,
+        config: INTERACTIVE_RECORDING_READY_PANEL_CONFIG,
         maxWidth: 0.17,
       });
-    this.recordingReadyPanelEntity.object3D!.scale.set(0.001, 0.001, 0.001);
-    this.recordingReadyPanelEntity.object3D!.visible = false;
+    this.panelEntity.object3D!.scale.set(0.001, 0.001, 0.001);
+    this.panelEntity.object3D!.visible = false;
 
     this.cleanupFuncs.push(
+      this.queries.panel.subscribe("qualify", (entity) => {
+        this.doc = entity.getValue(PanelDocument, "document") as UIKitDocument;
+        this.wireContinueButton();
+        this.tryRevealPanel();
+      }),
+
+      this.queries.panel.subscribe("disqualify", () => {
+        this.doc = null;
+        this.buttonWired = false;
+      }),
+
+      this.queries.recordingSetupInfoTask.subscribe("qualify", (taskEntity) => {
+        this.showForTask(taskEntity, phonographEntity, {
+          title: "Recording setup",
+          body: "First we need to assemble the phonograph for recording.",
+        });
+      }),
+
+      this.queries.recordingReadyInfoTask.subscribe("qualify", (taskEntity) => {
+        this.showForTask(taskEntity, phonographEntity, {
+          title: "Ready to record",
+          body: "The phonograph is now ready to record. Get ready to talk into the horn, then press Continue to start the countdown.",
+        });
+      }),
+
+      this.queries.playbackSetupInfoTask.subscribe("qualify", (taskEntity) => {
+        this.showForTask(taskEntity, phonographEntity, {
+          title: "Playback setup",
+          body: "To playback our recording we need to remove the recording parts and assemble the playback parts.",
+        });
+      }),
+
+      this.queries.playbackReadyInfoTask.subscribe("qualify", (taskEntity) => {
+        this.showForTask(taskEntity, phonographEntity, {
+          title: "Playback ready",
+          body: "Phonograph is ready to play your recording.",
+        });
+      }),
+
       this.queries.recordingTask.subscribe("qualify", () => {
-        this.recordingReadyWanted = true;
-        this.recordingReadyPanelEntity
-          .addComponent(Follower, {
-            behavior: FollowBehavior.NoRotation,
-            target: phonographEntity.object3D!,
-            offsetPosition: [0, 0.5, 0],
-          })
-          .addComponent(Billboard)
-          .addComponent(PokeInteractable);
-
-        this.tryRevealRecordingReadyPanel();
-      }),
-
-      this.queries.recordingTask.subscribe("disqualify", () => {
-        this.hideRecordingReadyPanel();
-      }),
-
-      this.queries.recordingReadyPanel.subscribe("qualify", () => {
-        this.recordingReadyDocReady = true;
-        this.wireRecordingReadyContinueButton();
-        this.tryRevealRecordingReadyPanel();
-      }),
-
-      this.queries.recordingReadyPanel.subscribe("disqualify", () => {
-        this.recordingReadyDocReady = false;
-        this.recordingReadyButtonWired = false;
+        this.currentTaskEntity = null;
+        this.currentTaskId = null;
+        this.hidePanel();
       }),
     );
   }
 
-  private wireRecordingReadyContinueButton(): void {
-    if (this.recordingReadyButtonWired) return;
+  private showForTask(
+    taskEntity: Entity,
+    phonographEntity: Entity,
+    copy: InteractivePanelCopy,
+  ): void {
+    this.currentTaskEntity = taskEntity;
+    this.currentTaskId = taskEntity.getValue(Task, "id")!;
+    this.panelWanted = true;
 
-    const doc = this.recordingReadyPanelEntity.getValue(
-      PanelDocument,
-      "document",
-    ) as UIKitDocument | undefined;
-    const button = doc?.getElementById("continue-button") as
-      | UIKit.Component
-      | undefined;
-    button?.addEventListener("click", () => {
-      const [taskEntity] = this.queries.recordingTask.entities;
-      if (!taskEntity || taskEntity.hasComponent(InteractivePanelConfirmed)) {
-        return;
-      }
-      taskEntity.addComponent(InteractivePanelConfirmed);
-    });
-    this.recordingReadyButtonWired = true;
+    this.panelEntity
+      .addComponent(Follower, {
+        behavior: FollowBehavior.NoRotation,
+        target: phonographEntity.object3D!,
+        offsetPosition: [0, 0.5, 0],
+      })
+      .addComponent(Billboard)
+      .addComponent(PokeInteractable);
+
+    this.setCopy(copy);
+    this.tryRevealPanel();
   }
 
-  private tryRevealRecordingReadyPanel(): void {
-    if (!this.recordingReadyWanted || !this.recordingReadyDocReady) return;
+  private setCopy(copy: InteractivePanelCopy): void {
+    if (!this.doc) return;
 
-    const obj = this.recordingReadyPanelEntity.object3D!;
+    const title = this.doc.getElementById("interactive-panel-title") as
+      | UIKit.Component
+      | undefined;
+    const body = this.doc.getElementById("interactive-panel-body") as
+      | UIKit.Component
+      | undefined;
+
+    (title as any)?.setProperties?.({ text: copy.title });
+    (body as any)?.setProperties?.({ text: copy.body });
+  }
+
+  private wireContinueButton(): void {
+    if (this.buttonWired || !this.doc) return;
+
+    const button = this.doc.getElementById("continue-button") as
+      | UIKit.Component
+      | undefined;
+
+    button?.addEventListener("click", () => {
+      const taskEntity = this.currentTaskEntity;
+      const taskId = this.currentTaskId;
+      if (!taskEntity || !taskEntity.active || !taskId) return;
+
+      // Dismiss immediately after interaction to avoid stale lingering panels.
+      this.hidePanel();
+      this.currentTaskEntity = null;
+      this.currentTaskId = null;
+      taskEntity.addComponent(CompletedTask);
+    });
+
+    this.buttonWired = true;
+  }
+
+  private tryRevealPanel(): void {
+    if (!this.panelWanted || !this.doc) return;
+
+    const obj = this.panelEntity.object3D!;
     if (obj.visible) return;
 
     obj.visible = true;
-    this.recordingReadyPanelEntity.removeComponent(PopOut2D);
-    if (!this.recordingReadyPanelEntity.hasComponent(PopIn2D)) {
-      this.recordingReadyPanelEntity.addComponent(PopIn2D);
+    this.panelEntity.removeComponent(PopOut2D);
+    if (!this.panelEntity.hasComponent(PopIn2D)) {
+      this.panelEntity.addComponent(PopIn2D);
     }
   }
 
-  private hideRecordingReadyPanel(): void {
-    this.recordingReadyWanted = false;
+  private hidePanel(): void {
+    this.panelWanted = false;
 
-    if (!this.recordingReadyPanelEntity.object3D!.visible) return;
+    if (!this.panelEntity.object3D!.visible) return;
 
-    if (this.recordingReadyHideTimer !== null) {
-      clearTimeout(this.recordingReadyHideTimer);
-      this.recordingReadyHideTimer = null;
+    if (this.hideTimer !== null) {
+      clearTimeout(this.hideTimer);
+      this.hideTimer = null;
     }
 
-    this.recordingReadyPanelEntity
-      .removeComponent(PopIn2D)
-      .addComponent(PopOut2D);
-
-    this.recordingReadyHideTimer = setTimeout(() => {
-      if (this.recordingReadyPanelEntity.active) {
-        this.recordingReadyPanelEntity.object3D!.visible = false;
-        this.recordingReadyPanelEntity.removeComponent(PopOut2D);
-        this.recordingReadyPanelEntity
+    this.panelEntity.removeComponent(PopIn2D).addComponent(PopOut2D);
+    this.hideTimer = setTimeout(() => {
+      if (this.panelEntity.active) {
+        this.panelEntity.object3D!.visible = false;
+        this.panelEntity.removeComponent(PopOut2D);
+        this.panelEntity
           .removeComponent(PokeInteractable)
           .removeComponent(Follower)
           .removeComponent(Billboard);
       }
-      this.recordingReadyHideTimer = null;
+      this.hideTimer = null;
     }, POP_OUT_MS);
   }
 }

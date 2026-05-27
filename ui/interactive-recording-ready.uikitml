@@ -69,10 +69,9 @@
 
 <div id="panel-root" class="placard">
   <div class="placard-content">
-    <span class="placard-title">Ready to record</span>
-    <p class="placard-body">
-      The phonograph is assembled. Stand close, take a breath, and get ready to
-      speak clearly into the horn when the countdown ends.
+    <span id="interactive-panel-title" class="placard-title">Ready</span>
+    <p id="interactive-panel-body" class="placard-body">
+      Continue to proceed.
     </p>
   </div>
   <div class="divider"></div>

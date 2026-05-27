@@ -109,13 +109,33 @@ export class AnimationSystem extends createSystem({
 }) {
   private tweens: ActiveTween[] = [];
   private spinTweens = new Map<number, ActiveTween>();
+  private pop3DTweens = new Map<number, ActiveTween>();
+  private pop2DTweens = new Map<number, ActiveTween>();
+  private snapTweens = new Map<number, ActiveTween>();
+
+  private stopEntityTween(
+    tweensByEntity: Map<number, ActiveTween>,
+    entityIndex: number,
+  ) {
+    const tween = tweensByEntity.get(entityIndex);
+    if (tween) {
+      stopTween(tween);
+      tweensByEntity.delete(entityIndex);
+    }
+  }
 
   init() {
     this.queries.popIn.subscribe("qualify", (entity) => {
       const obj = entity.object3D!;
-      startTween(
+      if (entity.hasComponent(PopOut)) {
+        entity.removeComponent(PopOut);
+      }
+      this.stopEntityTween(this.pop3DTweens, entity.index);
+
+      const fromScale = obj.scale.x;
+      const tween = startTween(
         this.tweens,
-        { scale: 0.001 },
+        { scale: fromScale },
         { scale: 1 },
         700,
         Easing.Cubic.Out,
@@ -124,16 +144,25 @@ export class AnimationSystem extends createSystem({
         },
         {
           onComplete: () => {
-            if (entity.active) entity.removeComponent(PopIn);
+            if (!entity.active) return;
+            if (this.pop3DTweens.get(entity.index) !== tween) return;
+            this.pop3DTweens.delete(entity.index);
+            entity.removeComponent(PopIn);
           },
         },
       );
+      this.pop3DTweens.set(entity.index, tween);
     });
 
     this.queries.popOut.subscribe("qualify", (entity) => {
       const obj = entity.object3D!;
+      if (entity.hasComponent(PopIn)) {
+        entity.removeComponent(PopIn);
+      }
+      this.stopEntityTween(this.pop3DTweens, entity.index);
+
       const fromScale = obj.scale.x;
-      startTween(
+      const tween = startTween(
         this.tweens,
         { scale: fromScale },
         { scale: 0.001 },
@@ -144,10 +173,14 @@ export class AnimationSystem extends createSystem({
         },
         {
           onComplete: () => {
-            if (entity.active) entity.removeComponent(PopOut);
+            if (!entity.active) return;
+            if (this.pop3DTweens.get(entity.index) !== tween) return;
+            this.pop3DTweens.delete(entity.index);
+            entity.removeComponent(PopOut);
           },
         },
       );
+      this.pop3DTweens.set(entity.index, tween);
     });
 
     this.queries.popIn2D.subscribe("qualify", (entity) => {
@@ -160,9 +193,15 @@ export class AnimationSystem extends createSystem({
         "panel-root",
       ) as UIKit.Component;
       if (!rootElement) return;
-      startTween(
+      if (entity.hasComponent(PopOut2D)) {
+        entity.removeComponent(PopOut2D);
+      }
+      this.stopEntityTween(this.pop2DTweens, entity.index);
+
+      const fromScale = rootElement.scale.x;
+      const tween = startTween(
         this.tweens,
-        { scale: 0.001 },
+        { scale: fromScale },
         { scale: 1 },
         700,
         Easing.Cubic.Out,
@@ -171,10 +210,14 @@ export class AnimationSystem extends createSystem({
         },
         {
           onComplete: () => {
-            if (entity.active) entity.removeComponent(PopIn2D);
+            if (!entity.active) return;
+            if (this.pop2DTweens.get(entity.index) !== tween) return;
+            this.pop2DTweens.delete(entity.index);
+            entity.removeComponent(PopIn2D);
           },
         },
       );
+      this.pop2DTweens.set(entity.index, tween);
     });
 
     this.queries.popOut2D.subscribe("qualify", (entity) => {
@@ -187,9 +230,15 @@ export class AnimationSystem extends createSystem({
         "panel-root",
       ) as UIKit.Component;
       if (!rootElement) return;
-      startTween(
+      if (entity.hasComponent(PopIn2D)) {
+        entity.removeComponent(PopIn2D);
+      }
+      this.stopEntityTween(this.pop2DTweens, entity.index);
+
+      const fromScale = rootElement.scale.x;
+      const tween = startTween(
         this.tweens,
-        { scale: 1 },
+        { scale: fromScale },
         { scale: 0.001 },
         550,
         Easing.Cubic.In,
@@ -198,14 +247,19 @@ export class AnimationSystem extends createSystem({
         },
         {
           onComplete: () => {
-            if (entity.active) entity.removeComponent(PopOut2D);
+            if (!entity.active) return;
+            if (this.pop2DTweens.get(entity.index) !== tween) return;
+            this.pop2DTweens.delete(entity.index);
+            entity.removeComponent(PopOut2D);
           },
         },
       );
+      this.pop2DTweens.set(entity.index, tween);
     });
 
     this.queries.snapAnimation.subscribe("qualify", (entity) => {
       const obj = entity.object3D!;
+      this.stopEntityTween(this.snapTweens, entity.index);
       const fromPos = obj.position.clone();
       const fromQuat = obj.quaternion.clone();
       const toPos = new Vector3(
@@ -219,7 +273,7 @@ export class AnimationSystem extends createSystem({
         entity.getValue(SnapAnimation, "targetQZ")!,
         entity.getValue(SnapAnimation, "targetQW")!,
       );
-      startTween(
+      const tween = startTween(
         this.tweens,
         { t: 0 },
         { t: 1 },
@@ -233,12 +287,15 @@ export class AnimationSystem extends createSystem({
         {
           onComplete: () => {
             if (!entity.active) return;
+            if (this.snapTweens.get(entity.index) !== tween) return;
+            this.snapTweens.delete(entity.index);
             obj.position.copy(toPos);
             obj.quaternion.copy(toQuat);
             entity.removeComponent(SnapAnimation);
           },
         },
       );
+      this.snapTweens.set(entity.index, tween);
     });
 
     this.queries.spin.subscribe("qualify", (entity) => {
@@ -264,6 +321,22 @@ export class AnimationSystem extends createSystem({
       const tween = this.spinTweens.get(entity.index);
       if (tween) stopTween(tween);
       this.spinTweens.delete(entity.index);
+    });
+
+    this.queries.popIn.subscribe("disqualify", (entity) => {
+      this.stopEntityTween(this.pop3DTweens, entity.index);
+    });
+    this.queries.popOut.subscribe("disqualify", (entity) => {
+      this.stopEntityTween(this.pop3DTweens, entity.index);
+    });
+    this.queries.popIn2D.subscribe("disqualify", (entity) => {
+      this.stopEntityTween(this.pop2DTweens, entity.index);
+    });
+    this.queries.popOut2D.subscribe("disqualify", (entity) => {
+      this.stopEntityTween(this.pop2DTweens, entity.index);
+    });
+    this.queries.snapAnimation.subscribe("disqualify", (entity) => {
+      this.stopEntityTween(this.snapTweens, entity.index);
     });
   }
 

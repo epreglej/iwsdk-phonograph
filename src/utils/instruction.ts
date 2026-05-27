@@ -14,7 +14,6 @@ import { ActiveTask, CompletedTask, Task } from "../task.js";
 import { Phonograph } from "../phonograph/phonograph.js";
 import { Billboard } from "./billboard.js";
 import { PopIn2D, PopOut2D } from "../animations/animation.js";
-import { InteractivePanelConfirmed } from "./interactive-panel.js";
 
 const INSTRUCTION_PANEL_CONFIG = "./ui/task-instruction.json";
 const COUNTDOWN_PANEL_CONFIG = "./ui/instruction-countdown.json";
@@ -30,7 +29,7 @@ export class InstructionSystem extends createSystem({
   },
   phonograph: { required: [Phonograph] },
   recordingCountdown: {
-    required: [Task, ActiveTask, InteractivePanelConfirmed],
+    required: [Task, ActiveTask],
     excluded: [CompletedTask, RecordingArmed],
     where: [eq(Task, "id", "recording")],
   },
@@ -80,7 +79,7 @@ export class InstructionSystem extends createSystem({
       .createTransformEntity(undefined, { parent: this.world.sceneEntity })
       .addComponent(PanelUI, {
         config: COUNTDOWN_PANEL_CONFIG,
-        maxWidth: 0.2,
+        maxWidth: 0.35,
       });
     this.countdownPanelEntity.object3D!.scale.set(0.001, 0.001, 0.001);
     this.countdownPanelEntity.object3D!.visible = false;
@@ -120,33 +119,20 @@ export class InstructionSystem extends createSystem({
         this.countdownDoc = null;
       }),
 
-      this.queries.activeTask.subscribe("qualify", (taskEntity) => {
-        const taskId = taskEntity.getValue(Task, "id")!;
+      this.queries.activeTask.subscribe("qualify", () => {
         this.sequenceToken += 1;
         this.clearCountdownTimers();
         this.clearInstructionPanelTimers();
         this.instructionTransitionToken += 1;
 
         this.hideCountdownPanel();
-
-        if (this.shouldShowInstruction(taskId)) {
-          this.showInstructionPanel(phonographEntity);
-        } else {
-          this.hideInstructionPanel();
-        }
-
-        this.handleTaskInstruction(taskEntity, taskId, this.sequenceToken);
+        this.hideInstructionPanel();
       }),
 
       this.queries.recordingCountdown.subscribe("qualify", (taskEntity) => {
         this.playRecordingCountdown(taskEntity, this.sequenceToken);
       }),
     );
-  }
-
-  private shouldShowInstruction(taskId: string): boolean {
-    if (taskId === "recording") return false;
-    return !taskId.startsWith("introduction_") && taskId !== "done";
   }
 
   private showInstructionPanel(phonographEntity: Entity): void {
@@ -246,54 +232,12 @@ export class InstructionSystem extends createSystem({
     }, POP_OUT_MS);
   }
 
-  private handleTaskInstruction(taskEntity: Entity, taskId: string, token: number): void {
-    if (
-      taskId === "cylinder_mount" ||
-      taskId === "recording_diaphragm_mount" ||
-      taskId === "recording_trumpet_mount"
-    ) {
-      this.setInstruction(
-        "Assemble the phonograph for recording.",
-      );
-      return;
-    }
-
-    if (taskId === "crank_cranking") {
-      this.setInstruction("Phonograph assembled! Crank it to wind the spring.");
-      return;
-    }
-
-    if (taskId === "recording") {
-      return;
-    }
-
-    if (
-      taskId === "recording_trumpet_unmount" ||
-      taskId === "recording_diaphragm_unmount"
-    ) {
-      this.setInstruction("Remove the parts for recording.");
-      return;
-    }
-
-    if (
-      taskId === "playback_diaphragm_mount" ||
-      taskId === "playback_trumpet_mount"
-    ) {
-      this.setInstruction("Assemble the phonograph for playback.");
-      return;
-    }
-
-    if (taskId === "playback") {
-      this.setInstruction("Playback started. Listen to your recording.");
-    }
-  }
-
   private playRecordingCountdown(taskEntity: Entity, token: number): void {
     const [phonographEntity] = this.queries.phonograph.entities;
 
     this.showCountdownPanel(phonographEntity);
 
-    const countdown = [5, 4, 3, 2, 1];
+    const countdown = [3, 2, 1];
     countdown.forEach((n, i) => {
       const t = setTimeout(() => {
         if (token !== this.sequenceToken) return;
@@ -304,9 +248,7 @@ export class InstructionSystem extends createSystem({
 
     const doneTimer = setTimeout(() => {
       if (token !== this.sequenceToken) return;
-      this.hideCountdownPanel();
-      this.showInstructionPanel(phonographEntity);
-      this.setInstruction("Speak into the horn.");
+      this.setCountdown("Speak!");
       if (!taskEntity.hasComponent(RecordingArmed)) {
         taskEntity.addComponent(RecordingArmed);
       }
@@ -390,4 +332,3 @@ export class InstructionSystem extends createSystem({
     }
   }
 }
-

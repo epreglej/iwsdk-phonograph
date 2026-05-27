@@ -11,6 +11,14 @@ export class SnapGhostSystem extends createSystem({
   },
   snapPoints: { required: [SnapPoint] },
 }) {
+  private hideVersionBySnapPoint = new Map<number, number>();
+
+  private bumpHideVersion(snapPointIndex: number): number {
+    const next = (this.hideVersionBySnapPoint.get(snapPointIndex) ?? 0) + 1;
+    this.hideVersionBySnapPoint.set(snapPointIndex, next);
+    return next;
+  }
+
   init() {
     this.cleanupFuncs.push(
       this.queries.grabbedWithSnapGhost.subscribe("qualify", (entity) => {
@@ -19,6 +27,9 @@ export class SnapGhostSystem extends createSystem({
 
         for (const sp of this.queries.snapPoints.entities) {
           if (sp.getValue(SnapPoint, "id") !== targetId) continue;
+
+          // Cancel any pending delayed hide for this snap-point.
+          this.bumpHideVersion(sp.index);
 
           // Smoothly animate the snap ghost in (scale + no pop).
           sp.removeComponent(PopOut);
@@ -38,13 +49,18 @@ export class SnapGhostSystem extends createSystem({
           for (const sp of this.queries.snapPoints.entities) {
             if (sp.getValue(SnapPoint, "id") !== targetId) continue;
 
+            const hideVersion = this.bumpHideVersion(sp.index);
+
             // Animate out before hiding to avoid a blink.
             sp.removeComponent(PopIn);
             sp.addComponent(PopOut);
             sp.removeComponent(Highlight);
 
             await delay(560);
-            if (sp.active) sp.object3D!.visible = false;
+            const currentVersion = this.hideVersionBySnapPoint.get(sp.index);
+            if (sp.active && currentVersion === hideVersion) {
+              sp.object3D!.visible = false;
+            }
             break;
           }
         },

@@ -8,7 +8,7 @@ export class PhonographSystem extends createSystem({
   activeSetupTask: {
     required: [Task, ActiveTask],
     excluded: [CompletedTask],
-    where: [eq(Task, "id", "cylinder_mount")],
+    where: [eq(Task, "id", "recording_setup_info")],
   },
   phonograph: { required: [Phonograph] },
 }) {

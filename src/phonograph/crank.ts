@@ -13,7 +13,6 @@ import { Task, ActiveTask, CompletedTask } from "../task.js";
 import { Highlight } from "../utils/highlight.js";
 import { PopIn } from "../animations/animation.js";
 import { playCrankTick } from "../audio/sfx.js";
-import { PlacardDismissed, PlacardTarget } from "../utils/object-placard.js";
 
 export const Crank = createComponent("Crank", {
   requiredRotations: {
@@ -78,15 +77,6 @@ export class CrankSystem extends createSystem(
             rotate: false,
           })
           .addComponent(Highlight);
-        crankEntity.addComponent(PlacardTarget, {
-          panelConfig: "./ui/crank-cranking-instruction.json",
-          offsetX: 0.1,
-          offsetY: 0.2,
-          offsetZ: 0,
-          dismissOnGrab: false,
-          dismissOnSnap: true,
-          autoDismissMs: 0,
-        });
 
         let pivot = crankRoot.getObjectByName("__crankPivot");
 
@@ -131,9 +121,6 @@ export class CrankSystem extends createSystem(
       }),
 
       this.queries.crankComplete.subscribe("qualify", () => {
-        crankEntity
-          .removeComponent(PlacardTarget)
-          .removeComponent(PlacardDismissed);
         for (const task of this.queries.activeCrankCrankingTask.entities) {
           task.addComponent(CompletedTask);
         }

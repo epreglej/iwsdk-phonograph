@@ -10,9 +10,3 @@ npm run dev
 ```
 
 Open `https://localhost:8081` and enter AR.
-
-## Stack
-
-- `@iwsdk/core` 0.4.1 — built-in `Grabbed` tag from `GrabSystem` (no custom grab sync)
-- Custom tween-free `AnimationSystem` in `src/animations/animation.ts`
-- Task flow: intro (`introduction_welcome` → `introduction_content` → `introduction_interaction`) then phonograph steps (see `src/task.ts`)

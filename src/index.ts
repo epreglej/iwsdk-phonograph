@@ -7,7 +7,8 @@ import { IntroductionWelcomePanelSystem } from "./panels/introductions/welcome.j
 import { IntroductionContentPanelSystem } from "./panels/introductions/content.js";
 import { PhonographSystem } from "./phonograph/phonograph.js";
 import { BillboardSystem } from "./utils/billboard.js";
-import { ObjectPlacardSystem } from "./utils/object-placard.js";
+import { PlacardSystem, PlacardTaskSystem } from "./utils/placard.js";
+import { InteractivePanelSystem } from "./utils/interactive-panel.js";
 import { CylinderSystem } from "./phonograph/cylinder.js";
 import { HighlightSystem } from "./utils/highlight.js";
 import { SnapSystem } from "./utils/snap.js";
@@ -91,7 +92,9 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
     .registerSystem(TaskSystem)
     .registerSystem(AnimationSystem)
     .registerSystem(BillboardSystem)
-    .registerSystem(ObjectPlacardSystem)
+    .registerSystem(PlacardSystem)
+    .registerSystem(PlacardTaskSystem)
+    .registerSystem(InteractivePanelSystem)
     .registerSystem(IntroductionWelcomePanelSystem)
     .registerSystem(IntroductionContentPanelSystem)
     .registerSystem(InstructionSystem)

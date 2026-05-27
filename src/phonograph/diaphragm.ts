@@ -17,7 +17,6 @@ import {
 } from "../utils/unmounting.js";
 import { forceReleaseGrab } from "../utils/grab-release.js";
 import { playPop } from "../audio/sfx.js";
-import { PlacardTarget } from "../utils/object-placard.js";
 
 export const RecordingDiaphragm = createComponent("RecordingDiaphragm", {});
 export const PlaybackDiaphragm = createComponent("PlaybackDiaphragm", {});
@@ -65,15 +64,6 @@ export class DiaphragmSystem extends createSystem({
             .addComponent(Snappable, { snapPointId: "diaphragm_snap_point" })
             .addComponent(SnapGhost)
             .addComponent(Highlight);
-          recordingDiaphragm.addComponent(PlacardTarget, {
-            panelConfig: "./ui/recording-diaphragm-mount-instruction.json",
-            offsetX: 0,
-            offsetY: 0.2,
-            offsetZ: 0,
-            dismissOnGrab: false,
-            dismissOnSnap: true,
-            autoDismissMs: 0,
-          });
         },
       ),
 
@@ -95,15 +85,6 @@ export class DiaphragmSystem extends createSystem({
             .removeComponent(Snappable)
             .addComponent(OneHandGrabbable)
             .addComponent(Highlight, { color: UNMOUNT_HIGHLIGHT_COLOR });
-          recordingDiaphragm.addComponent(PlacardTarget, {
-            panelConfig: "./ui/recording-diaphragm-unmount-instruction.json",
-            offsetX: 0,
-            offsetY: 0.2,
-            offsetZ: 0,
-            dismissOnGrab: true,
-            dismissOnSnap: false,
-            autoDismissMs: 0,
-          });
         },
       ),
 
@@ -136,15 +117,6 @@ export class DiaphragmSystem extends createSystem({
           .addComponent(Snappable, { snapPointId: "diaphragm_snap_point" })
           .addComponent(SnapGhost)
           .addComponent(Highlight);
-        playbackDiaphragm.addComponent(PlacardTarget, {
-          panelConfig: "./ui/playback-diaphragm-mount-instruction.json",
-          offsetX: 0,
-          offsetY: 0.2,
-          offsetZ: 0,
-          dismissOnGrab: false,
-          dismissOnSnap: true,
-          autoDismissMs: 0,
-        });
       }),
 
       this.queries.snappedPlaybackDiaphragm.subscribe("qualify", (entity) => {

@@ -17,7 +17,6 @@ import {
 import { forceReleaseGrab } from "../utils/grab-release.js";
 import { PopIn, PopOut, SnapAnimation } from "../animations/animation.js";
 import { playPop } from "../audio/sfx.js";
-import { PlacardTarget } from "../utils/object-placard.js";
 
 export const RecordingTrumpet = createComponent("RecordingTrumpet", {});
 export const PlaybackTrumpet = createComponent("PlaybackTrumpet", {});
@@ -63,15 +62,6 @@ export class TrumpetSystem extends createSystem({
           .addComponent(Snappable, { snapPointId: "trumpet_snap_point" })
           .addComponent(SnapGhost)
           .addComponent(Highlight);
-        recordingTrumpet.addComponent(PlacardTarget, {
-          panelConfig: "./ui/recording-trumpet-mount-instruction.json",
-          offsetX: 0,
-          offsetY: 0.2,
-          offsetZ: 0,
-          dismissOnGrab: false,
-          dismissOnSnap: true,
-          autoDismissMs: 0,
-        });
       }),
 
       this.queries.snappedRecordingTrumpet.subscribe("qualify", (entity) => {
@@ -92,15 +82,6 @@ export class TrumpetSystem extends createSystem({
             .removeComponent(Snappable)
             .addComponent(OneHandGrabbable)
             .addComponent(Highlight, { color: UNMOUNT_HIGHLIGHT_COLOR });
-          recordingTrumpet.addComponent(PlacardTarget, {
-            panelConfig: "./ui/recording-trumpet-unmount-instruction.json",
-            offsetX: 0,
-            offsetY: 0.2,
-            offsetZ: 0,
-            dismissOnGrab: true,
-            dismissOnSnap: false,
-            autoDismissMs: 0,
-          });
         },
       ),
 
@@ -133,15 +114,6 @@ export class TrumpetSystem extends createSystem({
           .addComponent(Snappable, { snapPointId: "trumpet_snap_point" })
           .addComponent(SnapGhost)
           .addComponent(Highlight);
-        playbackTrumpet.addComponent(PlacardTarget, {
-          panelConfig: "./ui/playback-trumpet-mount-instruction.json",
-          offsetX: 0,
-          offsetY: 0.2,
-          offsetZ: 0,
-          dismissOnGrab: false,
-          dismissOnSnap: true,
-          autoDismissMs: 0,
-        });
       }),
 
       this.queries.snappedPlaybackTrumpet.subscribe("qualify", (entity) => {

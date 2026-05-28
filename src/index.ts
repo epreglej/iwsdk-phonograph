@@ -1,23 +1,26 @@
 import { AssetManifest, AssetType, SessionMode, World } from "@iwsdk/core";
 
-import { ActiveTask, Task, TaskSystem } from "./task.js";
-import { SpawnSystem } from "./spawn.js";
-import { AnimationSystem } from "./animations/animation.js";
-import { IntroductionWelcomePanelSystem } from "./panels/introductions/welcome.js";
-import { IntroductionContentPanelSystem } from "./panels/introductions/content.js";
-import { PhonographSystem } from "./phonograph/phonograph.js";
-import { BillboardSystem } from "./utils/billboard.js";
-import { PlacardSystem, PlacardTaskSystem } from "./utils/placard.js";
-import { InteractivePanelSystem } from "./utils/interactive-panel.js";
-import { CylinderSystem } from "./phonograph/cylinder.js";
-import { HighlightSystem } from "./utils/highlight.js";
-import { SnapSystem } from "./utils/snap.js";
-import { SnapGhostSystem } from "./utils/snap-ghost.js";
-import { TrumpetSystem } from "./phonograph/trumpet.js";
-import { DiaphragmSystem } from "./phonograph/diaphragm.js";
-import { CrankSystem } from "./phonograph/crank.js";
-import { RecordingSystem } from "./utils/recording.js";
-import { InstructionSystem } from "./utils/instruction.js";
+import { ActiveTask, Task } from "./components/task.js";
+import { TaskSystem } from "./systems/task.js";
+import { SpawnSystem } from "./systems/spawn.js";
+import { AnimationSystem } from "./systems/animation.js";
+import { BillboardSystem } from "./systems/billboard.js";
+import { PlacardSystem } from "./systems/placard.js";
+import { PlacardTaskSystem } from "./systems/placard-task.js";
+import { InteractivePanelSystem } from "./systems/interactive-panel.js";
+import { IntroductionWelcomePanelSystem } from "./systems/introduction-welcome.js";
+import { IntroductionContentPanelSystem } from "./systems/introduction-content.js";
+import { RecordingCountdownSystem } from "./systems/recording-countdown.js";
+import { HighlightSystem } from "./systems/highlight.js";
+import { SnapSystem } from "./systems/snap.js";
+import { SnapGhostSystem } from "./systems/snap-ghost.js";
+import { PartMountSystem } from "./systems/part-mount.js";
+import { TaskSnapCompletionSystem } from "./systems/task-snap-completion.js";
+import { PartUnmountSystem } from "./systems/part-unmount.js";
+import { PhonographSystem } from "./systems/phonograph.js";
+import { CylinderSystem } from "./systems/cylinder.js";
+import { CrankSystem } from "./systems/crank.js";
+import { RecordingSystem } from "./systems/recording.js";
 
 const assets: AssetManifest = {
   chimeSound: {
@@ -87,29 +90,36 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
   const { camera } = world;
   camera.position.set(0, 1, 0.5);
 
-  world
-    .registerSystem(SpawnSystem)
-    .registerSystem(TaskSystem)
-    .registerSystem(AnimationSystem)
-    .registerSystem(BillboardSystem)
-    .registerSystem(PlacardSystem)
-    .registerSystem(PlacardTaskSystem)
-    .registerSystem(InteractivePanelSystem)
-    .registerSystem(IntroductionWelcomePanelSystem)
-    .registerSystem(IntroductionContentPanelSystem)
-    .registerSystem(InstructionSystem)
-    .registerSystem(HighlightSystem)
-    .registerSystem(SnapSystem)
-    .registerSystem(SnapGhostSystem)
-    .registerSystem(PhonographSystem)
-    .registerSystem(CylinderSystem)
-    .registerSystem(DiaphragmSystem)
-    .registerSystem(TrumpetSystem)
-    .registerSystem(CrankSystem)
-    .registerSystem(RecordingSystem);
+  try {
+    world
+      .registerSystem(HighlightSystem)
+      .registerSystem(AnimationSystem)
+      .registerSystem(SpawnSystem)
+      .registerSystem(TaskSystem)
+      .registerSystem(BillboardSystem)
+      .registerSystem(PlacardSystem)
+      .registerSystem(PlacardTaskSystem)
+      .registerSystem(InteractivePanelSystem)
+      .registerSystem(IntroductionWelcomePanelSystem)
+      .registerSystem(IntroductionContentPanelSystem)
+      .registerSystem(RecordingCountdownSystem)
+      .registerSystem(SnapSystem)
+      .registerSystem(SnapGhostSystem)
+      .registerSystem(PartMountSystem)
+      .registerSystem(TaskSnapCompletionSystem)
+      .registerSystem(PartUnmountSystem)
+      .registerSystem(PhonographSystem)
+      .registerSystem(CylinderSystem)
+      .registerSystem(CrankSystem)
+      .registerSystem(RecordingSystem);
 
-  world
-    .createEntity()
-    .addComponent(Task, { id: "introduction_welcome" })
-    .addComponent(ActiveTask);
+    world
+      .createEntity()
+      .addComponent(Task, { id: "introduction_welcome" })
+      .addComponent(ActiveTask);
+  } catch (error) {
+    console.error("Failed to initialize phonograph experience:", error);
+  }
+}).catch((error) => {
+  console.error("Failed to create IWSDK world:", error);
 });

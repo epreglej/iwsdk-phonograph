@@ -1,4 +1,3 @@
-/** Holds the user's recording until playback runs. */
 let recordedBuffer: AudioBuffer | null = null;
 let audioContext: AudioContext | null = null;
 

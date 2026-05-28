@@ -40,7 +40,6 @@ export function playSnap(volume = 0.22): void {
   const gain = ctx.createGain();
   envelopeGain(gain, now, { peak: volume, decay: 0.035 });
 
-  // Small click/noise layer for “mechanical” feel.
   const bufferSize = Math.floor(ctx.sampleRate * 0.02);
   const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
   const output = noiseBuffer.getChannelData(0);

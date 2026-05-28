@@ -7,9 +7,17 @@
     padding-left: 16px;
     padding-right: 16px;
     border-radius: 22px;
-    background-color: rgba(255, 255, 255, 0.32);
-    border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.42);
+    background-color: rgba(200, 196, 192, 0.30);
+    border-top-width: 1.2px;
+    border-top-color: rgba(255, 255, 255, 0.75);
+    border-left-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.30);
+    border-right-width: 1px;
+    border-right-color: rgba(255, 255, 255, 0.30);
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28),
+                inset 0 1px 0 rgba(255, 255, 255, 0.50);
   }
 
   .placard-title {
@@ -26,7 +34,6 @@
     color: rgba(255, 255, 255, 0.72);
   }
 </style>
-
 <div id="panel-root" class="placard">
   <span class="placard-title">Wax cylinder</span>
   <p class="placard-body">Wax cylinders were soft enough to be cut at home. Families could mail blanks to each other and hear a loved one's voice weeks later.</p>

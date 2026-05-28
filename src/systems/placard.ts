@@ -4,7 +4,9 @@ import {
   FollowBehavior,
   Follower,
   Grabbed,
+  PanelDocument,
   PanelUI,
+  UIKit,
 } from "@iwsdk/core";
 import { Placard, PlacardDismissed, PlacardInstance } from "../components/placard.js";
 import { PopIn2D, PopOut2D } from "../components/animation.js";
@@ -14,9 +16,11 @@ import { Snapped } from "../components/snap.js";
 export class PlacardSystem extends createSystem({
   targets: { required: [Placard], excluded: [PlacardDismissed] },
   instances: { required: [PlacardInstance] },
+  instanceDocs: { required: [PlacardInstance, PanelDocument] },
   targetGrabbed: { required: [Placard, Grabbed] },
   targetSnapped: { required: [Placard, Snapped] },
 }) {
+  private static readonly MAX_DOC_READY_RETRIES = 12;
   private dismissTimers = new Map<number, ReturnType<typeof setTimeout>>();
 
   init() {
@@ -32,6 +36,10 @@ export class PlacardSystem extends createSystem({
 
       this.queries.instances.subscribe("disqualify", (placard) => {
         placard.dispose();
+      }),
+
+      this.queries.instanceDocs.subscribe("qualify", (placard) => {
+        this.triggerPopInWhenDocumentReady(placard, 0);
       }),
 
       this.queries.targetGrabbed.subscribe("qualify", (target) => {
@@ -57,6 +65,29 @@ export class PlacardSystem extends createSystem({
     );
   }
 
+  private triggerPopInWhenDocumentReady(placard: Entity, attempt: number): void {
+    if (!placard.active) return;
+
+    const doc = placard.getValue(PanelDocument, "document");
+    const root = (doc as any)?.getElementById?.("panel-root") as
+      | UIKit.Component
+      | undefined;
+
+    if (!root) {
+      if (attempt >= PlacardSystem.MAX_DOC_READY_RETRIES) return;
+      setTimeout(() => {
+        this.triggerPopInWhenDocumentReady(placard, attempt + 1);
+      }, 16);
+      return;
+    }
+
+    root.scale.setScalar(0.001);
+    placard.removeComponent(PopOut2D);
+    if (!placard.hasComponent(PopIn2D)) {
+      placard.addComponent(PopIn2D);
+    }
+  }
+
   private spawnPlacard(target: Entity): void {
     const targetObj = target.object3D;
     if (!targetObj || this.findPlacardForTarget(target)) return;
@@ -65,7 +96,7 @@ export class PlacardSystem extends createSystem({
 
     const placard = this.world
       .createTransformEntity(undefined, { parent: this.world.sceneEntity })
-      .addComponent(PanelUI, { config, maxWidth: 0.17 })
+      .addComponent(PanelUI, { config, maxWidth: 0.221 })
       .addComponent(PlacardInstance, { target })
       .addComponent(Follower, {
         behavior: FollowBehavior.NoRotation,
@@ -76,8 +107,7 @@ export class PlacardSystem extends createSystem({
           target.getValue(Placard, "offsetZ") ?? 0,
         ],
       })
-      .addComponent(Billboard)
-      .addComponent(PopIn2D);
+      .addComponent(Billboard);
 
     placard.object3D!.scale.set(0.001, 0.001, 0.001);
     placard.object3D!.visible = true;

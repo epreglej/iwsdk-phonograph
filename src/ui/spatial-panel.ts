@@ -7,7 +7,7 @@ export type SpatialPanelOptions = {
 
 export function createSpatialPanel(
   world: World,
-  { config, maxWidth = 0.35 }: SpatialPanelOptions,
+  { config, maxWidth = 0.455 }: SpatialPanelOptions,
 ): Entity {
   const panel = world
     .createTransformEntity(undefined, { parent: world.sceneEntity })

@@ -1,5 +1,6 @@
 import { AssetManager, createSystem, Entity, Mesh, Object3D } from "@iwsdk/core";
-import { Phonograph, Cylinder, Crank } from "../components/phonograph.js";
+import { Phonograph, Cylinder, Crank, Brake } from "../components/phonograph.js";
+import { BRAKE_HOME } from "./brake.js";
 import {
   RecordingDiaphragm,
   PlaybackDiaphragm,
@@ -117,5 +118,11 @@ export class SpawnSystem extends createSystem({}) {
       .addComponent(Crank);
     crankMesh.position.set(0.235, 0.078, -0.0365);
     crankMesh.visible = false;
+
+    const { scene: brakeMesh } = AssetManager.getGLTF("brake")!;
+    this.world
+      .createTransformEntity(brakeMesh, { parent: phonographEntity })
+      .addComponent(Brake);
+    brakeMesh.position.set(BRAKE_HOME.x, BRAKE_HOME.y, BRAKE_HOME.z);
   }
 }

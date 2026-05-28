@@ -155,7 +155,7 @@ export class InteractivePanelSystem extends createSystem({
       .addComponent(Follower, {
         behavior: FollowBehavior.NoRotation,
         target: phonographEntity.object3D,
-        offsetPosition: [0, 0.5, 0],
+        offsetPosition: [0, 0.55, 0],
       })
       .addComponent(Billboard)
       .addComponent(PokeInteractable);

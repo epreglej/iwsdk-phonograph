@@ -8,5 +8,8 @@ export const Crank = createComponent("Crank", {
   requiredRotations: { type: Types.Float32, default: 3 },
 });
 
+export const Brake = createComponent("Brake", {});
+export const BrakeShifted = createComponent("BrakeShifted", {});
+export const BrakeReturning = createComponent("BrakeReturning", {});
 export const CrankingComplete = createComponent("CrankingComplete", {});
 export const CrankHeld = createComponent("CrankHeld", {});

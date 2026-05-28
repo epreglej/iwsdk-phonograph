@@ -1,0 +1,64 @@
+<style>
+  .menu-card {
+    width: 390px;
+    flex-direction: column;
+    border-radius: 24px;
+    background-color: rgba(210, 210, 210, 0.28);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.4);
+    padding-top: 18px;
+    padding-bottom: 14px;
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .title {
+    font-size: 30px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.98);
+    margin-bottom: 4px;
+  }
+
+  .subtitle {
+    font-size: 14px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.78);
+    margin-bottom: 16px;
+  }
+
+  .menu-button {
+    width: 100%;
+    margin-top: 8px;
+    border-radius: 16px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  .menu-button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+
+  .menu-button-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.95);
+  }
+</style>
+
+<div id="panel-root" class="menu-card">
+  <span class="title">The Phonograph</span>
+  <span class="subtitle">A history of recorded sound</span>
+
+  <button id="start-learning-button" class="menu-button">
+    <span class="menu-button-label">Start Learning</span>
+  </button>
+
+  <button id="settings-button" class="menu-button">
+    <span class="menu-button-label">Settings</span>
+  </button>
+</div>

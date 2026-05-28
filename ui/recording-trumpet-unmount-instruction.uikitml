@@ -1,6 +1,6 @@
 <style>
   .placard {
-    width: 152px;
+    width: 198px;
     flex-direction: column;
     padding-top: 14px;
     padding-bottom: 14px;

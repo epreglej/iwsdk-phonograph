@@ -3,11 +3,10 @@ import { Task, ActiveTask, CompletedTask } from "../components/task.js";
 import { Cylinder } from "../components/phonograph.js";
 import { Spin } from "../components/animation.js";
 import { firstEntity } from "../helpers/entity-query.js";
-import { RecordingArmed } from "../components/recording-armed.js";
 
 export class CylinderSystem extends createSystem({
   activeRecordingTask: {
-    required: [Task, ActiveTask, RecordingArmed],
+    required: [Task, ActiveTask],
     excluded: [CompletedTask],
     where: [eq(Task, "id", "recording")],
   },

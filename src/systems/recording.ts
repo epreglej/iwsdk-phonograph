@@ -1,14 +1,16 @@
-import { createSystem, eq } from "@iwsdk/core";
+import { createSystem, Entity, eq } from "@iwsdk/core";
 import { Task, ActiveTask, CompletedTask } from "../components/task.js";
 import {
+  abortActiveRecording,
+  clearActiveRecording,
   getRecordedAudio,
+  registerActiveRecording,
   setRecordedAudio,
 } from "../audio/recording-store.js";
-import { RecordingArmed } from "../components/recording-armed.js";
 
 export class RecordingSystem extends createSystem({
   activeRecordingTask: {
-    required: [Task, ActiveTask, RecordingArmed],
+    required: [Task, ActiveTask],
     excluded: [CompletedTask],
     where: [eq(Task, "id", "recording")],
   },
@@ -24,6 +26,10 @@ export class RecordingSystem extends createSystem({
     this.cleanupFuncs.push(
       this.queries.activeRecordingTask.subscribe("qualify", (taskEntity) => {
         this.startRecording(taskEntity);
+      }),
+
+      this.queries.activeRecordingTask.subscribe("disqualify", () => {
+        abortActiveRecording();
       }),
 
       this.queries.activePlaybackTask.subscribe("qualify", (taskEntity) => {
@@ -43,21 +49,21 @@ export class RecordingSystem extends createSystem({
     }
   }
 
-  private async startRecording(taskEntity: {
-    addComponent: (c: typeof CompletedTask) => void;
-  }) {
+  private async startRecording(taskEntity: Entity) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const audioContext = new AudioContext();
 
       const chunks: BlobPart[] = [];
       const recorder = new MediaRecorder(stream);
+      registerActiveRecording(recorder, stream);
 
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunks.push(e.data);
       };
 
       recorder.onstop = async () => {
+        clearActiveRecording();
         stream.getTracks().forEach((t) => t.stop());
 
         const blob = new Blob(chunks, { type: recorder.mimeType });
@@ -65,16 +71,15 @@ export class RecordingSystem extends createSystem({
         const buffer = await audioContext.decodeAudioData(arrayBuffer);
         setRecordedAudio(audioContext, buffer);
 
-        taskEntity.addComponent(CompletedTask);
+        if (taskEntity.active && !taskEntity.hasComponent(CompletedTask)) {
+          taskEntity.addComponent(CompletedTask);
+        }
       };
 
       recorder.start();
-
-      setTimeout(() => {
-        if (recorder.state === "recording") recorder.stop();
-      }, 7000);
     } catch (err) {
       console.error("Recording failed:", err);
+      clearActiveRecording();
     }
   }
 

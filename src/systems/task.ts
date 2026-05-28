@@ -1,11 +1,6 @@
-import { createSystem, eq } from "@iwsdk/core";
+import { createSystem } from "@iwsdk/core";
 import { Task, ActiveTask, CompletedTask } from "../components/task.js";
 import { playTaskChime } from "../audio/sfx.js";
-
-const INTRO_SEQUENCE = [
-  "introduction_welcome",
-  "introduction_content",
-] as const;
 
 const TASK_SEQUENCE = [
   "recording_setup_info",
@@ -14,6 +9,7 @@ const TASK_SEQUENCE = [
   "recording_trumpet_mount",
   "crank_cranking",
   "recording_ready_info",
+  "brake_shift",
   "recording",
   "playback_setup_info",
   "recording_trumpet_unmount",
@@ -41,15 +37,7 @@ export class TaskSystem extends createSystem({
   private transition(lastId: string) {
     const next = this.world.createEntity().addComponent(ActiveTask);
 
-    const introIndex = INTRO_SEQUENCE.indexOf(
-      lastId as (typeof INTRO_SEQUENCE)[number],
-    );
-    if (introIndex >= 0 && introIndex < INTRO_SEQUENCE.length - 1) {
-      next.addComponent(Task, { id: INTRO_SEQUENCE[introIndex + 1] });
-      return;
-    }
-
-    if (lastId === "introduction_content") {
+    if (lastId === "main_menu") {
       next.addComponent(Task, { id: "recording_setup_info" });
       return;
     }
@@ -59,6 +47,8 @@ export class TaskSystem extends createSystem({
       next.addComponent(Task, { id: TASK_SEQUENCE[index + 1] });
     } else if (lastId === "playback") {
       next.addComponent(Task, { id: "done" });
+    } else if (lastId === "done") {
+      next.addComponent(Task, { id: "main_menu" });
     }
   }
 }

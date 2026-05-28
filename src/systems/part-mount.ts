@@ -85,6 +85,8 @@ export class PartMountSystem extends createSystem({
     snapPointId: string,
     taskId: string,
   ): void {
+    // Ensure PopIn always has distance to tween from.
+    part.object3D!.scale.setScalar(0.001);
     part.object3D!.visible = true;
     part.addComponent(PopIn);
     part

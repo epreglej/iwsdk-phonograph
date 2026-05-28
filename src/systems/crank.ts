@@ -52,6 +52,7 @@ export class CrankSystem extends createSystem(
         const crankRoot = crankEntity.object3D;
         if (!crankRoot) return;
 
+        crankRoot.scale.setScalar(0.001);
         crankRoot.visible = true;
         crankEntity.addComponent(PopIn);
         crankEntity

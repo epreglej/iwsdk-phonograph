@@ -47,10 +47,12 @@ const PLACARD_TASK_BINDINGS: Record<string, PlacardBinding> = {
   recording_trumpet_mount: {
     ...MOUNT_PLACARD,
     panelConfig: "./ui/recording-trumpet-mount-instruction.json",
+    offsetZ: 0.25,
   },
   playback_trumpet_mount: {
     ...MOUNT_PLACARD,
     panelConfig: "./ui/playback-trumpet-mount-instruction.json",
+    offsetZ: 0.25,
   },
   recording_diaphragm_mount: {
     ...MOUNT_PLACARD,
@@ -59,24 +61,6 @@ const PLACARD_TASK_BINDINGS: Record<string, PlacardBinding> = {
   playback_diaphragm_mount: {
     ...MOUNT_PLACARD,
     panelConfig: "./ui/playback-diaphragm-mount-instruction.json",
-  },
-  recording_trumpet_unmount: {
-    panelConfig: "./ui/recording-trumpet-unmount-instruction.json",
-    offsetX: 0,
-    offsetY: 0.2,
-    offsetZ: 0,
-    dismissOnGrab: true,
-    dismissOnSnap: false,
-    autoDismissMs: 0,
-  },
-  recording_diaphragm_unmount: {
-    panelConfig: "./ui/recording-diaphragm-unmount-instruction.json",
-    offsetX: 0,
-    offsetY: 0.2,
-    offsetZ: 0,
-    dismissOnGrab: true,
-    dismissOnSnap: false,
-    autoDismissMs: 0,
   },
 };
 
@@ -103,12 +87,10 @@ export class PlacardTaskSystem extends createSystem({
       case "crank_cranking":
         return firstEntity(this.queries.crank.entities);
       case "recording_trumpet_mount":
-      case "recording_trumpet_unmount":
         return firstEntity(this.queries.recordingTrumpet.entities);
       case "playback_trumpet_mount":
         return firstEntity(this.queries.playbackTrumpet.entities);
       case "recording_diaphragm_mount":
-      case "recording_diaphragm_unmount":
         return firstEntity(this.queries.recordingDiaphragm.entities);
       case "playback_diaphragm_mount":
         return firstEntity(this.queries.playbackDiaphragm.entities);

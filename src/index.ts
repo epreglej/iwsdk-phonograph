@@ -8,9 +8,9 @@ import { BillboardSystem } from "./systems/billboard.js";
 import { PlacardSystem } from "./systems/placard.js";
 import { PlacardTaskSystem } from "./systems/placard-task.js";
 import { InteractivePanelSystem } from "./systems/interactive-panel.js";
-import { IntroductionWelcomePanelSystem } from "./systems/introduction-welcome.js";
-import { IntroductionContentPanelSystem } from "./systems/introduction-content.js";
-import { RecordingCountdownSystem } from "./systems/recording-countdown.js";
+import { MainMenuSystem } from "./systems/main-menu.js";
+import { MainMenuResetSystem } from "./systems/main-menu-reset.js";
+import { EndMenuSystem } from "./systems/end-menu.js";
 import { HighlightSystem } from "./systems/highlight.js";
 import { SnapSystem } from "./systems/snap.js";
 import { SnapGhostSystem } from "./systems/snap-ghost.js";
@@ -20,6 +20,7 @@ import { PartUnmountSystem } from "./systems/part-unmount.js";
 import { PhonographSystem } from "./systems/phonograph.js";
 import { CylinderSystem } from "./systems/cylinder.js";
 import { CrankSystem } from "./systems/crank.js";
+import { BrakeSystem } from "./systems/brake.js";
 import { RecordingSystem } from "./systems/recording.js";
 
 const assets: AssetManifest = {
@@ -63,6 +64,11 @@ const assets: AssetManifest = {
     type: AssetType.GLTF,
     priority: "critical",
   },
+  brake: {
+    url: "./gltf/brake.glb",
+    type: AssetType.GLTF,
+    priority: "critical",
+  },
 };
 
 World.create(document.getElementById("scene-container") as HTMLDivElement, {
@@ -99,10 +105,9 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       .registerSystem(BillboardSystem)
       .registerSystem(PlacardSystem)
       .registerSystem(PlacardTaskSystem)
+      .registerSystem(MainMenuSystem)
+      .registerSystem(MainMenuResetSystem)
       .registerSystem(InteractivePanelSystem)
-      .registerSystem(IntroductionWelcomePanelSystem)
-      .registerSystem(IntroductionContentPanelSystem)
-      .registerSystem(RecordingCountdownSystem)
       .registerSystem(SnapSystem)
       .registerSystem(SnapGhostSystem)
       .registerSystem(PartMountSystem)
@@ -111,11 +116,13 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       .registerSystem(PhonographSystem)
       .registerSystem(CylinderSystem)
       .registerSystem(CrankSystem)
-      .registerSystem(RecordingSystem);
+      .registerSystem(BrakeSystem)
+      .registerSystem(RecordingSystem)
+      .registerSystem(EndMenuSystem);
 
     world
       .createEntity()
-      .addComponent(Task, { id: "introduction_welcome" })
+      .addComponent(Task, { id: "main_menu" })
       .addComponent(ActiveTask);
   } catch (error) {
     console.error("Failed to initialize phonograph experience:", error);

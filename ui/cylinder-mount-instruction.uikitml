@@ -1,6 +1,6 @@
 <style>
   .placard {
-    width: 198px;
+    width: 210px;
     flex-direction: column;
     padding-top: 14px;
     padding-bottom: 14px;
@@ -34,7 +34,8 @@
     color: rgba(255, 255, 255, 0.72);
   }
 </style>
+
 <div id="panel-root" class="placard">
   <span class="placard-title">Wax cylinder</span>
-  <p class="placard-body">Wax cylinders were soft enough to be cut at home. Families could mail blanks to each other and hear a loved one's voice weeks later.</p>
+  <p class="placard-body">Grab the cylinder and snap it onto the spindle — it will lock in and rotate with the motor, because sound can only be cut into the wax while the cylinder spins.</p>
 </div>

@@ -52,7 +52,7 @@
 
 <div id="panel-root" class="menu-card">
   <span class="title">Playback Complete</span>
-  <span class="subtitle">Want to start over from the main menu?</span>
+  <span class="subtitle">Start over from the main menu?</span>
 
   <button id="end-menu-restart-button" class="menu-button">
     <span class="menu-button-label">Restart</span>

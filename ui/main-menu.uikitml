@@ -52,7 +52,7 @@
 
 <div id="panel-root" class="menu-card">
   <span class="title">The Phonograph</span>
-  <span class="subtitle">A history of recorded sound</span>
+  <span class="subtitle">Learn how sound was first recorded</span>
 
   <button id="start-learning-button" class="menu-button">
     <span class="menu-button-label">Start Learning</span>

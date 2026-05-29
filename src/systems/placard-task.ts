@@ -3,7 +3,7 @@ import { Task, ActiveTask, CompletedTask } from "../components/task.js";
 import { PhonographPart } from "../components/phonograph-part.js";
 import { Crank, CrankingComplete } from "../components/phonograph.js";
 import { Placard, PlacardDismissed } from "../components/placard.js";
-import { PLACARD_BY_TASK, type PlacardSpec } from "../config/task-flow.js";
+import { PLACARD_BY_TASK, nextTaskId, type PlacardSpec } from "../config/task-flow.js";
 import { getPart } from "../helpers/parts.js";
 
 export class PlacardTaskSystem extends createSystem({
@@ -23,8 +23,26 @@ export class PlacardTaskSystem extends createSystem({
       }),
 
       this.queries.activeTask.subscribe("disqualify", (taskEntity) => {
-        const binding = PLACARD_BY_TASK[taskEntity.getValue(Task, "id")!];
-        const target = binding && getPart(this.queries.parts.entities, binding.partId);
+        const taskId = taskEntity.getValue(Task, "id")!;
+        const binding = PLACARD_BY_TASK[taskId];
+        if (!binding) return;
+
+        for (const other of this.queries.activeTask.entities) {
+          if (other.index === taskEntity.index) continue;
+          const otherBinding = PLACARD_BY_TASK[other.getValue(Task, "id")!];
+          if (otherBinding?.partId === binding.partId) return;
+        }
+
+        const nextBinding = PLACARD_BY_TASK[nextTaskId(taskId) ?? ""];
+        if (
+          nextBinding &&
+          nextBinding.partId === binding.partId &&
+          nextBinding.placard.panelConfig === binding.placard.panelConfig
+        ) {
+          return;
+        }
+
+        const target = getPart(this.queries.parts.entities, binding.partId);
         if (target) this.stripPlacard(target);
       }),
 
@@ -36,6 +54,14 @@ export class PlacardTaskSystem extends createSystem({
   }
 
   private attachPlacard(entity: Entity, spec: PlacardSpec): void {
+    if (
+      entity.hasComponent(Placard) &&
+      !entity.hasComponent(PlacardDismissed) &&
+      entity.getValue(Placard, "panelConfig") === spec.panelConfig
+    ) {
+      return;
+    }
+
     entity.removeComponent(PlacardDismissed).removeComponent(Placard);
     entity.addComponent(Placard, {
       panelConfig: spec.panelConfig,

@@ -1,6 +1,6 @@
 <style>
   .placard {
-    width: 198px;
+    width: 210px;
     flex-direction: column;
     padding-top: 14px;
     padding-bottom: 14px;
@@ -29,5 +29,5 @@
 
 <div id="panel-root" class="placard">
   <span class="placard-title">Playback horn</span>
-  <p class="placard-body">The playback horn acted like a megaphone in reverse. It spread the faint motion of the diaphragm so a whole parlor could hear the recording.</p>
+  <p class="placard-body">Snap the playback horn onto the mount to amplify the faint stylus vibrations into audible sound, because the groove alone is far too quiet to hear across a room.</p>
 </div>

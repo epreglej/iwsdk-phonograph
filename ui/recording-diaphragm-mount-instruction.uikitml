@@ -1,6 +1,6 @@
 <style>
   .placard {
-    width: 198px;
+    width: 210px;
     flex-direction: column;
     padding-top: 14px;
     padding-bottom: 14px;
@@ -29,5 +29,5 @@
 
 <div id="panel-root" class="placard">
   <span class="placard-title">Recording diaphragm</span>
-  <p class="placard-body">A stiff steel needle gouged a deep groove into the wax. Playback later needed a lighter touch.</p>
+  <p class="placard-body">Snap the diaphragm onto the mount so the stiff recording stylus presses against the wax, carrying vibrations from the horn with enough force to cut grooves into the cylinder.</p>
 </div>

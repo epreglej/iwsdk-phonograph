@@ -1,5 +1,10 @@
 import { createSystem, Entity, eq } from "@iwsdk/core";
 import { Task, ActiveTask, CompletedTask } from "../components/task.js";
+import { PhonographPart } from "../components/phonograph-part.js";
+import {
+  Highlight,
+  RECORDING_INPUT_HIGHLIGHT_COLOR,
+} from "../components/highlight.js";
 import {
   abortActiveRecording,
   clearActiveRecording,
@@ -7,6 +12,12 @@ import {
   registerActiveRecording,
   setRecordedAudio,
 } from "../audio/recording-store.js";
+import {
+  playRecordingStart,
+  startRecordingMotorLoop,
+  stopRecordingMotorLoop,
+} from "../audio/sfx.js";
+import { getPart } from "../helpers/parts.js";
 
 export class RecordingSystem extends createSystem({
   activeRecordingTask: {
@@ -19,16 +30,19 @@ export class RecordingSystem extends createSystem({
     excluded: [CompletedTask],
     where: [eq(Task, "id", "playback")],
   },
+  parts: { required: [PhonographPart] },
 }) {
   init() {
     this.triggerEarlyPermissionPrompt();
 
     this.cleanupFuncs.push(
       this.queries.activeRecordingTask.subscribe("qualify", (taskEntity) => {
+        this.onRecordingStart();
         this.startRecording(taskEntity);
       }),
 
       this.queries.activeRecordingTask.subscribe("disqualify", () => {
+        this.onRecordingStop();
         abortActiveRecording();
       }),
 
@@ -80,7 +94,25 @@ export class RecordingSystem extends createSystem({
     } catch (err) {
       console.error("Recording failed:", err);
       clearActiveRecording();
+      this.onRecordingStop();
     }
+  }
+
+  private onRecordingStart(): void {
+    playRecordingStart();
+    startRecordingMotorLoop();
+
+    const trumpet = getPart(this.queries.parts.entities, "recording_trumpet");
+    if (trumpet && !trumpet.hasComponent(Highlight)) {
+      trumpet.addComponent(Highlight, { color: RECORDING_INPUT_HIGHLIGHT_COLOR });
+    }
+  }
+
+  private onRecordingStop(): void {
+    stopRecordingMotorLoop();
+
+    const trumpet = getPart(this.queries.parts.entities, "recording_trumpet");
+    trumpet?.removeComponent(Highlight);
   }
 
   private startPlayback(taskEntity: {

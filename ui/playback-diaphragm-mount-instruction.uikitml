@@ -1,6 +1,6 @@
 <style>
   .placard {
-    width: 198px;
+    width: 210px;
     flex-direction: column;
     padding-top: 14px;
     padding-bottom: 14px;
@@ -29,5 +29,5 @@
 
 <div id="panel-root" class="placard">
   <span class="placard-title">Playback diaphragm</span>
-  <p class="placard-body">Playback diaphragms used a finer, more flexible point. They followed the groove and let the wax speak without re-cutting it.</p>
+  <p class="placard-body">Snap the playback diaphragm onto the mount so a lighter stylus rests against the groove and follows it without re-cutting, unlike the hard stylus used for recording.</p>
 </div>

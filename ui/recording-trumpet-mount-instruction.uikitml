@@ -1,6 +1,6 @@
 <style>
   .placard {
-    width: 198px;
+    width: 210px;
     flex-direction: column;
     padding-top: 14px;
     padding-bottom: 14px;
@@ -29,5 +29,5 @@
 
 <div id="panel-root" class="placard">
   <span class="placard-title">Recording horn</span>
-  <p class="placard-body">The horn gathered sound from the room and focused it onto the diaphragm. Its wide opening is optimized to catch and concentrate sound waves down into a narrow channel to maximize mechanical force.</p>
+  <p class="placard-body">Snap the horn onto the mount — it gathers sound from the room and focuses it onto the diaphragm, because without it your voice would be too faint to cut a clear groove.</p>
 </div>

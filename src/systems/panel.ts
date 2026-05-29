@@ -81,6 +81,18 @@ const PANELS: PanelDef[] = [
     titleElementId: "interactive-panel-title",
     bodyElementId: "interactive-panel-body",
   },
+  {
+    config: "./ui/recording-indicator.json",
+    maxWidth: 0.38,
+    follow: {
+      target: "phonograph",
+      behavior: FollowBehavior.NoRotation,
+      offset: [0, 0.5, 0],
+      billboard: true,
+    },
+    showOnTaskIds: ["recording"],
+    buttonId: "recording-indicator-unused",
+  },
 ];
 
 interface PanelController {
@@ -89,6 +101,7 @@ interface PanelController {
   doc: UIKitDocument | null;
   wired: boolean;
   currentTask: Entity | null;
+  pendingContinueTask: Entity | null;
   pendingCopy: PanelCopy | null;
 }
 
@@ -110,6 +123,7 @@ export class PanelSystem extends createSystem({
       doc: null,
       wired: false,
       currentTask: null,
+      pendingContinueTask: null,
       pendingCopy: null,
     }));
 
@@ -161,7 +175,18 @@ export class PanelSystem extends createSystem({
 
       this.queries.poppedOut.subscribe("qualify", (entity) => {
         const controller = this.controllerForPanel(entity);
-        if (controller) this.teardownPanel(controller);
+        if (!controller) return;
+
+        const pending = controller.pendingContinueTask;
+        if (
+          pending?.active &&
+          !pending.hasComponent(CompletedTask)
+        ) {
+          pending.addComponent(CompletedTask);
+          controller.pendingContinueTask = null;
+        }
+
+        this.teardownPanel(controller);
       }),
     );
   }
@@ -234,9 +259,17 @@ export class PanelSystem extends createSystem({
     const button = controller.doc.getElementById(controller.def.buttonId);
     button?.addEventListener("click", () => {
       const task = controller.currentTask;
-      if (task?.active && !task.hasComponent(CompletedTask)) {
-        task.addComponent(CompletedTask);
+      if (!task?.active || task.hasComponent(CompletedTask)) return;
+
+      const taskId = task.getValue(Task, "id")!;
+      if (INFO_TASK_IDS.includes(taskId)) {
+        controller.pendingContinueTask = task;
+        controller.entity.removeComponent(PokeInteractable);
+        this.hide(controller);
+        return;
       }
+
+      task.addComponent(CompletedTask);
     });
 
     controller.wired = true;
@@ -244,6 +277,7 @@ export class PanelSystem extends createSystem({
 
   private clearTask(controller: PanelController): void {
     controller.currentTask = null;
+    controller.pendingContinueTask = null;
     controller.pendingCopy = null;
   }
 

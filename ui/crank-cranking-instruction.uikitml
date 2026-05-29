@@ -1,6 +1,6 @@
 <style>
   .placard {
-    width: 198px;
+    width: 210px;
     flex-direction: column;
     padding-top: 14px;
     padding-bottom: 14px;
@@ -29,5 +29,5 @@
 
 <div id="panel-root" class="placard">
   <span class="placard-title">Hand crank</span>
-  <p class="placard-body">A hand crank kept the cylinder turning at an even speed. Steady rotation stopped voices from warbling when the record was played back.</p>
+  <p class="placard-body">Rotate the crank several full turns to wind the spring motor, which will later drive the spindle and keep the cylinder spinning steadily while you record.</p>
 </div>

@@ -19,6 +19,7 @@ import { PhonographSystem } from "./systems/phonograph.js";
 import { CylinderSystem } from "./systems/cylinder.js";
 import { CrankSystem } from "./systems/crank.js";
 import { BrakeSystem } from "./systems/brake.js";
+import { InteractionGateSystem } from "./systems/interaction-gate.js";
 import { RecordingSystem } from "./systems/recording.js";
 
 const assets: AssetManifest = {
@@ -104,6 +105,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       .registerSystem(PlacardSystem)
       .registerSystem(PlacardTaskSystem)
       .registerSystem(PanelSystem)
+      .registerSystem(InteractionGateSystem)
       .registerSystem(WorldResetSystem)
       .registerSystem(SnapSystem)
       .registerSystem(SnapGhostSystem)

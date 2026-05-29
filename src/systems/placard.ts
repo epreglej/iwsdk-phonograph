@@ -82,7 +82,10 @@ export class PlacardSystem extends createSystem({
 
   private spawnPlacard(target: Entity): void {
     const targetObj = target.object3D;
-    if (!targetObj || this.findPlacardForTarget(target)) return;
+    if (!targetObj) return;
+
+    const existing = this.findPlacardForTarget(target);
+    if (existing) existing.dispose();
 
     const config = target.getValue(Placard, "panelConfig")!;
 

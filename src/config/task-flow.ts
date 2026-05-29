@@ -18,9 +18,9 @@ export type TaskDef =
   | { id: string; kind: "info"; copy: PanelCopy }
   | { id: string; kind: "mount"; partId: string; snapPointId: string; placard: PlacardSpec }
   | { id: string; kind: "crank"; partId: string; placard: PlacardSpec }
-  | { id: string; kind: "unmount"; partId: string }
-  | { id: string; kind: "brakeShift" }
-  | { id: string; kind: "recording" }
+  | { id: string; kind: "unmount"; partId: string; placard: PlacardSpec }
+  | { id: string; kind: "brakeShift"; partId: string; placard: PlacardSpec }
+  | { id: string; kind: "recording"; partId: string; placard: PlacardSpec }
   | { id: string; kind: "playback" };
 
 const MOUNT_PLACARD_DEFAULTS = {
@@ -30,6 +30,30 @@ const MOUNT_PLACARD_DEFAULTS = {
   autoDismissMs: 0,
 } as const;
 
+const BRAKE_PLACARD_DEFAULTS = {
+  offsetX: 0,
+  offsetY: 0.2,
+  offsetZ: 0,
+  dismissOnGrab: false,
+  dismissOnSnap: false,
+  autoDismissMs: 0,
+} as const;
+
+const BRAKE_RECORDING_PLACARD: PlacardSpec = {
+  ...BRAKE_PLACARD_DEFAULTS,
+  panelConfig: "./ui/brake-shift-instruction.json",
+};
+
+const BRAKE_RECORDING_STOP_PLACARD: PlacardSpec = {
+  ...BRAKE_PLACARD_DEFAULTS,
+  panelConfig: "./ui/brake-recording-stop-instruction.json",
+};
+
+const BRAKE_PLAYBACK_PLACARD: PlacardSpec = {
+  ...BRAKE_PLACARD_DEFAULTS,
+  panelConfig: "./ui/playback-brake-shift-instruction.json",
+};
+
 export const TASK_FLOW: TaskDef[] = [
   { id: "main_menu", kind: "menu" },
   {
@@ -37,7 +61,7 @@ export const TASK_FLOW: TaskDef[] = [
     kind: "info",
     copy: {
       title: "Recording setup",
-      body: "First we need to assemble the phonograph for recording.",
+      body: "To make a recording, the phonograph first needs to be assembled with its recording parts. Each piece — the wax cylinder, diaphragm, horn, and crank — prepares the machine to capture sound in the groove.",
     },
   },
   {
@@ -90,21 +114,39 @@ export const TASK_FLOW: TaskDef[] = [
     kind: "info",
     copy: {
       title: "Ready to record",
-      body: "The phonograph is now ready to record. Get ready to talk into the horn, then press Continue to start the countdown.",
+      body: "The machine is wound and ready. Your voice will travel through the horn and into the wax — the brake lever is what brings the recording stylus into the groove.",
     },
   },
-  { id: "brake_shift", kind: "brakeShift" },
-  { id: "recording", kind: "recording" },
+  {
+    id: "brake_shift",
+    kind: "brakeShift",
+    partId: "brake",
+    placard: BRAKE_RECORDING_PLACARD,
+  },
+  { id: "recording", kind: "recording", partId: "brake", placard: BRAKE_RECORDING_STOP_PLACARD },
   {
     id: "playback_setup_info",
     kind: "info",
     copy: {
       title: "Playback setup",
-      body: "To playback our recording we need to remove the recording parts and assemble the playback parts.",
+      body: "To hear what was recorded, the phonograph must be reconfigured for playback. The recording parts come off and lighter reproducer parts take their place.",
     },
   },
-  { id: "recording_trumpet_unmount", kind: "unmount", partId: "recording_trumpet" },
-  { id: "recording_diaphragm_unmount", kind: "unmount", partId: "recording_diaphragm" },
+  { id: "recording_trumpet_unmount", kind: "unmount", partId: "recording_trumpet", placard: {
+      ...MOUNT_PLACARD_DEFAULTS,
+      dismissOnGrab: true,
+      dismissOnSnap: false,
+      panelConfig: "./ui/recording-trumpet-unmount-instruction.json",
+      offsetZ: 0.25,
+    },
+  },
+  { id: "recording_diaphragm_unmount", kind: "unmount", partId: "recording_diaphragm", placard: {
+      ...MOUNT_PLACARD_DEFAULTS,
+      dismissOnGrab: true,
+      dismissOnSnap: false,
+      panelConfig: "./ui/recording-diaphragm-unmount-instruction.json",
+    },
+  },
   {
     id: "playback_diaphragm_mount",
     kind: "mount",
@@ -131,10 +173,15 @@ export const TASK_FLOW: TaskDef[] = [
     kind: "info",
     copy: {
       title: "Playback ready",
-      body: "Phonograph is ready to play your recording.",
+      body: "The playback reproducer is in place. Engaging the brake lets a lighter stylus trace the groove and send the sound back out through the horn.",
     },
   },
-  { id: "playback_brake_shift", kind: "brakeShift" },
+  {
+    id: "playback_brake_shift",
+    kind: "brakeShift",
+    partId: "brake",
+    placard: BRAKE_PLAYBACK_PLACARD,
+  },
   { id: "playback", kind: "playback" },
   { id: "done", kind: "menu" },
 ];
@@ -170,8 +217,15 @@ for (const task of TASK_FLOW) {
     case "crank":
       PLACARD_BY_TASK[task.id] = { partId: task.partId, placard: task.placard };
       break;
+    case "brakeShift":
+      PLACARD_BY_TASK[task.id] = { partId: task.partId, placard: task.placard };
+      break;
+    case "recording":
+      PLACARD_BY_TASK[task.id] = { partId: task.partId, placard: task.placard };
+      break;
     case "unmount":
       UNMOUNT_BY_TASK[task.id] = { partId: task.partId };
+      PLACARD_BY_TASK[task.id] = { partId: task.partId, placard: task.placard };
       break;
     case "info":
       PANEL_COPY_BY_TASK[task.id] = task.copy;
@@ -182,3 +236,16 @@ for (const task of TASK_FLOW) {
 }
 
 export const INFO_TASK_IDS = Object.keys(PANEL_COPY_BY_TASK);
+
+const INTERACTIVE_TASK_KINDS = new Set<TaskDef["kind"]>([
+  "mount",
+  "crank",
+  "unmount",
+  "brakeShift",
+  "recording",
+]);
+
+export function isInteractiveTask(taskId: string): boolean {
+  const task = TASK_FLOW.find((entry) => entry.id === taskId);
+  return task != null && INTERACTIVE_TASK_KINDS.has(task.kind);
+}

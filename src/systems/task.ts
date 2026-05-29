@@ -17,6 +17,7 @@ const TASK_SEQUENCE = [
   "playback_diaphragm_mount",
   "playback_trumpet_mount",
   "playback_ready_info",
+  "playback_brake_shift",
   "playback",
 ] as const;
 

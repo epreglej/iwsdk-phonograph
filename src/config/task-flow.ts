@@ -1,4 +1,3 @@
-/** Placard attached to a part while a mount/crank task is active. */
 export interface PlacardSpec {
   panelConfig: string;
   offsetX?: number;
@@ -31,11 +30,6 @@ const MOUNT_PLACARD_DEFAULTS = {
   autoDismissMs: 0,
 } as const;
 
-/**
- * The full ordered experience. `TaskFlowSystem` walks this list to advance;
- * every other system derives the data it needs from the maps below, so task
- * ids and per-task data live in exactly one place.
- */
 export const TASK_FLOW: TaskDef[] = [
   { id: "main_menu", kind: "menu" },
   {
@@ -147,7 +141,6 @@ export const TASK_FLOW: TaskDef[] = [
 
 export const TASK_ORDER: string[] = TASK_FLOW.map((task) => task.id);
 
-/** Next task id, wrapping `done` back to `main_menu`. */
 export function nextTaskId(currentId: string): string | undefined {
   const index = TASK_ORDER.indexOf(currentId);
   if (index < 0) return undefined;
@@ -188,7 +181,4 @@ for (const task of TASK_FLOW) {
   }
 }
 
-export const MOUNT_TASK_IDS = Object.keys(MOUNT_BY_TASK);
-export const PLACARD_TASK_IDS = Object.keys(PLACARD_BY_TASK);
-export const UNMOUNT_TASK_IDS = Object.keys(UNMOUNT_BY_TASK);
 export const INFO_TASK_IDS = Object.keys(PANEL_COPY_BY_TASK);

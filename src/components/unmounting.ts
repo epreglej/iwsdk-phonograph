@@ -5,7 +5,3 @@ export const Unmounting = createComponent("Unmounting", {
 });
 
 export const UnmountPopping = createComponent("UnmountPopping", {});
-
-export const UNMOUNT_HIGHLIGHT_COLOR: [number, number, number, number] = [
-  1, 0.12, 0.08, 0.38,
-];

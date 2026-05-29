@@ -11,9 +11,9 @@ import { Task, ActiveTask, CompletedTask } from "../components/task.js";
 import { Crank, CrankingComplete, CrankHeld } from "../components/phonograph.js";
 import { CrankRotation } from "../components/crank-rotation.js";
 import { Highlight } from "../components/highlight.js";
-import { PopIn } from "../components/animation.js";
 import { playCrankTick } from "../audio/sfx.js";
 import { firstEntity } from "../helpers/entity-query.js";
+import { popInFromZero } from "../helpers/pop.js";
 
 export class CrankSystem extends createSystem(
   {
@@ -50,9 +50,7 @@ export class CrankSystem extends createSystem(
         const crankRoot = crankEntity?.object3D;
         if (!crankEntity || !crankRoot) return;
 
-        crankRoot.scale.setScalar(0.001);
-        crankRoot.visible = true;
-        crankEntity.addComponent(PopIn);
+        popInFromZero(crankEntity);
         crankEntity
           .addComponent(OneHandGrabbable, {
             translate: false,

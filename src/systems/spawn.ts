@@ -35,7 +35,6 @@ export class SpawnSystem extends createSystem({}) {
       .addComponent(PhonographPart, { id: "phonograph" });
   }
 
-  /** Permanent highlight; root scale 0.001 so PopIn/PopOut tweens the whole ghost. */
   private spawnSnapPoints(parent: Entity): void {
     for (const layout of SNAP_POINT_LAYOUT) {
       const ghost = cloneMesh(AssetManager.getGLTF(layout.ghostAssetKey)!.scene);

@@ -13,7 +13,6 @@ import { Placard, PlacardDismissed, PlacardInstance } from "../components/placar
 import { PopIn2D, PopOut2D } from "../components/animation.js";
 import { Billboard } from "../components/billboard.js";
 import { Snapped } from "../components/snap.js";
-import { POP_OUT_MS } from "../ui/panel-lifecycle.js";
 
 export class PlacardSystem extends createSystem({
   targets: { required: [Placard], excluded: [PlacardDismissed] },
@@ -51,12 +50,12 @@ export class PlacardSystem extends createSystem({
           return;
         }
 
-        this.hidePlacard(target.index);
+        this.hidePlacard(target);
       }),
 
       this.queries.targetGrabbed.subscribe("disqualify", (target) => {
         if (target.hasComponent(PlacardDismissed)) return;
-        this.showPlacard(target.index);
+        this.showPlacard(target);
       }),
 
       this.queries.targetSnapped.subscribe("qualify", (target) => {
@@ -126,42 +125,24 @@ export class PlacardSystem extends createSystem({
     return undefined;
   }
 
-  private hidePlacard(targetIndex: number): void {
-    const placard = this.findPlacardByTargetIndex(targetIndex);
+  private hidePlacard(target: Entity): void {
+    const placard = this.findPlacardForTarget(target);
     if (!placard) return;
     placard.removeComponent(PopIn2D);
     placard.addComponent(PopOut2D);
   }
 
-  private showPlacard(targetIndex: number): void {
-    const placard = this.findPlacardByTargetIndex(targetIndex);
+  private showPlacard(target: Entity): void {
+    const placard = this.findPlacardForTarget(target);
     if (!placard?.object3D) return;
     placard.removeComponent(PopOut2D);
     placard.object3D.visible = true;
     placard.addComponent(PopIn2D);
   }
 
-  private findPlacardByTargetIndex(targetIndex: number): Entity | undefined {
-    for (const placard of this.queries.instances.entities) {
-      const target = placard.getValue(PlacardInstance, "target") as Entity | null;
-      if (target?.index === targetIndex) return placard;
-    }
-    return undefined;
-  }
-
   private dismissPlacard(target: Entity): void {
     if (target.hasComponent(PlacardDismissed)) return;
-
-    this.clearDismissTimer(target.index);
     target.addComponent(PlacardDismissed);
-
-    const placard = this.findPlacardForTarget(target);
-    if (placard) {
-      placard.removeComponent(PopIn2D);
-      placard.addComponent(PopOut2D);
-      const toDispose = placard;
-      setTimeout(() => toDispose.dispose(), POP_OUT_MS);
-    }
   }
 
   private destroyPlacardForTarget(target: Entity): void {

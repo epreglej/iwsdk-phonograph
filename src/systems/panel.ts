@@ -12,12 +12,13 @@ import {
 import { Task, ActiveTask, CompletedTask } from "../components/task.js";
 import { Phonograph } from "../components/phonograph.js";
 import { Billboard } from "../components/billboard.js";
+import { PopOut2DDone } from "../components/animation.js";
 import {
   INFO_TASK_IDS,
   PANEL_COPY_BY_TASK,
   type PanelCopy,
 } from "../config/task-flow.js";
-import { hidePanelWithPopOut, revealPanel } from "../ui/panel-lifecycle.js";
+import { hidePanel, revealPanel } from "../ui/panel-lifecycle.js";
 import { setPanelElementText } from "../ui/panel-text.js";
 import { createSpatialPanel } from "../ui/spatial-panel.js";
 import { firstEntity } from "../helpers/entity-query.js";
@@ -89,13 +90,13 @@ interface PanelController {
   wired: boolean;
   currentTask: Entity | null;
   pendingCopy: PanelCopy | null;
-  hideTimer: ReturnType<typeof setTimeout> | null;
 }
 
 export class PanelSystem extends createSystem({
   activeTask: { required: [Task, ActiveTask], excluded: [CompletedTask] },
   phonograph: { required: [Phonograph] },
   panelDocs: { required: [PanelUI, PanelDocument] },
+  poppedOut: { required: [PanelUI, PopOut2DDone] },
 }) {
   private controllers: PanelController[] = [];
 
@@ -110,7 +111,6 @@ export class PanelSystem extends createSystem({
       wired: false,
       currentTask: null,
       pendingCopy: null,
-      hideTimer: null,
     }));
 
     this.cleanupFuncs.push(
@@ -158,6 +158,11 @@ export class PanelSystem extends createSystem({
           }
         }
       }),
+
+      this.queries.poppedOut.subscribe("qualify", (entity) => {
+        const controller = this.controllerForPanel(entity);
+        if (controller) this.teardownPanel(controller);
+      }),
     );
   }
 
@@ -168,11 +173,6 @@ export class PanelSystem extends createSystem({
   ): void {
     const targetObj = this.followTarget(controller.def.follow.target);
     if (!targetObj) return;
-
-    if (controller.hideTimer !== null) {
-      clearTimeout(controller.hideTimer);
-      controller.hideTimer = null;
-    }
 
     controller.currentTask = taskEntity;
     controller.pendingCopy = controller.def.titleElementId
@@ -199,21 +199,24 @@ export class PanelSystem extends createSystem({
   }
 
   private hide(controller: PanelController): void {
-    if (controller.hideTimer !== null) {
-      clearTimeout(controller.hideTimer);
-      controller.hideTimer = null;
-    }
+    const entity = controller.entity;
+    if (!entity.active) return;
 
-    controller.hideTimer = hidePanelWithPopOut(controller.entity, () => {
-      controller.hideTimer = null;
-      if (!controller.entity.active) return;
-      controller.entity
-        .removeComponent(PokeInteractable)
-        .removeComponent(Follower);
-      if (controller.def.follow.billboard) {
-        controller.entity.removeComponent(Billboard);
-      }
-    });
+    if (entity.object3D?.visible) {
+      hidePanel(entity);
+    } else {
+      this.teardownPanel(controller);
+    }
+  }
+
+  private teardownPanel(controller: PanelController): void {
+    const entity = controller.entity;
+    if (!entity.active) return;
+    if (entity.object3D) entity.object3D.visible = false;
+    entity.removeComponent(PokeInteractable).removeComponent(Follower);
+    if (controller.def.follow.billboard) {
+      entity.removeComponent(Billboard);
+    }
   }
 
   private applyCopy(controller: PanelController): void {

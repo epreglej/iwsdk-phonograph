@@ -7,8 +7,8 @@ import {
 } from "@iwsdk/core";
 import { Task, ActiveTask, CompletedTask } from "../components/task.js";
 import { Brake, BrakeReturning, BrakeShifted } from "../components/phonograph.js";
-import { SnapAnimation } from "../components/animation.js";
-import { Highlight } from "../components/highlight.js";
+import { SnapAnimation, SnapDone } from "../components/animation.js";
+import { Highlight, STOP_HIGHLIGHT_COLOR } from "../components/highlight.js";
 import { stopActiveRecording } from "../audio/recording-store.js";
 import { forceReleaseGrab } from "../helpers/grab-release.js";
 import { playSnap } from "../audio/sfx.js";
@@ -16,10 +16,6 @@ import { firstEntity } from "../helpers/entity-query.js";
 import { BRAKE_HOME, BRAKE_SHIFTED } from "../config/phonograph-layout.js";
 
 const BRAKE_SHIFT_DURATION_MS = 300;
-
-export const BRAKE_RECORDING_STOP_HIGHLIGHT: [number, number, number, number] = [
-  1, 0.12, 0.08, 0.38,
-];
 
 export class BrakeSystem extends createSystem({
   activeBrakeShiftTask: {
@@ -51,8 +47,8 @@ export class BrakeSystem extends createSystem({
     required: [Brake, Grabbed],
     excluded: [SnapAnimation, BrakeReturning],
   },
-  brakeShifting: { required: [Brake, SnapAnimation, BrakeShifted] },
-  brakeReturningHome: { required: [Brake, SnapAnimation, BrakeReturning] },
+  brakeShiftDone: { required: [Brake, SnapDone, BrakeShifted] },
+  brakeReturnDone: { required: [Brake, SnapDone, BrakeReturning] },
 }) {
   init() {
     this.cleanupFuncs.push(
@@ -106,14 +102,12 @@ export class BrakeSystem extends createSystem({
         this.stopRecordingWithBrake(brake);
       }),
 
-      this.queries.brakeShifting.subscribe("disqualify", (brake) => {
-        if (!brake.hasComponent(BrakeShifted)) return;
+      this.queries.brakeShiftDone.subscribe("qualify", (brake) => {
         if (!this.isManualBrakeShiftActive()) return;
         this.completeBrakeShiftTask(brake);
       }),
 
-      this.queries.brakeReturningHome.subscribe("disqualify", (brake) => {
-        if (!brake.hasComponent(BrakeReturning)) return;
+      this.queries.brakeReturnDone.subscribe("qualify", (brake) => {
         this.finishReturnHome(brake);
       }),
     );
@@ -138,14 +132,11 @@ export class BrakeSystem extends createSystem({
     brake.object3D.position.set(BRAKE_HOME.x, BRAKE_HOME.y, BRAKE_HOME.z);
     brake.object3D.visible = true;
 
-    if (brake.hasComponent(Highlight)) {
-      brake.removeComponent(Highlight);
-    }
-    if (brake.hasComponent(OneHandGrabbable)) {
-      brake.removeComponent(OneHandGrabbable);
-    }
-
-    brake.addComponent(OneHandGrabbable).addComponent(Highlight);
+    brake
+      .removeComponent(Highlight)
+      .removeComponent(OneHandGrabbable)
+      .addComponent(OneHandGrabbable)
+      .addComponent(Highlight);
   }
 
   private onManualBrakeShiftDisqualify(): void {
@@ -179,18 +170,12 @@ export class BrakeSystem extends createSystem({
     obj.position.set(BRAKE_SHIFTED.x, BRAKE_SHIFTED.y, BRAKE_SHIFTED.z);
     obj.visible = true;
 
-    brake.removeComponent(Grabbed);
-
-    if (brake.hasComponent(Highlight)) {
-      brake.removeComponent(Highlight);
-    }
-    if (brake.hasComponent(OneHandGrabbable)) {
-      brake.removeComponent(OneHandGrabbable);
-    }
-
     brake
+      .removeComponent(Grabbed)
+      .removeComponent(Highlight)
+      .removeComponent(OneHandGrabbable)
       .addComponent(OneHandGrabbable)
-      .addComponent(Highlight, { color: BRAKE_RECORDING_STOP_HIGHLIGHT });
+      .addComponent(Highlight, { color: STOP_HIGHLIGHT_COLOR });
   }
 
   private setBrakeAtShifted(brake: Entity): void {

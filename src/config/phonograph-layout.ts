@@ -11,13 +11,10 @@ export const BRAKE_SHIFTED = {
   z: BRAKE_HOME.z,
 };
 
-/** Behaviour tag a part needs in addition to its `PhonographPart` id. */
 export type PartBehaviorTag = "cylinder" | "crank" | "brake";
 
 export interface PartLayout {
-  /** `PhonographPart` id and lookup key used across systems. */
   id: string;
-  /** `AssetManager.getGLTF` key. */
   assetKey: string;
   position: Vec3;
   quaternion: Quat;
@@ -26,15 +23,12 @@ export interface PartLayout {
 }
 
 export interface SnapPointLayout {
-  /** `SnapPoint` id. */
   id: string;
-  /** Mesh cloned into the ghost preview. */
   ghostAssetKey: string;
   position: Vec3;
   quaternion: Quat;
 }
 
-/** Single source of truth for every swappable / mechanism part transform. */
 export const PART_LAYOUT: PartLayout[] = [
   {
     id: "cylinder",
@@ -90,7 +84,6 @@ export const PART_LAYOUT: PartLayout[] = [
   },
 ];
 
-/** Snap-point ghosts, parented under the phonograph root. */
 export const SNAP_POINT_LAYOUT: SnapPointLayout[] = [
   {
     id: "cylinder_snap_point",

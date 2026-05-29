@@ -2,11 +2,11 @@ import { createSystem, Entity, OneHandGrabbable } from "@iwsdk/core";
 import { Task, ActiveTask, CompletedTask } from "../components/task.js";
 import { PhonographPart } from "../components/phonograph-part.js";
 import { MountTaskBinding } from "../components/mount-task-binding.js";
-import { PopIn } from "../components/animation.js";
 import { Highlight } from "../components/highlight.js";
 import { Snappable, SnapGhost } from "../components/snap.js";
 import { MOUNT_BY_TASK } from "../config/task-flow.js";
 import { getPart } from "../helpers/parts.js";
+import { popInFromZero } from "../helpers/pop.js";
 
 export class PartMountSystem extends createSystem({
   activeTask: {
@@ -39,9 +39,7 @@ export class PartMountSystem extends createSystem({
     snapPointId: string,
     taskId: string,
   ): void {
-    part.object3D!.scale.setScalar(0.001);
-    part.object3D!.visible = true;
-    part.addComponent(PopIn);
+    popInFromZero(part);
     part
       .addComponent(OneHandGrabbable)
       .addComponent(Snappable, { snapPointId })

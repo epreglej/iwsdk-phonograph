@@ -1,64 +1,60 @@
-import { createSystem, Grabbed } from "@iwsdk/core";
+import { createSystem, Entity, Grabbed } from "@iwsdk/core";
 import { Snappable, SnapGhost, SnapPoint, Snapped } from "../components/snap.js";
-import { PopIn, PopOut } from "../components/animation.js";
-import { delay } from "../helpers/delay.js";
+import { PopIn, PopOut, PopOutDone } from "../components/animation.js";
 
 export class SnapGhostSystem extends createSystem({
   grabbedWithSnapGhost: {
     required: [Snappable, SnapGhost, Grabbed],
     excluded: [Snapped],
   },
+  snappedWithGhost: { required: [Snappable, SnapGhost, Snapped] },
+  ghostPoppedOut: { required: [SnapPoint, PopOutDone] },
   snapPoints: { required: [SnapPoint] },
 }) {
-  private hideVersionBySnapPoint = new Map<number, number>();
-
-  private bumpHideVersion(snapPointIndex: number): number {
-    const next = (this.hideVersionBySnapPoint.get(snapPointIndex) ?? 0) + 1;
-    this.hideVersionBySnapPoint.set(snapPointIndex, next);
-    return next;
-  }
-
   init() {
     this.cleanupFuncs.push(
       this.queries.grabbedWithSnapGhost.subscribe("qualify", (entity) => {
-        const targetId = entity.getValue(Snappable, "snapPointId")!;
-        if (!targetId) return;
-
-        for (const sp of this.queries.snapPoints.entities) {
-          if (sp.getValue(SnapPoint, "id") !== targetId) continue;
-
-          this.bumpHideVersion(sp.index);
-
-          sp.removeComponent(PopOut);
-          sp.object3D!.visible = true;
-          sp.addComponent(PopIn);
-          break;
-        }
+        const sp = this.snapPointFor(entity);
+        if (!sp?.object3D) return;
+        sp.removeComponent(PopOut);
+        sp.object3D.visible = true;
+        sp.addComponent(PopIn);
       }),
 
-      this.queries.grabbedWithSnapGhost.subscribe(
-        "disqualify",
-        async (entity) => {
-          const targetId = entity.getValue(Snappable, "snapPointId")!;
-          if (!targetId) return;
+      this.queries.grabbedWithSnapGhost.subscribe("disqualify", (entity) => {
+        // A part that snapped hides its ghost instantly (see snappedWithGhost),
+        // so only pop out when the part was released without snapping.
+        if (entity.hasComponent(Snapped)) return;
+        const sp = this.snapPointFor(entity);
+        if (!sp) return;
+        sp.removeComponent(PopIn);
+        sp.addComponent(PopOut);
+      }),
 
-          for (const sp of this.queries.snapPoints.entities) {
-            if (sp.getValue(SnapPoint, "id") !== targetId) continue;
+      // Part snapped into place: drop the ghost immediately, cancelling any
+      // pop-out the release may have started.
+      this.queries.snappedWithGhost.subscribe("qualify", (entity) => {
+        const sp = this.snapPointFor(entity);
+        if (!sp?.object3D) return;
+        sp.removeComponent(PopIn).removeComponent(PopOut);
+        sp.object3D.visible = false;
+      }),
 
-            const hideVersion = this.bumpHideVersion(sp.index);
-
-            sp.removeComponent(PopIn);
-            sp.addComponent(PopOut);
-
-            await delay(560);
-            const currentVersion = this.hideVersionBySnapPoint.get(sp.index);
-            if (sp.active && currentVersion === hideVersion) {
-              sp.object3D!.visible = false;
-            }
-            break;
-          }
-        },
-      ),
+      // The pop-out ran to completion: hide the ghost. If the part is re-grabbed
+      // mid-pop-out, PopOut is removed before it finishes, so no PopOutDone is
+      // emitted and the ghost simply stays visible — no version tracking needed.
+      this.queries.ghostPoppedOut.subscribe("qualify", (sp) => {
+        if (sp.object3D) sp.object3D.visible = false;
+      }),
     );
+  }
+
+  private snapPointFor(entity: Entity): Entity | undefined {
+    const targetId = entity.getValue(Snappable, "snapPointId");
+    if (!targetId) return undefined;
+    for (const sp of this.queries.snapPoints.entities) {
+      if (sp.getValue(SnapPoint, "id") === targetId) return sp;
+    }
+    return undefined;
   }
 }

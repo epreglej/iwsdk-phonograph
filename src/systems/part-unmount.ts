@@ -6,14 +6,10 @@ import {
 } from "@iwsdk/core";
 import { Task, ActiveTask, CompletedTask } from "../components/task.js";
 import { PhonographPart } from "../components/phonograph-part.js";
-import { PopOut, SnapAnimation } from "../components/animation.js";
-import { Highlight } from "../components/highlight.js";
+import { PopOut, PopOutDone, SnapAnimation } from "../components/animation.js";
+import { Highlight, STOP_HIGHLIGHT_COLOR } from "../components/highlight.js";
 import { Snappable, SnapGhost, Snapped } from "../components/snap.js";
-import {
-  Unmounting,
-  UnmountPopping,
-  UNMOUNT_HIGHLIGHT_COLOR,
-} from "../components/unmounting.js";
+import { Unmounting, UnmountPopping } from "../components/unmounting.js";
 import { UNMOUNT_BY_TASK } from "../config/task-flow.js";
 import { forceReleaseGrab } from "../helpers/grab-release.js";
 import { getPart } from "../helpers/parts.js";
@@ -29,7 +25,7 @@ export class PartUnmountSystem extends createSystem({
     required: [Unmounting, Grabbed],
     excluded: [PopOut, UnmountPopping],
   },
-  unmountPopOut: { required: [Unmounting, PopOut] },
+  unmountDone: { required: [Unmounting, PopOutDone] },
 }) {
   init() {
     this.cleanupFuncs.push(
@@ -51,7 +47,7 @@ export class PartUnmountSystem extends createSystem({
         this.finishUnmount(part);
       }),
 
-      this.queries.unmountPopOut.subscribe("disqualify", (part) => {
+      this.queries.unmountDone.subscribe("qualify", (part) => {
         this.completeUnmount(part);
       }),
     );
@@ -71,7 +67,7 @@ export class PartUnmountSystem extends createSystem({
       .removeComponent(SnapGhost)
       .removeComponent(Snappable)
       .addComponent(OneHandGrabbable)
-      .addComponent(Highlight, { color: UNMOUNT_HIGHLIGHT_COLOR });
+      .addComponent(Highlight, { color: STOP_HIGHLIGHT_COLOR });
   }
 
   private finishUnmount(part: Entity): void {

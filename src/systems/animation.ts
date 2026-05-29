@@ -12,13 +12,16 @@ import {
   PopIn2D,
   PopOut,
   PopOut2D,
+  PopInDone,
+  PopOutDone,
+  PopOut2DDone,
+  SnapDone,
   Spin,
   SnapAnimation,
+  POP_IN_MS,
+  POP_OUT_MS,
+  SPIN_PERIOD_MS,
 } from "../components/animation.js";
-
-const POP_IN_MS = 700;
-const POP_OUT_MS = 550;
-const SPIN_PERIOD_MS = 1000;
 
 const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
 const easeInCubic = (t: number) => t * t * t;
@@ -34,11 +37,21 @@ type PopComponent =
   | typeof PopIn2D
   | typeof PopOut2D;
 
+type DoneTag =
+  | typeof PopInDone
+  | typeof PopOutDone
+  | typeof PopOut2DDone
+  | typeof SnapDone;
+
 export class AnimationSystem extends createSystem({
   popIn: { required: [PopIn] },
   popIn2D: { required: [PopIn2D] },
   popOut: { required: [PopOut] },
   popOut2D: { required: [PopOut2D] },
+  popInDone: { required: [PopInDone] },
+  popOutDone: { required: [PopOutDone] },
+  popOut2DDone: { required: [PopOut2DDone] },
+  snapDone: { required: [SnapDone] },
   spin: { required: [Spin] },
   snapAnimation: { required: [SnapAnimation] },
 }) {
@@ -47,6 +60,7 @@ export class AnimationSystem extends createSystem({
   private fromQuat!: Quaternion;
   private toQuat!: Quaternion;
   private finished: Entity[] = [];
+  private doneBuffer: Entity[] = [];
 
   init() {
     this.fromPos = new Vector3();
@@ -71,14 +85,25 @@ export class AnimationSystem extends createSystem({
   }
 
   update(delta: number) {
+    this.sweepDone(this.queries.popInDone.entities, PopInDone);
+    this.sweepDone(this.queries.popOutDone.entities, PopOutDone);
+    this.sweepDone(this.queries.popOut2DDone.entities, PopOut2DDone);
+    this.sweepDone(this.queries.snapDone.entities, SnapDone);
+
     const dtMs = delta * 1000;
 
-    this.advancePop3D(this.queries.popIn.entities, PopIn, 1, POP_IN_MS, easeOutCubic, dtMs);
-    this.advancePop3D(this.queries.popOut.entities, PopOut, 0.001, POP_OUT_MS, easeInCubic, dtMs);
+    this.advancePop3D(this.queries.popIn.entities, PopIn, 1, POP_IN_MS, easeOutCubic, dtMs, PopInDone);
+    this.advancePop3D(this.queries.popOut.entities, PopOut, 0.001, POP_OUT_MS, easeInCubic, dtMs, PopOutDone);
     this.advancePop2D(this.queries.popIn2D.entities, PopIn2D, 1, POP_IN_MS, easeOutCubic, dtMs);
-    this.advancePop2D(this.queries.popOut2D.entities, PopOut2D, 0.001, POP_OUT_MS, easeInCubic, dtMs);
+    this.advancePop2D(this.queries.popOut2D.entities, PopOut2D, 0.001, POP_OUT_MS, easeInCubic, dtMs, PopOut2DDone);
     this.advanceSpin(dtMs);
     this.advanceSnap(dtMs);
+  }
+
+  private sweepDone(entities: Iterable<Entity>, tag: DoneTag): void {
+    this.doneBuffer.length = 0;
+    for (const entity of entities) this.doneBuffer.push(entity);
+    for (const entity of this.doneBuffer) entity.removeComponent(tag);
   }
 
   private advancePop3D(
@@ -88,6 +113,7 @@ export class AnimationSystem extends createSystem({
     durationMs: number,
     easing: (t: number) => number,
     dtMs: number,
+    doneTag?: DoneTag,
   ): void {
     this.finished.length = 0;
     for (const entity of entities) {
@@ -107,7 +133,7 @@ export class AnimationSystem extends createSystem({
       if (t >= 1) this.finished.push(entity);
       else entity.setValue(component, "elapsed", elapsed);
     }
-    for (const entity of this.finished) entity.removeComponent(component);
+    this.finishPop(component, doneTag);
   }
 
   private advancePop2D(
@@ -117,6 +143,7 @@ export class AnimationSystem extends createSystem({
     durationMs: number,
     easing: (t: number) => number,
     dtMs: number,
+    doneTag?: DoneTag,
   ): void {
     this.finished.length = 0;
     for (const entity of entities) {
@@ -136,7 +163,14 @@ export class AnimationSystem extends createSystem({
       if (t >= 1) this.finished.push(entity);
       else entity.setValue(component, "elapsed", elapsed);
     }
-    for (const entity of this.finished) entity.removeComponent(component);
+    this.finishPop(component, doneTag);
+  }
+
+  private finishPop(component: PopComponent, doneTag?: DoneTag): void {
+    for (const entity of this.finished) {
+      entity.removeComponent(component);
+      if (doneTag) entity.addComponent(doneTag);
+    }
   }
 
   private advanceSpin(dtMs: number): void {
@@ -203,7 +237,10 @@ export class AnimationSystem extends createSystem({
         entity.setValue(SnapAnimation, "elapsed", elapsed);
       }
     }
-    for (const entity of this.finished) entity.removeComponent(SnapAnimation);
+    for (const entity of this.finished) {
+      entity.removeComponent(SnapAnimation);
+      entity.addComponent(SnapDone);
+    }
   }
 
   private panelRoot(entity: Entity): UIKit.Component | undefined {

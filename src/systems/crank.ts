@@ -44,13 +44,11 @@ export class CrankSystem extends createSystem(
   private _gripLocalPos = new Vector3();
 
   init() {
-    const crankEntity = firstEntity(this.queries.crank.entities);
-    if (!crankEntity) return;
-
     this.cleanupFuncs.push(
       this.queries.activeCrankCrankingTask.subscribe("qualify", () => {
-        const crankRoot = crankEntity.object3D;
-        if (!crankRoot) return;
+        const crankEntity = firstEntity(this.queries.crank.entities);
+        const crankRoot = crankEntity?.object3D;
+        if (!crankEntity || !crankRoot) return;
 
         crankRoot.scale.setScalar(0.001);
         crankRoot.visible = true;
@@ -75,8 +73,9 @@ export class CrankSystem extends createSystem(
       }),
 
       this.queries.activeCrankCrankingTask.subscribe("disqualify", () => {
+        const crankEntity = firstEntity(this.queries.crank.entities);
         crankEntity
-          .removeComponent(CrankHeld)
+          ?.removeComponent(CrankHeld)
           .removeComponent(CrankRotation)
           .removeComponent(OneHandGrabbable)
           .removeComponent(Highlight);

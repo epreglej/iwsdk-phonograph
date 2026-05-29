@@ -7,11 +7,13 @@ import {
   PanelDocument,
   PanelUI,
   UIKit,
+  UIKitDocument,
 } from "@iwsdk/core";
 import { Placard, PlacardDismissed, PlacardInstance } from "../components/placard.js";
 import { PopIn2D, PopOut2D } from "../components/animation.js";
 import { Billboard } from "../components/billboard.js";
 import { Snapped } from "../components/snap.js";
+import { POP_OUT_MS } from "../ui/panel-lifecycle.js";
 
 export class PlacardSystem extends createSystem({
   targets: { required: [Placard], excluded: [PlacardDismissed] },
@@ -20,7 +22,6 @@ export class PlacardSystem extends createSystem({
   targetGrabbed: { required: [Placard, Grabbed] },
   targetSnapped: { required: [Placard, Snapped] },
 }) {
-  private static readonly MAX_DOC_READY_RETRIES = 12;
   private dismissTimers = new Map<number, ReturnType<typeof setTimeout>>();
 
   init() {
@@ -39,7 +40,7 @@ export class PlacardSystem extends createSystem({
       }),
 
       this.queries.instanceDocs.subscribe("qualify", (placard) => {
-        this.triggerPopInWhenDocumentReady(placard, 0);
+        this.popInPlacard(placard);
       }),
 
       this.queries.targetGrabbed.subscribe("qualify", (target) => {
@@ -65,23 +66,15 @@ export class PlacardSystem extends createSystem({
     );
   }
 
-  private triggerPopInWhenDocumentReady(placard: Entity, attempt: number): void {
+  private popInPlacard(placard: Entity): void {
     if (!placard.active) return;
 
-    const doc = placard.getValue(PanelDocument, "document");
-    const root = (doc as any)?.getElementById?.("panel-root") as
-      | UIKit.Component
-      | undefined;
+    const doc = placard.getValue(PanelDocument, "document") as
+      | UIKitDocument
+      | null;
+    const root = doc?.getElementById("panel-root") as UIKit.Component | undefined;
+    if (root) root.scale.setScalar(0.001);
 
-    if (!root) {
-      if (attempt >= PlacardSystem.MAX_DOC_READY_RETRIES) return;
-      setTimeout(() => {
-        this.triggerPopInWhenDocumentReady(placard, attempt + 1);
-      }, 16);
-      return;
-    }
-
-    root.scale.setScalar(0.001);
     placard.removeComponent(PopOut2D);
     if (!placard.hasComponent(PopIn2D)) {
       placard.addComponent(PopIn2D);
@@ -167,7 +160,7 @@ export class PlacardSystem extends createSystem({
       placard.removeComponent(PopIn2D);
       placard.addComponent(PopOut2D);
       const toDispose = placard;
-      setTimeout(() => toDispose.dispose(), 600);
+      setTimeout(() => toDispose.dispose(), POP_OUT_MS);
     }
   }
 

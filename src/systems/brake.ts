@@ -13,16 +13,9 @@ import { stopActiveRecording } from "../audio/recording-store.js";
 import { forceReleaseGrab } from "../helpers/grab-release.js";
 import { playSnap } from "../audio/sfx.js";
 import { firstEntity } from "../helpers/entity-query.js";
+import { BRAKE_HOME, BRAKE_SHIFTED } from "../config/phonograph-layout.js";
 
-export const BRAKE_HOME = { x: -0.1, y: 0.155, z: 0.0725 };
-const BRAKE_SHIFT_X = 0.035;
 const BRAKE_SHIFT_DURATION_MS = 300;
-
-const BRAKE_SHIFTED = {
-  x: BRAKE_HOME.x + BRAKE_SHIFT_X,
-  y: BRAKE_HOME.y,
-  z: BRAKE_HOME.z,
-};
 
 export const BRAKE_RECORDING_STOP_HIGHLIGHT: [number, number, number, number] = [
   1, 0.12, 0.08, 0.38,

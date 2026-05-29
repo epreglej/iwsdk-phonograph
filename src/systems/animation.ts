@@ -1,5 +1,6 @@
 import {
   createSystem,
+  Entity,
   PanelDocument,
   Quaternion,
   UIKit,
@@ -15,79 +16,23 @@ import {
   SnapAnimation,
 } from "../components/animation.js";
 
-type EasingFn = (t: number) => number;
+const POP_IN_MS = 700;
+const POP_OUT_MS = 550;
+const SPIN_PERIOD_MS = 1000;
 
-const Easing = {
-  Linear: {
-    None: (t: number) => t,
-  },
-  Cubic: {
-    In: (t: number) => t * t * t,
-    Out: (t: number) => 1 - (1 - t) ** 3,
-  },
-  Back: {
-    Out: (t: number) => {
-      const c1 = 1.70158;
-      const c3 = c1 + 1;
-      return 1 + c3 * (t - 1) ** 3 + c1 * (t - 1) ** 2;
-    },
-  },
-} as const;
+const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
+const easeInCubic = (t: number) => t * t * t;
+const easeOutBack = (t: number) => {
+  const c1 = 1.70158;
+  const c3 = c1 + 1;
+  return 1 + c3 * (t - 1) ** 3 + c1 * (t - 1) ** 2;
+};
 
-type NumericProps = Record<string, number>;
-
-interface ActiveTween {
-  from: NumericProps;
-  to: NumericProps;
-  values: NumericProps;
-  durationMs: number;
-  elapsedMs: number;
-  easing: EasingFn;
-  repeat: boolean;
-  stopped: boolean;
-  onUpdate: (values: NumericProps) => void;
-  onComplete?: () => void;
-}
-
-function lerpProps(
-  from: NumericProps,
-  to: NumericProps,
-  t: number,
-  out: NumericProps,
-) {
-  for (const key of Object.keys(from)) {
-    out[key] = from[key] + (to[key] - from[key]) * t;
-  }
-}
-
-function startTween(
-  tweens: ActiveTween[],
-  from: NumericProps,
-  to: NumericProps,
-  durationMs: number,
-  easing: EasingFn,
-  onUpdate: (values: NumericProps) => void,
-  options?: { onComplete?: () => void; repeat?: boolean },
-): ActiveTween {
-  const tween: ActiveTween = {
-    from: { ...from },
-    to: { ...to },
-    values: { ...from },
-    durationMs,
-    elapsedMs: 0,
-    easing,
-    repeat: options?.repeat ?? false,
-    stopped: false,
-    onUpdate,
-    onComplete: options?.onComplete,
-  };
-  tweens.push(tween);
-  return tween;
-}
-
-function stopTween(tween: ActiveTween) {
-  tween.stopped = true;
-}
+type PopComponent =
+  | typeof PopIn
+  | typeof PopOut
+  | typeof PopIn2D
+  | typeof PopOut2D;
 
 export class AnimationSystem extends createSystem({
   popIn: { required: [PopIn] },
@@ -97,264 +42,174 @@ export class AnimationSystem extends createSystem({
   spin: { required: [Spin] },
   snapAnimation: { required: [SnapAnimation] },
 }) {
-  private tweens: ActiveTween[] = [];
-  private spinTweens = new Map<number, ActiveTween>();
-  private pop3DTweens = new Map<number, ActiveTween>();
-  private pop2DTweens = new Map<number, ActiveTween>();
-  private snapTweens = new Map<number, ActiveTween>();
-
-  private stopEntityTween(
-    tweensByEntity: Map<number, ActiveTween>,
-    entityIndex: number,
-  ) {
-    const tween = tweensByEntity.get(entityIndex);
-    if (tween) {
-      stopTween(tween);
-      tweensByEntity.delete(entityIndex);
-    }
-  }
+  private fromPos!: Vector3;
+  private toPos!: Vector3;
+  private fromQuat!: Quaternion;
+  private toQuat!: Quaternion;
+  private finished: Entity[] = [];
 
   init() {
-    this.queries.popIn.subscribe("qualify", (entity) => {
-      const obj = entity.object3D!;
-      if (entity.hasComponent(PopOut)) {
-        entity.removeComponent(PopOut);
-      }
-      this.stopEntityTween(this.pop3DTweens, entity.index);
+    this.fromPos = new Vector3();
+    this.toPos = new Vector3();
+    this.fromQuat = new Quaternion();
+    this.toQuat = new Quaternion();
 
-      const fromScale = obj.scale.x;
-      const tween = startTween(
-        this.tweens,
-        { scale: fromScale },
-        { scale: 1 },
-        700,
-        Easing.Cubic.Out,
-        ({ scale }) => {
-          if (entity.active) obj.scale.setScalar(scale);
-        },
-        {
-          onComplete: () => {
-            if (!entity.active) return;
-            if (this.pop3DTweens.get(entity.index) !== tween) return;
-            this.pop3DTweens.delete(entity.index);
-            entity.removeComponent(PopIn);
-          },
-        },
-      );
-      this.pop3DTweens.set(entity.index, tween);
-    });
-
-    this.queries.popOut.subscribe("qualify", (entity) => {
-      const obj = entity.object3D!;
-      if (entity.hasComponent(PopIn)) {
-        entity.removeComponent(PopIn);
-      }
-      this.stopEntityTween(this.pop3DTweens, entity.index);
-
-      const fromScale = obj.scale.x;
-      const tween = startTween(
-        this.tweens,
-        { scale: fromScale },
-        { scale: 0.001 },
-        550,
-        Easing.Cubic.In,
-        ({ scale }) => {
-          if (entity.active) obj.scale.setScalar(scale);
-        },
-        {
-          onComplete: () => {
-            if (!entity.active) return;
-            if (this.pop3DTweens.get(entity.index) !== tween) return;
-            this.pop3DTweens.delete(entity.index);
-            entity.removeComponent(PopOut);
-          },
-        },
-      );
-      this.pop3DTweens.set(entity.index, tween);
-    });
-
-    this.queries.popIn2D.subscribe("qualify", (entity) => {
-      const document = entity.getValue(
-        PanelDocument,
-        "document",
-      ) as UIKitDocument;
-      if (!document) return;
-      const rootElement = document.getElementById(
-        "panel-root",
-      ) as UIKit.Component;
-      if (!rootElement) return;
-      if (entity.hasComponent(PopOut2D)) {
-        entity.removeComponent(PopOut2D);
-      }
-      this.stopEntityTween(this.pop2DTweens, entity.index);
-
-      const fromScale = rootElement.scale.x;
-      const tween = startTween(
-        this.tweens,
-        { scale: fromScale },
-        { scale: 1 },
-        700,
-        Easing.Cubic.Out,
-        ({ scale }) => {
-          if (entity.active) rootElement.scale.setScalar(scale);
-        },
-        {
-          onComplete: () => {
-            if (!entity.active) return;
-            if (this.pop2DTweens.get(entity.index) !== tween) return;
-            this.pop2DTweens.delete(entity.index);
-            entity.removeComponent(PopIn2D);
-          },
-        },
-      );
-      this.pop2DTweens.set(entity.index, tween);
-    });
-
-    this.queries.popOut2D.subscribe("qualify", (entity) => {
-      const document = entity.getValue(
-        PanelDocument,
-        "document",
-      ) as UIKitDocument;
-      if (!document) return;
-      const rootElement = document.getElementById(
-        "panel-root",
-      ) as UIKit.Component;
-      if (!rootElement) return;
-      if (entity.hasComponent(PopIn2D)) {
-        entity.removeComponent(PopIn2D);
-      }
-      this.stopEntityTween(this.pop2DTweens, entity.index);
-
-      const fromScale = rootElement.scale.x;
-      const tween = startTween(
-        this.tweens,
-        { scale: fromScale },
-        { scale: 0.001 },
-        550,
-        Easing.Cubic.In,
-        ({ scale }) => {
-          if (entity.active) rootElement.scale.setScalar(scale);
-        },
-        {
-          onComplete: () => {
-            if (!entity.active) return;
-            if (this.pop2DTweens.get(entity.index) !== tween) return;
-            this.pop2DTweens.delete(entity.index);
-            entity.removeComponent(PopOut2D);
-          },
-        },
-      );
-      this.pop2DTweens.set(entity.index, tween);
-    });
-
-    this.queries.snapAnimation.subscribe("qualify", (entity) => {
-      const obj = entity.object3D!;
-      this.stopEntityTween(this.snapTweens, entity.index);
-      const fromPos = obj.position.clone();
-      const fromQuat = obj.quaternion.clone();
-      const toPos = new Vector3(
-        entity.getValue(SnapAnimation, "targetX")!,
-        entity.getValue(SnapAnimation, "targetY")!,
-        entity.getValue(SnapAnimation, "targetZ")!,
-      );
-      const toQuat = new Quaternion(
-        entity.getValue(SnapAnimation, "targetQX")!,
-        entity.getValue(SnapAnimation, "targetQY")!,
-        entity.getValue(SnapAnimation, "targetQZ")!,
-        entity.getValue(SnapAnimation, "targetQW")!,
-      );
-      const tween = startTween(
-        this.tweens,
-        { t: 0 },
-        { t: 1 },
-        entity.getValue(SnapAnimation, "duration")!,
-        Easing.Back.Out,
-        ({ t }) => {
-          if (!entity.active) return;
-          obj.position.lerpVectors(fromPos, toPos, t);
-          obj.quaternion.slerpQuaternions(fromQuat, toQuat, t);
-        },
-        {
-          onComplete: () => {
-            if (!entity.active) return;
-            if (this.snapTweens.get(entity.index) !== tween) return;
-            this.snapTweens.delete(entity.index);
-            obj.position.copy(toPos);
-            obj.quaternion.copy(toQuat);
-            entity.removeComponent(SnapAnimation);
-          },
-        },
-      );
-      this.snapTweens.set(entity.index, tween);
-    });
-
-    this.queries.spin.subscribe("qualify", (entity) => {
-      const obj = entity.object3D!;
-      const rotation = obj.rotation.x;
-
-      const tween = startTween(
-        this.tweens,
-        { rotation },
-        { rotation: rotation + Math.PI * 2 },
-        1000,
-        Easing.Linear.None,
-        ({ rotation: r }) => {
-          if (entity.active) obj.rotation.x = r;
-        },
-        { repeat: true },
-      );
-
-      this.spinTweens.set(entity.index, tween);
-    });
-
-    this.queries.spin.subscribe("disqualify", (entity) => {
-      const tween = this.spinTweens.get(entity.index);
-      if (tween) stopTween(tween);
-      this.spinTweens.delete(entity.index);
-    });
-
-    this.queries.popIn.subscribe("disqualify", (entity) => {
-      this.stopEntityTween(this.pop3DTweens, entity.index);
-    });
-    this.queries.popOut.subscribe("disqualify", (entity) => {
-      this.stopEntityTween(this.pop3DTweens, entity.index);
-    });
-    this.queries.popIn2D.subscribe("disqualify", (entity) => {
-      this.stopEntityTween(this.pop2DTweens, entity.index);
-    });
-    this.queries.popOut2D.subscribe("disqualify", (entity) => {
-      this.stopEntityTween(this.pop2DTweens, entity.index);
-    });
-    this.queries.snapAnimation.subscribe("disqualify", (entity) => {
-      this.stopEntityTween(this.snapTweens, entity.index);
-    });
+    const resetPop = (entity: Entity, component: PopComponent) => {
+      entity.setValue(component, "elapsed", 0);
+      entity.setValue(component, "from", -1);
+    };
+    this.cleanupFuncs.push(
+      this.queries.popIn.subscribe("qualify", (e) => resetPop(e, PopIn)),
+      this.queries.popOut.subscribe("qualify", (e) => resetPop(e, PopOut)),
+      this.queries.popIn2D.subscribe("qualify", (e) => resetPop(e, PopIn2D)),
+      this.queries.popOut2D.subscribe("qualify", (e) => resetPop(e, PopOut2D)),
+      this.queries.snapAnimation.subscribe("qualify", (e) => {
+        e.setValue(SnapAnimation, "started", false);
+        e.setValue(SnapAnimation, "elapsed", 0);
+      }),
+    );
   }
 
   update(delta: number) {
     const dtMs = delta * 1000;
 
-    for (let i = this.tweens.length - 1; i >= 0; i--) {
-      const tween = this.tweens[i];
-      if (tween.stopped) {
-        this.tweens.splice(i, 1);
-        continue;
+    this.advancePop3D(this.queries.popIn.entities, PopIn, 1, POP_IN_MS, easeOutCubic, dtMs);
+    this.advancePop3D(this.queries.popOut.entities, PopOut, 0.001, POP_OUT_MS, easeInCubic, dtMs);
+    this.advancePop2D(this.queries.popIn2D.entities, PopIn2D, 1, POP_IN_MS, easeOutCubic, dtMs);
+    this.advancePop2D(this.queries.popOut2D.entities, PopOut2D, 0.001, POP_OUT_MS, easeInCubic, dtMs);
+    this.advanceSpin(dtMs);
+    this.advanceSnap(dtMs);
+  }
+
+  private advancePop3D(
+    entities: Iterable<Entity>,
+    component: PopComponent,
+    target: number,
+    durationMs: number,
+    easing: (t: number) => number,
+    dtMs: number,
+  ): void {
+    this.finished.length = 0;
+    for (const entity of entities) {
+      const obj = entity.object3D;
+      if (!obj) continue;
+
+      let from = entity.getValue(component, "from")!;
+      if (from < 0) {
+        from = obj.scale.x;
+        entity.setValue(component, "from", from);
       }
 
-      tween.elapsedMs += dtMs;
-      const linearT = Math.min(tween.elapsedMs / tween.durationMs, 1);
-      const easedT = tween.easing(linearT);
-      lerpProps(tween.from, tween.to, easedT, tween.values);
-      tween.onUpdate(tween.values);
+      const elapsed = entity.getValue(component, "elapsed")! + dtMs;
+      const t = Math.min(elapsed / durationMs, 1);
+      obj.scale.setScalar(from + (target - from) * easing(t));
 
-      if (linearT < 1) continue;
-
-      if (tween.repeat) {
-        tween.elapsedMs = 0;
-        continue;
-      }
-
-      tween.onComplete?.();
-      this.tweens.splice(i, 1);
+      if (t >= 1) this.finished.push(entity);
+      else entity.setValue(component, "elapsed", elapsed);
     }
+    for (const entity of this.finished) entity.removeComponent(component);
+  }
+
+  private advancePop2D(
+    entities: Iterable<Entity>,
+    component: PopComponent,
+    target: number,
+    durationMs: number,
+    easing: (t: number) => number,
+    dtMs: number,
+  ): void {
+    this.finished.length = 0;
+    for (const entity of entities) {
+      const root = this.panelRoot(entity);
+      if (!root) continue;
+
+      let from = entity.getValue(component, "from")!;
+      if (from < 0) {
+        from = root.scale.x;
+        entity.setValue(component, "from", from);
+      }
+
+      const elapsed = entity.getValue(component, "elapsed")! + dtMs;
+      const t = Math.min(elapsed / durationMs, 1);
+      root.scale.setScalar(from + (target - from) * easing(t));
+
+      if (t >= 1) this.finished.push(entity);
+      else entity.setValue(component, "elapsed", elapsed);
+    }
+    for (const entity of this.finished) entity.removeComponent(component);
+  }
+
+  private advanceSpin(dtMs: number): void {
+    const step = (Math.PI * 2 * dtMs) / SPIN_PERIOD_MS;
+    for (const entity of this.queries.spin.entities) {
+      if (entity.object3D) entity.object3D.rotation.x += step;
+    }
+  }
+
+  private advanceSnap(dtMs: number): void {
+    this.finished.length = 0;
+    for (const entity of this.queries.snapAnimation.entities) {
+      const obj = entity.object3D;
+      if (!obj) continue;
+
+      if (!entity.getValue(SnapAnimation, "started")) {
+        entity.setValue(SnapAnimation, "started", true);
+        entity.setValue(SnapAnimation, "elapsed", 0);
+        entity.setValue(SnapAnimation, "fromX", obj.position.x);
+        entity.setValue(SnapAnimation, "fromY", obj.position.y);
+        entity.setValue(SnapAnimation, "fromZ", obj.position.z);
+        entity.setValue(SnapAnimation, "fromQX", obj.quaternion.x);
+        entity.setValue(SnapAnimation, "fromQY", obj.quaternion.y);
+        entity.setValue(SnapAnimation, "fromQZ", obj.quaternion.z);
+        entity.setValue(SnapAnimation, "fromQW", obj.quaternion.w);
+      }
+
+      const duration = entity.getValue(SnapAnimation, "duration")!;
+      const elapsed = entity.getValue(SnapAnimation, "elapsed")! + dtMs;
+      const t = Math.min(elapsed / duration, 1);
+      const eased = easeOutBack(t);
+
+      this.fromPos.set(
+        entity.getValue(SnapAnimation, "fromX")!,
+        entity.getValue(SnapAnimation, "fromY")!,
+        entity.getValue(SnapAnimation, "fromZ")!,
+      );
+      this.toPos.set(
+        entity.getValue(SnapAnimation, "targetX")!,
+        entity.getValue(SnapAnimation, "targetY")!,
+        entity.getValue(SnapAnimation, "targetZ")!,
+      );
+      this.fromQuat.set(
+        entity.getValue(SnapAnimation, "fromQX")!,
+        entity.getValue(SnapAnimation, "fromQY")!,
+        entity.getValue(SnapAnimation, "fromQZ")!,
+        entity.getValue(SnapAnimation, "fromQW")!,
+      );
+      this.toQuat.set(
+        entity.getValue(SnapAnimation, "targetQX")!,
+        entity.getValue(SnapAnimation, "targetQY")!,
+        entity.getValue(SnapAnimation, "targetQZ")!,
+        entity.getValue(SnapAnimation, "targetQW")!,
+      );
+
+      obj.position.lerpVectors(this.fromPos, this.toPos, eased);
+      obj.quaternion.slerpQuaternions(this.fromQuat, this.toQuat, eased);
+
+      if (t >= 1) {
+        obj.position.copy(this.toPos);
+        obj.quaternion.copy(this.toQuat);
+        this.finished.push(entity);
+      } else {
+        entity.setValue(SnapAnimation, "elapsed", elapsed);
+      }
+    }
+    for (const entity of this.finished) entity.removeComponent(SnapAnimation);
+  }
+
+  private panelRoot(entity: Entity): UIKit.Component | undefined {
+    const doc = entity.getValue(PanelDocument, "document") as
+      | UIKitDocument
+      | null;
+    return doc?.getElementById("panel-root") as UIKit.Component | undefined;
   }
 }

@@ -11,10 +11,9 @@ export class BillboardSystem extends createSystem({
     for (const entity of this.queries.billboards.entities) {
       const obj = entity.object3D!;
       this.player.head.getWorldPosition(this.lookAtTarget);
-      obj.getWorldPosition(this.entityPos);
 
-      const lockY = entity.getValue(Billboard, "lockY") as boolean;
-      if (lockY) {
+      if (entity.getValue(Billboard, "lockY")) {
+        obj.getWorldPosition(this.entityPos);
         this.lookAtTarget.y = this.entityPos.y;
       }
 

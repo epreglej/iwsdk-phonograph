@@ -18,22 +18,18 @@ export class CylinderSystem extends createSystem({
   cylinder: { required: [Cylinder] },
 }) {
   init() {
-    const cylinderEntity = firstEntity(this.queries.cylinder.entities);
-    if (!cylinderEntity) return;
-
     this.cleanupFuncs.push(
-      this.queries.activeRecordingTask.subscribe("qualify", () => {
-        cylinderEntity.addComponent(Spin);
-      }),
-      this.queries.activeRecordingTask.subscribe("disqualify", () => {
-        cylinderEntity.removeComponent(Spin);
-      }),
-      this.queries.activePlaybackTask.subscribe("qualify", () => {
-        cylinderEntity.addComponent(Spin);
-      }),
-      this.queries.activePlaybackTask.subscribe("disqualify", () => {
-        cylinderEntity.removeComponent(Spin);
-      }),
+      this.queries.activeRecordingTask.subscribe("qualify", () => this.setSpin(true)),
+      this.queries.activeRecordingTask.subscribe("disqualify", () => this.setSpin(false)),
+      this.queries.activePlaybackTask.subscribe("qualify", () => this.setSpin(true)),
+      this.queries.activePlaybackTask.subscribe("disqualify", () => this.setSpin(false)),
     );
+  }
+
+  private setSpin(spinning: boolean): void {
+    const cylinder = firstEntity(this.queries.cylinder.entities);
+    if (!cylinder) return;
+    if (spinning) cylinder.addComponent(Spin);
+    else cylinder.removeComponent(Spin);
   }
 }

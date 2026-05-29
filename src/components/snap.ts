@@ -1,4 +1,4 @@
-import { createComponent, Entity, Types } from "@iwsdk/core";
+import { createComponent, Types } from "@iwsdk/core";
 
 export const Snappable = createComponent("Snappable", {
   snapRadius: { type: Types.Float32, default: 0.15 },
@@ -12,15 +12,3 @@ export const Snapped = createComponent("Snapped", {
 });
 
 export const SnapGhost = createComponent("SnapGhost", {});
-export const TrackSnapZone = createComponent("TrackSnapZone", {});
-export const InSnapZone = createComponent("InSnapZone", {});
-
-export function findSnapPointById(
-  snapPoints: Iterable<Entity>,
-  id: string,
-): Entity | undefined {
-  for (const point of snapPoints) {
-    if (point.getValue(SnapPoint, "id") === id) return point;
-  }
-  return undefined;
-}

@@ -16,13 +16,8 @@ function isMesh(obj: Object3D): obj is Mesh {
 export class HighlightSystem extends createSystem({
   all: { required: [Highlight], excluded: [Grabbed] },
 }) {
-  private originalMaterials = new Map<
-    Entity,
-    Map<Mesh, Mesh["material"]>
-  >();
+  private originalMaterials = new Map<Entity, Map<Mesh, Mesh["material"]>>();
   private highlightMaterials: Map<Entity, MeshBasicMaterial> = new Map();
-  private highlightBaseOpacity = new Map<Entity, number>();
-  private highlightPhase = new Map<Entity, number>();
   private _clockSeconds = 0;
   private tempColor = new Color();
 
@@ -45,9 +40,7 @@ export class HighlightSystem extends createSystem({
     this.highlightMaterials.set(entity, highlightMaterial);
     this.originalMaterials.set(entity, new Map());
 
-    const colorView = entity.getVectorView(Highlight, "color") as Float32Array;
-    this.highlightBaseOpacity.set(entity, colorView[3] ?? 0.25);
-    this.highlightPhase.set(entity, Math.random() * Math.PI * 2);
+    entity.setValue(Highlight, "phase", Math.random() * Math.PI * 2);
 
     const savedMats = this.originalMaterials.get(entity)!;
 
@@ -90,9 +83,6 @@ export class HighlightSystem extends createSystem({
       highlightMaterial.dispose();
       this.highlightMaterials.delete(entity);
     }
-
-    this.highlightBaseOpacity.delete(entity);
-    this.highlightPhase.delete(entity);
   }
 
   private createHighlightMaterial(entity: Entity): MeshBasicMaterial {
@@ -121,9 +111,9 @@ export class HighlightSystem extends createSystem({
     const amp = 0.18;
 
     for (const [entity, material] of this.highlightMaterials.entries()) {
-      const base = this.highlightBaseOpacity.get(entity);
-      if (base === undefined) continue;
-      const phase = this.highlightPhase.get(entity) ?? 0;
+      const colorView = entity.getVectorView(Highlight, "color") as Float32Array;
+      const base = colorView[3] ?? 0.25;
+      const phase = entity.getValue(Highlight, "phase") ?? 0;
       const pulse = Math.sin(this._clockSeconds * Math.PI * 2 * freqHz + phase);
       const nextOpacity = base * (1 + amp * pulse);
       material.opacity = Math.min(0.95, Math.max(0.04, nextOpacity));

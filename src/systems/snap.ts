@@ -5,14 +5,7 @@ import {
   OneHandGrabbable,
   Vector3,
 } from "@iwsdk/core";
-import {
-  Snappable,
-  SnapPoint,
-  Snapped,
-  SnapGhost,
-  TrackSnapZone,
-  InSnapZone,
-} from "../components/snap.js";
+import { Snappable, SnapPoint, Snapped } from "../components/snap.js";
 import { SnapAnimation } from "../components/animation.js";
 import { playSnap } from "../audio/sfx.js";
 import { Unmounting } from "../components/unmounting.js";
@@ -24,7 +17,6 @@ export class SnapSystem extends createSystem({
   },
   snappedAndGrabbed: { required: [Snappable, Snapped, Grabbed] },
   snapPoints: { required: [SnapPoint] },
-  zoneTracked: { required: [Snappable, TrackSnapZone] },
 }) {
   private _pos1!: Vector3;
   private _pos2!: Vector3;
@@ -88,34 +80,5 @@ export class SnapSystem extends createSystem({
     });
 
     playSnap();
-  }
-
-  update() {
-    for (const entity of this.queries.zoneTracked.entities) {
-      if (this.isWithinSnapZone(entity)) {
-        if (!entity.hasComponent(InSnapZone)) {
-          entity.addComponent(InSnapZone);
-        }
-      } else if (entity.hasComponent(InSnapZone)) {
-        entity.removeComponent(InSnapZone);
-      }
-    }
-  }
-
-  private isWithinSnapZone(entity: Entity): boolean {
-    const snapRadius = entity.getValue(Snappable, "snapRadius")!;
-    const targetId = entity.getValue(Snappable, "snapPointId");
-    if (!targetId) return false;
-
-    entity.object3D!.getWorldPosition(this._pos1);
-
-    for (const point of this.queries.snapPoints.entities) {
-      if (point.getValue(SnapPoint, "id") !== targetId) continue;
-
-      point.object3D!.getWorldPosition(this._pos2);
-      return this._pos1.distanceTo(this._pos2) < snapRadius;
-    }
-
-    return false;
   }
 }

@@ -1,16 +1,14 @@
 import { AssetManifest, AssetType, SessionMode, World } from "@iwsdk/core";
 
 import { ActiveTask, Task } from "./components/task.js";
-import { TaskSystem } from "./systems/task.js";
+import { TaskFlowSystem } from "./systems/task.js";
 import { SpawnSystem } from "./systems/spawn.js";
 import { AnimationSystem } from "./systems/animation.js";
 import { BillboardSystem } from "./systems/billboard.js";
 import { PlacardSystem } from "./systems/placard.js";
 import { PlacardTaskSystem } from "./systems/placard-task.js";
-import { InteractivePanelSystem } from "./systems/interactive-panel.js";
-import { MainMenuSystem } from "./systems/main-menu.js";
-import { MainMenuResetSystem } from "./systems/main-menu-reset.js";
-import { EndMenuSystem } from "./systems/end-menu.js";
+import { PanelSystem } from "./systems/panel.js";
+import { WorldResetSystem } from "./systems/world-reset.js";
 import { HighlightSystem } from "./systems/highlight.js";
 import { SnapSystem } from "./systems/snap.js";
 import { SnapGhostSystem } from "./systems/snap-ghost.js";
@@ -101,13 +99,12 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       .registerSystem(HighlightSystem)
       .registerSystem(AnimationSystem)
       .registerSystem(SpawnSystem)
-      .registerSystem(TaskSystem)
+      .registerSystem(TaskFlowSystem)
       .registerSystem(BillboardSystem)
       .registerSystem(PlacardSystem)
       .registerSystem(PlacardTaskSystem)
-      .registerSystem(MainMenuSystem)
-      .registerSystem(MainMenuResetSystem)
-      .registerSystem(InteractivePanelSystem)
+      .registerSystem(PanelSystem)
+      .registerSystem(WorldResetSystem)
       .registerSystem(SnapSystem)
       .registerSystem(SnapGhostSystem)
       .registerSystem(PartMountSystem)
@@ -117,8 +114,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       .registerSystem(CylinderSystem)
       .registerSystem(CrankSystem)
       .registerSystem(BrakeSystem)
-      .registerSystem(RecordingSystem)
-      .registerSystem(EndMenuSystem);
+      .registerSystem(RecordingSystem);
 
     world
       .createEntity()

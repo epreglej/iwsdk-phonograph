@@ -1,15 +1,11 @@
 import {
   createSystem,
   Entity,
-  eq,
   Grabbed,
   OneHandGrabbable,
 } from "@iwsdk/core";
 import { Task, ActiveTask, CompletedTask } from "../components/task.js";
-import {
-  RecordingDiaphragm,
-  RecordingTrumpet,
-} from "../components/phonograph-parts.js";
+import { PhonographPart } from "../components/phonograph-part.js";
 import { PopOut, SnapAnimation } from "../components/animation.js";
 import { Highlight } from "../components/highlight.js";
 import { Snappable, SnapGhost, Snapped } from "../components/snap.js";
@@ -18,72 +14,38 @@ import {
   UnmountPopping,
   UNMOUNT_HIGHLIGHT_COLOR,
 } from "../components/unmounting.js";
+import { UNMOUNT_BY_TASK } from "../config/task-flow.js";
 import { forceReleaseGrab } from "../helpers/grab-release.js";
+import { getPart } from "../helpers/parts.js";
 import { playPop } from "../audio/sfx.js";
-import { firstEntity } from "../helpers/entity-query.js";
 
 export class PartUnmountSystem extends createSystem({
-  activeRecordingTrumpetUnmountTask: {
+  activeTask: {
     required: [Task, ActiveTask],
     excluded: [CompletedTask],
-    where: [eq(Task, "id", "recording_trumpet_unmount")],
   },
-  activeRecordingDiaphragmUnmountTask: {
-    required: [Task, ActiveTask],
-    excluded: [CompletedTask],
-    where: [eq(Task, "id", "recording_diaphragm_unmount")],
-  },
-  recordingTrumpet: { required: [RecordingTrumpet] },
-  recordingDiaphragm: { required: [RecordingDiaphragm] },
+  parts: { required: [PhonographPart] },
   grabbedWhileUnmounting: {
     required: [Unmounting, Grabbed],
     excluded: [PopOut, UnmountPopping],
   },
   unmountPopOut: { required: [Unmounting, PopOut] },
 }) {
-  private partForTask(taskId: string): Entity | undefined {
-    if (taskId === "recording_trumpet_unmount") {
-      return firstEntity(this.queries.recordingTrumpet.entities);
-    }
-    if (taskId === "recording_diaphragm_unmount") {
-      return firstEntity(this.queries.recordingDiaphragm.entities);
-    }
-    return undefined;
-  }
-
   init() {
     this.cleanupFuncs.push(
-      this.queries.activeRecordingTrumpetUnmountTask.subscribe(
-        "qualify",
-        (taskEntity) => {
-          const part = this.partForTask(taskEntity.getValue(Task, "id")!);
-          if (part) this.activateUnmount(part, "recording_trumpet_unmount");
-        },
-      ),
+      this.queries.activeTask.subscribe("qualify", (taskEntity) => {
+        const taskId = taskEntity.getValue(Task, "id")!;
+        if (!UNMOUNT_BY_TASK[taskId]) return;
+        const part = this.partForTask(taskId);
+        if (part) this.activateUnmount(part, taskId);
+      }),
 
-      this.queries.activeRecordingDiaphragmUnmountTask.subscribe(
-        "qualify",
-        (taskEntity) => {
-          const part = this.partForTask(taskEntity.getValue(Task, "id")!);
-          if (part) this.activateUnmount(part, "recording_diaphragm_unmount");
-        },
-      ),
-
-      this.queries.activeRecordingTrumpetUnmountTask.subscribe(
-        "disqualify",
-        (taskEntity) => {
-          const part = this.partForTask(taskEntity.getValue(Task, "id")!);
-          part?.removeComponent(Unmounting);
-        },
-      ),
-
-      this.queries.activeRecordingDiaphragmUnmountTask.subscribe(
-        "disqualify",
-        (taskEntity) => {
-          const part = this.partForTask(taskEntity.getValue(Task, "id")!);
-          part?.removeComponent(Unmounting);
-        },
-      ),
+      this.queries.activeTask.subscribe("disqualify", (taskEntity) => {
+        const taskId = taskEntity.getValue(Task, "id")!;
+        if (!UNMOUNT_BY_TASK[taskId]) return;
+        const part = this.partForTask(taskId);
+        part?.removeComponent(Unmounting);
+      }),
 
       this.queries.grabbedWhileUnmounting.subscribe("qualify", (part) => {
         this.finishUnmount(part);
@@ -93,6 +55,12 @@ export class PartUnmountSystem extends createSystem({
         this.completeUnmount(part);
       }),
     );
+  }
+
+  private partForTask(taskId: string): Entity | undefined {
+    const binding = UNMOUNT_BY_TASK[taskId];
+    if (!binding) return undefined;
+    return getPart(this.queries.parts.entities, binding.partId);
   }
 
   private activateUnmount(part: Entity, taskId: string): void {
@@ -138,12 +106,7 @@ export class PartUnmountSystem extends createSystem({
 
     if (!taskId) return;
 
-    const activeUnmountTasks = [
-      ...this.queries.activeRecordingTrumpetUnmountTask.entities,
-      ...this.queries.activeRecordingDiaphragmUnmountTask.entities,
-    ];
-
-    for (const task of activeUnmountTasks) {
+    for (const task of this.queries.activeTask.entities) {
       if (task.getValue(Task, "id") === taskId) {
         task.addComponent(CompletedTask);
       }

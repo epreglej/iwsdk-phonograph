@@ -1,5 +1,5 @@
 <style>
-  .placard {
+  .panel {
     width: 218px;
     flex-direction: column;
     border-radius: 22px;
@@ -8,7 +8,7 @@
     border-color: rgba(255, 255, 255, 0.42);
   }
 
-  .placard-content {
+  .panel-content {
     flex-direction: column;
     padding-top: 14px;
     padding-bottom: 12px;
@@ -16,14 +16,14 @@
     padding-right: 16px;
   }
 
-  .placard-title {
+  .panel-title {
     font-size: 15px;
     font-weight: 600;
     color: rgba(255, 255, 255, 0.98);
     margin-bottom: 6px;
   }
 
-  .placard-body {
+  .panel-body {
     font-size: 11px;
     font-weight: 500;
     line-height: 1.45;
@@ -67,12 +67,10 @@
   }
 </style>
 
-<div id="panel-root" class="placard">
-  <div class="placard-content">
-    <span id="interactive-panel-title" class="placard-title">Ready</span>
-    <p id="interactive-panel-body" class="placard-body">
-      Continue to proceed.
-    </p>
+<div id="panel-root" class="panel">
+  <div class="panel-content">
+    <span class="panel-title">Ready to record</span>
+    <p class="panel-body">The machine is ready to record your voice, ahbfbasbfs will travel through the horn and into the wax — the brake lever is what brings the recording stylus into the groove.</p>
   </div>
   <div class="divider"></div>
   <button id="continue-button" class="continue-button">

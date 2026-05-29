@@ -12,11 +12,6 @@ import {
   registerActiveRecording,
   setRecordedAudio,
 } from "../audio/recording-store.js";
-import {
-  playRecordingStart,
-  startRecordingMotorLoop,
-  stopRecordingMotorLoop,
-} from "../audio/sfx.js";
 import { getPart } from "../helpers/parts.js";
 
 export class RecordingSystem extends createSystem({
@@ -99,9 +94,6 @@ export class RecordingSystem extends createSystem({
   }
 
   private onRecordingStart(): void {
-    playRecordingStart();
-    startRecordingMotorLoop();
-
     const trumpet = getPart(this.queries.parts.entities, "recording_trumpet");
     if (trumpet && !trumpet.hasComponent(Highlight)) {
       trumpet.addComponent(Highlight, { color: RECORDING_INPUT_HIGHLIGHT_COLOR });
@@ -109,8 +101,6 @@ export class RecordingSystem extends createSystem({
   }
 
   private onRecordingStop(): void {
-    stopRecordingMotorLoop();
-
     const trumpet = getPart(this.queries.parts.entities, "recording_trumpet");
     trumpet?.removeComponent(Highlight);
   }

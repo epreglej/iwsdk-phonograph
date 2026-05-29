@@ -11,10 +11,7 @@ export class TaskFlowSystem extends createSystem({
     this.cleanupFuncs.push(
       this.queries.completedActiveTask.subscribe("qualify", (entity) => {
         const completedId = entity.getValue(Task, "id")!;
-        const nextId = nextTaskId(completedId);
-        if (nextId !== "recording") {
-          playTaskChime();
-        }
+        playTaskChime();
         this.advance(completedId);
         entity.dispose();
       }),

@@ -8,19 +8,33 @@ export interface PlacardSpec {
   autoDismissMs?: number;
 }
 
-export interface PanelCopy {
-  title: string;
-  body: string;
+export interface TaskPanelSpec {
+  panelConfig: string;
+  maxWidth?: number;
+  anchor: "head" | "phonograph";
+  offsetX?: number;
+  offsetY?: number;
+  offsetZ?: number;
+  faceTarget?: boolean;
+  billboard?: boolean;
+  buttonId?: string;
+  deferCompleteOnDismiss?: boolean;
 }
 
 export type TaskDef =
-  | { id: string; kind: "menu" }
-  | { id: string; kind: "info"; copy: PanelCopy }
+  | { id: string; kind: "menu"; panel: TaskPanelSpec }
+  | { id: string; kind: "info"; panel: TaskPanelSpec }
   | { id: string; kind: "mount"; partId: string; snapPointId: string; placard: PlacardSpec }
   | { id: string; kind: "crank"; partId: string; placard: PlacardSpec }
   | { id: string; kind: "unmount"; partId: string; placard: PlacardSpec }
   | { id: string; kind: "brakeShift"; partId: string; placard: PlacardSpec }
-  | { id: string; kind: "recording"; partId: string; placard: PlacardSpec }
+  | {
+      id: string;
+      kind: "recording";
+      partId: string;
+      placard: PlacardSpec;
+      panel: TaskPanelSpec;
+    }
   | { id: string; kind: "playback" };
 
 const MOUNT_PLACARD_DEFAULTS = {
@@ -54,14 +68,47 @@ const BRAKE_PLAYBACK_PLACARD: PlacardSpec = {
   panelConfig: "./ui/playback-brake-shift-instruction.json",
 };
 
+const HEAD_MENU_PANEL = {
+  maxWidth: 0.455,
+  anchor: "head" as const,
+  offsetY: -0.15,
+  offsetZ: -0.5,
+  faceTarget: true,
+};
+
+const PHONOGRAPH_INFO_PANEL = {
+  maxWidth: 0.35,
+  anchor: "phonograph" as const,
+  offsetY: 0.55,
+  billboard: true,
+  buttonId: "continue-button",
+  deferCompleteOnDismiss: true,
+};
+
+const RECORDING_INDICATOR_PANEL: TaskPanelSpec = {
+  panelConfig: "./ui/recording-indicator.json",
+  maxWidth: 0.38,
+  anchor: "phonograph",
+  offsetY: 0.5,
+  billboard: true,
+};
+
 export const TASK_FLOW: TaskDef[] = [
-  { id: "main_menu", kind: "menu" },
+  {
+    id: "main_menu",
+    kind: "menu",
+    panel: {
+      ...HEAD_MENU_PANEL,
+      panelConfig: "./ui/main-menu.json",
+      buttonId: "start-learning-button",
+    },
+  },
   {
     id: "recording_setup_info",
     kind: "info",
-    copy: {
-      title: "Recording setup",
-      body: "To make a recording, the phonograph first needs to be assembled with its recording parts. Each piece — the wax cylinder, diaphragm, horn, and crank — prepares the machine to capture sound in the groove.",
+    panel: {
+      ...PHONOGRAPH_INFO_PANEL,
+      panelConfig: "./ui/recording-setup-info.json",
     },
   },
   {
@@ -112,9 +159,9 @@ export const TASK_FLOW: TaskDef[] = [
   {
     id: "recording_ready_info",
     kind: "info",
-    copy: {
-      title: "Ready to record",
-      body: "The machine is wound and ready. Your voice will travel through the horn and into the wax — the brake lever is what brings the recording stylus into the groove.",
+    panel: {
+      ...PHONOGRAPH_INFO_PANEL,
+      panelConfig: "./ui/recording-ready-info.json",
     },
   },
   {
@@ -123,13 +170,19 @@ export const TASK_FLOW: TaskDef[] = [
     partId: "brake",
     placard: BRAKE_RECORDING_PLACARD,
   },
-  { id: "recording", kind: "recording", partId: "brake", placard: BRAKE_RECORDING_STOP_PLACARD },
+  {
+    id: "recording",
+    kind: "recording",
+    partId: "brake",
+    placard: BRAKE_RECORDING_STOP_PLACARD,
+    panel: RECORDING_INDICATOR_PANEL,
+  },
   {
     id: "playback_setup_info",
     kind: "info",
-    copy: {
-      title: "Playback setup",
-      body: "To hear what was recorded, the phonograph must be reconfigured for playback. The recording parts come off and lighter reproducer parts take their place.",
+    panel: {
+      ...PHONOGRAPH_INFO_PANEL,
+      panelConfig: "./ui/playback-setup-info.json",
     },
   },
   { id: "recording_trumpet_unmount", kind: "unmount", partId: "recording_trumpet", placard: {
@@ -171,9 +224,9 @@ export const TASK_FLOW: TaskDef[] = [
   {
     id: "playback_ready_info",
     kind: "info",
-    copy: {
-      title: "Playback ready",
-      body: "The playback reproducer is in place. Engaging the brake lets a lighter stylus trace the groove and send the sound back out through the horn.",
+    panel: {
+      ...PHONOGRAPH_INFO_PANEL,
+      panelConfig: "./ui/playback-ready-info.json",
     },
   },
   {
@@ -183,7 +236,15 @@ export const TASK_FLOW: TaskDef[] = [
     placard: BRAKE_PLAYBACK_PLACARD,
   },
   { id: "playback", kind: "playback" },
-  { id: "done", kind: "menu" },
+  {
+    id: "done",
+    kind: "menu",
+    panel: {
+      ...HEAD_MENU_PANEL,
+      panelConfig: "./ui/end-menu.json",
+      buttonId: "end-menu-restart-button",
+    },
+  },
 ];
 
 export const TASK_ORDER: string[] = TASK_FLOW.map((task) => task.id);
@@ -202,7 +263,7 @@ export interface MountBinding {
 export const MOUNT_BY_TASK: Record<string, MountBinding> = {};
 export const PLACARD_BY_TASK: Record<string, { partId: string; placard: PlacardSpec }> =
   {};
-export const PANEL_COPY_BY_TASK: Record<string, PanelCopy> = {};
+export const TASK_PANEL_BY_TASK: Record<string, TaskPanelSpec> = {};
 export const UNMOUNT_BY_TASK: Record<string, { partId: string }> = {};
 
 for (const task of TASK_FLOW) {
@@ -222,20 +283,20 @@ for (const task of TASK_FLOW) {
       break;
     case "recording":
       PLACARD_BY_TASK[task.id] = { partId: task.partId, placard: task.placard };
+      TASK_PANEL_BY_TASK[task.id] = task.panel;
       break;
     case "unmount":
       UNMOUNT_BY_TASK[task.id] = { partId: task.partId };
       PLACARD_BY_TASK[task.id] = { partId: task.partId, placard: task.placard };
       break;
     case "info":
-      PANEL_COPY_BY_TASK[task.id] = task.copy;
+    case "menu":
+      TASK_PANEL_BY_TASK[task.id] = task.panel;
       break;
     default:
       break;
   }
 }
-
-export const INFO_TASK_IDS = Object.keys(PANEL_COPY_BY_TASK);
 
 const INTERACTIVE_TASK_KINDS = new Set<TaskDef["kind"]>([
   "mount",

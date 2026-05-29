@@ -7,7 +7,8 @@ import { AnimationSystem } from "./systems/animation.js";
 import { BillboardSystem } from "./systems/billboard.js";
 import { PlacardSystem } from "./systems/placard.js";
 import { PlacardTaskSystem } from "./systems/placard-task.js";
-import { PanelSystem } from "./systems/panel.js";
+import { TaskPanelSystem } from "./systems/task-panel.js";
+import { TaskPanelTaskSystem } from "./systems/task-panel-task.js";
 import { WorldResetSystem } from "./systems/world-reset.js";
 import { HighlightSystem } from "./systems/highlight.js";
 import { SnapSystem } from "./systems/snap.js";
@@ -104,7 +105,8 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       .registerSystem(BillboardSystem)
       .registerSystem(PlacardSystem)
       .registerSystem(PlacardTaskSystem)
-      .registerSystem(PanelSystem)
+      .registerSystem(TaskPanelSystem)
+      .registerSystem(TaskPanelTaskSystem)
       .registerSystem(InteractionGateSystem)
       .registerSystem(WorldResetSystem)
       .registerSystem(SnapSystem)

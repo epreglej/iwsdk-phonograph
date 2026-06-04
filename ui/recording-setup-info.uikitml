@@ -69,8 +69,8 @@
 
 <div id="panel-root" class="panel">
   <div class="panel-content">
-    <span class="panel-title">Recording setup</span>
-    <p class="panel-body">To make a recording, the phonograph first needs to be assembled with its recording parts. Each piece — the wax cylinder, diaphragm, horn, and crank — prepares the machine to capture sound in the groove.</p>
+    <span class="panel-title">Recording</span>
+    <p class="panel-body">To make a recording, the phonograph first needs to be assembled with recording-specific parts</p>
   </div>
   <div class="divider"></div>
   <button id="continue-button" class="continue-button">

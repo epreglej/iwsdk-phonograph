@@ -1,41 +1,61 @@
 <style>
   .placard {
     width: 210px;
+    display: flex;
     flex-direction: column;
     padding-top: 14px;
     padding-bottom: 14px;
     padding-left: 16px;
     padding-right: 16px;
     border-radius: 22px;
-    background-color: rgba(200, 196, 192, 0.30);
-    border-top-width: 1.2px;
-    border-top-color: rgba(255, 255, 255, 0.75);
-    border-left-width: 1px;
-    border-left-color: rgba(255, 255, 255, 0.30);
-    border-right-width: 1px;
-    border-right-color: rgba(255, 255, 255, 0.30);
-    border-bottom-width: 1px;
-    border-bottom-color: rgba(255, 255, 255, 0.12);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28),
-                inset 0 1px 0 rgba(255, 255, 255, 0.50);
+    background-color: rgba(25, 25, 25, 0.8);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.35);
   }
 
   .placard-title {
     font-size: 15px;
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.98);
+    color: #ffffff;
     margin-bottom: 6px;
+    text-align: center;
   }
 
-  .placard-body {
+  .placard-description {
     font-size: 11px;
     font-weight: 500;
     line-height: 1.45;
-    color: rgba(255, 255, 255, 0.72);
+    color: rgba(255, 255, 255, 0.95);
+    margin: 0;
+  }
+
+  .placard-action-row {
+    display: flex;
+    flex-direction: row;
+    margin-top: 8px;
+  }
+
+  .placard-action-accent {
+    width: 2px;
+    background-color: rgba(255, 255, 255, 0.35);
+    margin-right: 6px;
+  }
+
+  .placard-action {
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.45;
+    color: rgba(255, 255, 255, 0.65);
+    margin: 0;
+    flex: 1;
   }
 </style>
 
 <div id="panel-root" class="placard">
-  <span class="placard-title">Wax cylinder</span>
-  <p class="placard-body">Grab the cylinder and snap it onto the spindle — it will lock in and rotate with the motor, because sound can only be cut into the wax while the cylinder spins.</p>
+  <span class="placard-title">Wax Cylinder</span>
+  <p class="placard-description">A fragile storage medium used to physically etch and retain analog audio data</p>
+  <div class="placard-action-row">
+    <div class="placard-action-accent"></div>
+    <p class="placard-action">Mount onto the spindle to enable rotation</p>
+  </div>
 </div>

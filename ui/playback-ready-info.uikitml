@@ -70,7 +70,7 @@
 <div id="panel-root" class="panel">
   <div class="panel-content">
     <span class="panel-title">Playback ready</span>
-    <p class="panel-body">The playback reproducer is in place. Engaging the brake lets a lighter stylus trace the groove and send the sound back out through the horn.</p>
+    <p class="panel-body">The reproducer is in place. Engaging the brake lets a lighter stylus trace the groove and send the sound back out through the listening horn.</p>
   </div>
   <div class="divider"></div>
   <button id="continue-button" class="continue-button">

@@ -70,7 +70,7 @@
 <div id="panel-root" class="panel">
   <div class="panel-content">
     <span class="panel-title">Playback setup</span>
-    <p class="panel-body">To hear what was recorded, the phonograph must be reconfigured for playback. The recording parts come off and lighter reproducer parts take their place.</p>
+    <p class="panel-body">To hear what was recorded, the phonograph must be reconfigured for playback. The recording parts should come off and lighter reproducer parts must take their place.</p>
   </div>
   <div class="divider"></div>
   <button id="continue-button" class="continue-button">

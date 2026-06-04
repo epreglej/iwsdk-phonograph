@@ -107,7 +107,7 @@ export class HighlightSystem extends createSystem({
   update(delta: number): void {
     this._clockSeconds += delta;
 
-    const freqHz = 1.6;
+    const freqHz = 0.8;
     const amp = 0.18;
 
     for (const [entity, material] of this.highlightMaterials.entries()) {

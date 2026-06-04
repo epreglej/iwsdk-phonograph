@@ -6,8 +6,8 @@ export const Highlight = createComponent("Highlight", {
 });
 
 export const STOP_HIGHLIGHT_COLOR: [number, number, number, number] = [
-  1, 0.12, 0.08, 0.38,
+  1, 0.138, 0.092, 0.38,
 ];
 
 export const RECORDING_INPUT_HIGHLIGHT_COLOR: [number, number, number, number] =
-  [1, 0.45, 0.08, 0.42];
+  [1, 0.45, 0.08, 0.32];

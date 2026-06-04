@@ -70,7 +70,7 @@
 <div id="panel-root" class="panel">
   <div class="panel-content">
     <span class="panel-title">Ready to record</span>
-    <p class="panel-body">The machine is ready to record your voice, ahbfbasbfs will travel through the horn and into the wax — the brake lever is what brings the recording stylus into the groove.</p>
+    <p class="panel-body">Everything is ready to record your voice, ahbfbasbfs will travel through the horn and into the wax — the brake lever is what brings the recording stylus into the groove.</p>
   </div>
   <div class="divider"></div>
   <button id="continue-button" class="continue-button">

@@ -39,23 +39,23 @@ const assets: AssetManifest = {
     type: AssetType.GLTF,
     priority: "critical",
   },
-  recording_diaphragm: {
-    url: "./gltf/recording_diaphragm.glb",
+  recorder: {
+    url: "./gltf/recorder.glb",
     type: AssetType.GLTF,
     priority: "critical",
   },
-  playback_diaphragm: {
-    url: "./gltf/playback_diaphragm.glb",
+  reproducer: {
+    url: "./gltf/reproducer.glb",
     type: AssetType.GLTF,
     priority: "critical",
   },
-  recording_trumpet: {
-    url: "./gltf/recording_trumpet.glb",
+  recording_horn: {
+    url: "./gltf/recording_horn.glb",
     type: AssetType.GLTF,
     priority: "critical",
   },
-  playback_trumpet: {
-    url: "./gltf/playback_trumpet.glb",
+  listening_horn: {
+    url: "./gltf/listening_horn.glb",
     type: AssetType.GLTF,
     priority: "critical",
   },

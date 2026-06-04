@@ -13,7 +13,7 @@ import { stopActiveRecording } from "../audio/recording-store.js";
 import { forceReleaseGrab } from "../helpers/grab-release.js";
 import { playSnap } from "../audio/sfx.js";
 import { firstEntity } from "../helpers/entity-query.js";
-import { BRAKE_HOME, BRAKE_SHIFTED } from "../config/phonograph-layout.js";
+import { BRAKE_PLAY, BRAKE_STOP } from "../config/phonograph-layout.js";
 
 const BRAKE_SHIFT_DURATION_MS = 300;
 
@@ -83,7 +83,7 @@ export class BrakeSystem extends createSystem({
         this.deactivateRecordingStop(brake);
         brake.removeComponent(BrakeReturning).removeComponent(SnapAnimation);
         if (brake.object3D) {
-          brake.object3D.position.set(BRAKE_HOME.x, BRAKE_HOME.y, BRAKE_HOME.z);
+          brake.object3D.position.set(BRAKE_STOP.x, BRAKE_STOP.y, BRAKE_STOP.z);
         }
       }),
 
@@ -129,7 +129,7 @@ export class BrakeSystem extends createSystem({
       .removeComponent(BrakeShifted)
       .removeComponent(SnapAnimation)
       .removeComponent(Grabbed);
-    brake.object3D.position.set(BRAKE_HOME.x, BRAKE_HOME.y, BRAKE_HOME.z);
+    brake.object3D.position.set(BRAKE_STOP.x, BRAKE_STOP.y, BRAKE_STOP.z);
     brake.object3D.visible = true;
 
     brake
@@ -154,7 +154,7 @@ export class BrakeSystem extends createSystem({
     }
 
     if (this.queries.activePlaybackTask.entities.size > 0) {
-      this.setBrakeAtShifted(brake);
+      this.setBrakeAtPlay(brake);
       return;
     }
 
@@ -167,7 +167,7 @@ export class BrakeSystem extends createSystem({
 
     brake.removeComponent(BrakeReturning);
 
-    obj.position.set(BRAKE_SHIFTED.x, BRAKE_SHIFTED.y, BRAKE_SHIFTED.z);
+    obj.position.set(BRAKE_PLAY.x, BRAKE_PLAY.y, BRAKE_PLAY.z);
     obj.visible = true;
 
     brake
@@ -178,14 +178,14 @@ export class BrakeSystem extends createSystem({
       .addComponent(Highlight, { color: STOP_HIGHLIGHT_COLOR });
   }
 
-  private setBrakeAtShifted(brake: Entity): void {
+  private setBrakeAtPlay(brake: Entity): void {
     const obj = brake.object3D;
     if (!obj) return;
 
     brake.removeComponent(BrakeReturning).removeComponent(Grabbed);
     brake.removeComponent(OneHandGrabbable).removeComponent(Highlight);
 
-    obj.position.set(BRAKE_SHIFTED.x, BRAKE_SHIFTED.y, BRAKE_SHIFTED.z);
+    obj.position.set(BRAKE_PLAY.x, BRAKE_PLAY.y, BRAKE_PLAY.z);
     obj.visible = true;
   }
 
@@ -194,7 +194,7 @@ export class BrakeSystem extends createSystem({
       brake.removeComponent(SnapAnimation);
     }
 
-    this.animateBrakeTo(brake, BRAKE_HOME, BrakeReturning);
+    this.animateBrakeTo(brake, BRAKE_STOP, BrakeReturning);
   }
 
   private shiftBrake(brake: Entity): void {
@@ -210,7 +210,7 @@ export class BrakeSystem extends createSystem({
       .removeComponent(Grabbed)
       .addComponent(BrakeShifted);
 
-    this.animateBrakeTo(brake, BRAKE_SHIFTED, BrakeShifted);
+    this.animateBrakeTo(brake, BRAKE_PLAY, BrakeShifted);
   }
 
   private stopRecordingWithBrake(brake: Entity): void {
@@ -228,7 +228,7 @@ export class BrakeSystem extends createSystem({
     forceReleaseGrab(brake);
     this.deactivateRecordingStop(brake);
 
-    this.animateBrakeTo(brake, BRAKE_HOME, BrakeReturning);
+    this.animateBrakeTo(brake, BRAKE_STOP, BrakeReturning);
   }
 
   private animateBrakeTo(
@@ -260,7 +260,7 @@ export class BrakeSystem extends createSystem({
   private finishReturnHome(brake: Entity): void {
     const obj = brake.object3D;
     if (obj) {
-      obj.position.set(BRAKE_HOME.x, BRAKE_HOME.y, BRAKE_HOME.z);
+      obj.position.set(BRAKE_STOP.x, BRAKE_STOP.y, BRAKE_STOP.z);
     }
     brake.removeComponent(BrakeReturning);
   }
@@ -270,7 +270,7 @@ export class BrakeSystem extends createSystem({
 
     const obj = brake.object3D;
     if (obj) {
-      obj.position.set(BRAKE_SHIFTED.x, BRAKE_SHIFTED.y, BRAKE_SHIFTED.z);
+      obj.position.set(BRAKE_PLAY.x, BRAKE_PLAY.y, BRAKE_PLAY.z);
     }
 
     brake.removeComponent(BrakeShifted);

@@ -94,15 +94,15 @@ export class RecordingSystem extends createSystem({
   }
 
   private onRecordingStart(): void {
-    const trumpet = getPart(this.queries.parts.entities, "recording_trumpet");
-    if (trumpet && !trumpet.hasComponent(Highlight)) {
-      trumpet.addComponent(Highlight, { color: RECORDING_INPUT_HIGHLIGHT_COLOR });
+    const recordingHorn = getPart(this.queries.parts.entities, "recording_horn");
+    if (recordingHorn && !recordingHorn.hasComponent(Highlight)) {
+      recordingHorn.addComponent(Highlight, { color: RECORDING_INPUT_HIGHLIGHT_COLOR });
     }
   }
 
   private onRecordingStop(): void {
-    const trumpet = getPart(this.queries.parts.entities, "recording_trumpet");
-    trumpet?.removeComponent(Highlight);
+    const recordingHorn = getPart(this.queries.parts.entities, "recording_horn");
+    recordingHorn?.removeComponent(Highlight);
   }
 
   private startPlayback(taskEntity: {

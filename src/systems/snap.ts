@@ -9,6 +9,10 @@ import { Snappable, SnapPoint, Snapped } from "../components/snap.js";
 import { SnapAnimation } from "../components/animation.js";
 import { playSnap } from "../audio/sfx.js";
 import { Unmounting } from "../components/unmounting.js";
+import {
+  isCarriageSnapPoint,
+  reparentObject3D,
+} from "../helpers/carriage-attach.js";
 
 export class SnapSystem extends createSystem({
   snappables: {
@@ -61,8 +65,16 @@ export class SnapSystem extends createSystem({
   }
 
   private executeSnap(entity: Entity, point: Entity) {
-    const targetPos = point.object3D!.position;
-    const targetQuat = point.object3D!.quaternion;
+    const pointObj = point.object3D!;
+    const entityObj = entity.object3D!;
+
+    const snapPointId = point.getValue(SnapPoint, "id")!;
+    if (isCarriageSnapPoint(snapPointId) && pointObj.parent && entityObj.parent !== pointObj.parent) {
+      reparentObject3D(entityObj, pointObj.parent);
+    }
+
+    const targetPos = pointObj.position;
+    const targetQuat = pointObj.quaternion;
 
     entity.removeComponent(OneHandGrabbable);
     entity.addComponent(Snapped, {

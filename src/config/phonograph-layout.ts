@@ -1,4 +1,4 @@
-type Vec3 = [number, number, number];
+export type Vec3 = [number, number, number];
 type Quat = [number, number, number, number];
 
 const IDENTITY_QUAT: Quat = [0, 0, 0, 1];
@@ -84,6 +84,27 @@ export const PART_LAYOUT: PartLayout[] = [
   },
 ];
 
+export const CARRIAGE_SNAP_POINT_IDS = [
+  "recorder_snap_point",
+  "horn_snap_point",
+] as const;
+
+export const CARRIAGE_PART_IDS = [
+  "recorder",
+  "reproducer",
+  "recording_horn",
+  "listening_horn",
+] as const;
+
+export const CARRIAGE_LAYOUT = {
+  assetKey: "carriage",
+  position: [0.08, 0.2375, 0.03885] as Vec3,
+  quaternion: IDENTITY_QUAT,
+  startX: 0.08,
+  endX: -0.08,
+  travelDurationS: 120,
+};
+
 export const SNAP_POINT_LAYOUT: SnapPointLayout[] = [
   {
     id: "cylinder_snap_point",
@@ -94,13 +115,13 @@ export const SNAP_POINT_LAYOUT: SnapPointLayout[] = [
   {
     id: "recorder_snap_point",
     ghostAssetKey: "recorder",
-    position: [0.09, 0.2945, -0.016],
+    position: [0.09, 0.2945, -0.01625],
     quaternion: [-0.1, -0.002, -0.02, 0.995],
   },
   {
     id: "horn_snap_point",
     ghostAssetKey: "recording_horn",
-    position: [0.09025, 0.3955, 0.455],
+    position: [0.09025, 0.3975, 0.455],
     quaternion: [-0.78, 0, 0, 0.625],
   },
 ];

@@ -5,6 +5,7 @@ import {
   OneHandGrabbable,
 } from "@iwsdk/core";
 import { Task, ActiveTask, CompletedTask } from "../components/task.js";
+import { Phonograph } from "../components/phonograph.js";
 import { PhonographPart } from "../components/phonograph-part.js";
 import { PopOut, PopOutDone, SnapAnimation } from "../components/animation.js";
 import { Highlight, STOP_HIGHLIGHT_COLOR } from "../components/highlight.js";
@@ -14,6 +15,11 @@ import { UNMOUNT_BY_TASK } from "../config/task-flow.js";
 import { forceReleaseGrab } from "../helpers/grab-release.js";
 import { getPart } from "../helpers/parts.js";
 import { playPop } from "../audio/sfx.js";
+import {
+  isCarriagePart,
+  reparentPartToPhonographStaging,
+} from "../helpers/carriage-attach.js";
+import { firstEntity } from "../helpers/entity-query.js";
 
 export class PartUnmountSystem extends createSystem({
   activeTask: {
@@ -21,6 +27,7 @@ export class PartUnmountSystem extends createSystem({
     excluded: [CompletedTask],
   },
   parts: { required: [PhonographPart] },
+  phonograph: { required: [Phonograph] },
   grabbedWhileUnmounting: {
     required: [Unmounting, Grabbed],
     excluded: [PopOut, UnmountPopping],
@@ -93,6 +100,12 @@ export class PartUnmountSystem extends createSystem({
     const taskId = part.getValue(Unmounting, "taskId");
     forceReleaseGrab(part);
     part.removeComponent(Unmounting).removeComponent(UnmountPopping);
+
+    const partId = part.getValue(PhonographPart, "id");
+    const phonograph = firstEntity(this.queries.phonograph.entities);
+    if (isCarriagePart(partId) && phonograph?.object3D) {
+      reparentPartToPhonographStaging(part, phonograph.object3D);
+    }
 
     const obj = part.object3D;
     if (obj) {

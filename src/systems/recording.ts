@@ -13,6 +13,8 @@ import {
   setRecordedAudio,
 } from "../audio/recording-store.js";
 import { getPart } from "../helpers/parts.js";
+import { CARRIAGE_LAYOUT } from "../config/phonograph-layout.js";
+import { stopActiveRecording } from "../audio/recording-store.js";
 
 export class RecordingSystem extends createSystem({
   activeRecordingTask: {
@@ -27,6 +29,8 @@ export class RecordingSystem extends createSystem({
   },
   parts: { required: [PhonographPart] },
 }) {
+  private recordingLimitTimer: ReturnType<typeof setTimeout> | undefined;
+
   init() {
     this.triggerEarlyPermissionPrompt();
 
@@ -72,6 +76,7 @@ export class RecordingSystem extends createSystem({
       };
 
       recorder.onstop = async () => {
+        this.clearRecordingLimitTimer();
         clearActiveRecording();
         stream.getTracks().forEach((t) => t.stop());
 
@@ -86,6 +91,10 @@ export class RecordingSystem extends createSystem({
       };
 
       recorder.start();
+      this.clearRecordingLimitTimer();
+      this.recordingLimitTimer = setTimeout(() => {
+        stopActiveRecording();
+      }, CARRIAGE_LAYOUT.travelDurationS * 1000);
     } catch (err) {
       console.error("Recording failed:", err);
       clearActiveRecording();
@@ -101,8 +110,16 @@ export class RecordingSystem extends createSystem({
   }
 
   private onRecordingStop(): void {
+    this.clearRecordingLimitTimer();
     const recordingHorn = getPart(this.queries.parts.entities, "recording_horn");
     recordingHorn?.removeComponent(Highlight);
+  }
+
+  private clearRecordingLimitTimer(): void {
+    if (this.recordingLimitTimer != null) {
+      clearTimeout(this.recordingLimitTimer);
+      this.recordingLimitTimer = undefined;
+    }
   }
 
   private startPlayback(taskEntity: {

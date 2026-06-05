@@ -1,7 +1,7 @@
 import { createSystem, Entity, eq, Grabbed, OneHandGrabbable } from "@iwsdk/core";
 import { Task, ActiveTask, CompletedTask } from "../components/task.js";
 import { PhonographPart } from "../components/phonograph-part.js";
-import { Phonograph, BrakeShifted, BrakeReturning, CrankHeld, CrankingComplete } from "../components/phonograph.js";
+import { Phonograph, Carriage, CarriageMesh, CarriageReturning, BrakeShifted, BrakeReturning, CrankHeld, CrankingComplete } from "../components/phonograph.js";
 import { CrankRotation } from "../components/crank-rotation.js";
 import { Highlight } from "../components/highlight.js";
 import { MountTaskBinding } from "../components/mount-task-binding.js";
@@ -10,7 +10,8 @@ import { Snappable, Snapped, SnapGhost, SnapPoint } from "../components/snap.js"
 import { Unmounting, UnmountPopping } from "../components/unmounting.js";
 import { clearRecordedAudio } from "../audio/recording-store.js";
 import { getPart } from "../helpers/parts.js";
-import { PART_LAYOUT } from "../config/phonograph-layout.js";
+import { isCarriagePart, reparentPartToPhonographStaging } from "../helpers/carriage-attach.js";
+import { CARRIAGE_LAYOUT, PART_LAYOUT } from "../config/phonograph-layout.js";
 
 const GAMEPLAY_COMPONENTS = [
   MountTaskBinding,
@@ -31,6 +32,7 @@ const GAMEPLAY_COMPONENTS = [
   CrankRotation,
   BrakeShifted,
   BrakeReturning,
+  CarriageReturning,
 ] as const;
 
 export class WorldResetSystem extends createSystem({
@@ -42,6 +44,8 @@ export class WorldResetSystem extends createSystem({
   phonograph: { required: [Phonograph] },
   parts: { required: [PhonographPart] },
   snapPoints: { required: [SnapPoint] },
+  carriage: { required: [Carriage] },
+  carriageMesh: { required: [CarriageMesh] },
 }) {
   init() {
     this.cleanupFuncs.push(
@@ -59,14 +63,33 @@ export class WorldResetSystem extends createSystem({
       this.stripGameplay(phonograph);
     }
 
+    const phonographRoot = this.queries.phonograph.entities.values().next().value
+      ?.object3D;
+
     for (const layout of PART_LAYOUT) {
       const part = getPart(this.queries.parts.entities, layout.id);
       if (!part?.object3D) continue;
-      part.object3D.position.set(...layout.position);
-      part.object3D.quaternion.set(...layout.quaternion);
+      if (phonographRoot && isCarriagePart(layout.id)) {
+        reparentPartToPhonographStaging(part, phonographRoot);
+      } else {
+        part.object3D.position.set(...layout.position);
+        part.object3D.quaternion.set(...layout.quaternion);
+      }
       part.object3D.scale.setScalar(1);
       part.object3D.visible = layout.visible;
       this.stripGameplay(part);
+    }
+
+    for (const carriage of this.queries.carriage.entities) {
+      if (!carriage.object3D) continue;
+      carriage.object3D.position.set(...CARRIAGE_LAYOUT.position);
+      carriage.object3D.quaternion.set(...CARRIAGE_LAYOUT.quaternion);
+      carriage.object3D.visible = true;
+      this.stripGameplay(carriage);
+    }
+
+    for (const mesh of this.queries.carriageMesh.entities) {
+      this.stripGameplay(mesh);
     }
 
     for (const snapPoint of this.queries.snapPoints.entities) {

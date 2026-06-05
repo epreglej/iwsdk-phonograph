@@ -28,6 +28,7 @@ export type TaskDef =
   | { id: string; kind: "crank"; partId: string; placard: PlacardSpec }
   | { id: string; kind: "unmount"; partId: string; placard: PlacardSpec }
   | { id: string; kind: "brakeShift"; partId: string; placard: PlacardSpec }
+  | { id: string; kind: "carriageReturn"; partId: string; placard: PlacardSpec }
   | {
       id: string;
       kind: "recording";
@@ -55,17 +56,17 @@ const BRAKE_PLACARD_DEFAULTS = {
 
 const BRAKE_RECORDING_PLACARD: PlacardSpec = {
   ...BRAKE_PLACARD_DEFAULTS,
-  panelConfig: "./ui/brake-shift-instruction.json",
+  panelConfig: "./ui/placards/brake-shift-instruction.json",
 };
 
 const BRAKE_RECORDING_STOP_PLACARD: PlacardSpec = {
   ...BRAKE_PLACARD_DEFAULTS,
-  panelConfig: "./ui/brake-recording-stop-instruction.json",
+  panelConfig: "./ui/placards/brake-recording-stop-instruction.json",
 };
 
 const BRAKE_PLAYBACK_PLACARD: PlacardSpec = {
   ...BRAKE_PLACARD_DEFAULTS,
-  panelConfig: "./ui/playback-brake-shift-instruction.json",
+  panelConfig: "./ui/placards/playback-brake-shift-instruction.json",
 };
 
 const HEAD_MENU_PANEL = {
@@ -86,7 +87,7 @@ const PHONOGRAPH_INFO_PANEL = {
 };
 
 const RECORDING_INDICATOR_PANEL: TaskPanelSpec = {
-  panelConfig: "./ui/recording-indicator.json",
+  panelConfig: "./ui/panels/recording-indicator.json",
   maxWidth: 0.38,
   anchor: "phonograph",
   offsetY: 0.5,
@@ -99,7 +100,7 @@ export const TASK_FLOW: TaskDef[] = [
     kind: "menu",
     panel: {
       ...HEAD_MENU_PANEL,
-      panelConfig: "./ui/main-menu.json",
+      panelConfig: "./ui/menus/main-menu.json",
       buttonId: "start-learning-button",
     },
   },
@@ -108,7 +109,7 @@ export const TASK_FLOW: TaskDef[] = [
     kind: "info",
     panel: {
       ...PHONOGRAPH_INFO_PANEL,
-      panelConfig: "./ui/recording-setup-info.json",
+      panelConfig: "./ui/info/recording-setup-info.json",
     },
   },
   {
@@ -118,7 +119,7 @@ export const TASK_FLOW: TaskDef[] = [
     snapPointId: "cylinder_snap_point",
     placard: {
       ...MOUNT_PLACARD_DEFAULTS,
-      panelConfig: "./ui/cylinder-mount-instruction.json",
+      panelConfig: "./ui/placards/cylinder-mount-instruction.json",
     },
   },
   {
@@ -128,7 +129,7 @@ export const TASK_FLOW: TaskDef[] = [
     snapPointId: "recorder_snap_point",
     placard: {
       ...MOUNT_PLACARD_DEFAULTS,
-      panelConfig: "./ui/recorder-mount-instruction.json",
+      panelConfig: "./ui/placards/recorder-mount-instruction.json",
     },
   },
   {
@@ -138,7 +139,7 @@ export const TASK_FLOW: TaskDef[] = [
     snapPointId: "horn_snap_point",
     placard: {
       ...MOUNT_PLACARD_DEFAULTS,
-      panelConfig: "./ui/recording-horn-mount-instruction.json",
+      panelConfig: "./ui/placards/recording-horn-mount-instruction.json",
       offsetZ: 0.25,
     },
   },
@@ -147,7 +148,7 @@ export const TASK_FLOW: TaskDef[] = [
     kind: "crank",
     partId: "crank",
     placard: {
-      panelConfig: "./ui/crank-cranking-instruction.json",
+      panelConfig: "./ui/placards/crank-cranking-instruction.json",
       offsetX: 0.1,
       offsetY: 0.2,
       offsetZ: 0,
@@ -161,7 +162,7 @@ export const TASK_FLOW: TaskDef[] = [
     kind: "info",
     panel: {
       ...PHONOGRAPH_INFO_PANEL,
-      panelConfig: "./ui/recording-ready-info.json",
+      panelConfig: "./ui/info/recording-ready-info.json",
     },
   },
   {
@@ -182,14 +183,14 @@ export const TASK_FLOW: TaskDef[] = [
     kind: "info",
     panel: {
       ...PHONOGRAPH_INFO_PANEL,
-      panelConfig: "./ui/playback-setup-info.json",
+      panelConfig: "./ui/info/playback-setup-info.json",
     },
   },
   { id: "recording_horn_unmount", kind: "unmount", partId: "recording_horn", placard: {
       ...MOUNT_PLACARD_DEFAULTS,
       dismissOnGrab: true,
       dismissOnSnap: false,
-      panelConfig: "./ui/recording-horn-unmount-instruction.json",
+      panelConfig: "./ui/placards/recording-horn-unmount-instruction.json",
       offsetZ: 0.25,
     },
   },
@@ -197,7 +198,16 @@ export const TASK_FLOW: TaskDef[] = [
       ...MOUNT_PLACARD_DEFAULTS,
       dismissOnGrab: true,
       dismissOnSnap: false,
-      panelConfig: "./ui/recorder-unmount-instruction.json",
+      panelConfig: "./ui/placards/recorder-unmount-instruction.json",
+    },
+  },
+  {
+    id: "carriage_return",
+    kind: "carriageReturn",
+    partId: "carriage",
+    placard: {
+      ...BRAKE_PLACARD_DEFAULTS,
+      panelConfig: "./ui/placards/carriage-return-instruction.json",
     },
   },
   {
@@ -207,7 +217,7 @@ export const TASK_FLOW: TaskDef[] = [
     snapPointId: "recorder_snap_point",
     placard: {
       ...MOUNT_PLACARD_DEFAULTS,
-      panelConfig: "./ui/reproducer-mount-instruction.json",
+      panelConfig: "./ui/placards/reproducer-mount-instruction.json",
     },
   },
   {
@@ -217,7 +227,7 @@ export const TASK_FLOW: TaskDef[] = [
     snapPointId: "horn_snap_point",
     placard: {
       ...MOUNT_PLACARD_DEFAULTS,
-      panelConfig: "./ui/listening-horn-mount-instruction.json",
+      panelConfig: "./ui/placards/listening-horn-mount-instruction.json",
       offsetZ: 0.25,
     },
   },
@@ -226,7 +236,7 @@ export const TASK_FLOW: TaskDef[] = [
     kind: "info",
     panel: {
       ...PHONOGRAPH_INFO_PANEL,
-      panelConfig: "./ui/playback-ready-info.json",
+      panelConfig: "./ui/info/playback-ready-info.json",
     },
   },
   {
@@ -241,7 +251,7 @@ export const TASK_FLOW: TaskDef[] = [
     kind: "menu",
     panel: {
       ...PHONOGRAPH_INFO_PANEL,
-      panelConfig: "./ui/end-menu.json",
+      panelConfig: "./ui/menus/end-menu.json",
       buttonId: "end-menu-restart-button",
       deferCompleteOnDismiss: false,
     },
@@ -280,6 +290,7 @@ for (const task of TASK_FLOW) {
       PLACARD_BY_TASK[task.id] = { partId: task.partId, placard: task.placard };
       break;
     case "brakeShift":
+    case "carriageReturn":
       PLACARD_BY_TASK[task.id] = { partId: task.partId, placard: task.placard };
       break;
     case "recording":
@@ -304,6 +315,7 @@ const INTERACTIVE_TASK_KINDS = new Set<TaskDef["kind"]>([
   "crank",
   "unmount",
   "brakeShift",
+  "carriageReturn",
   "recording",
 ]);
 

@@ -1,5 +1,6 @@
 import { createSystem, Entity, OneHandGrabbable } from "@iwsdk/core";
 import { Task, ActiveTask, CompletedTask } from "../components/task.js";
+import { Phonograph } from "../components/phonograph.js";
 import { PhonographPart } from "../components/phonograph-part.js";
 import { MountTaskBinding } from "../components/mount-task-binding.js";
 import { Highlight } from "../components/highlight.js";
@@ -7,6 +8,11 @@ import { Snappable, SnapGhost } from "../components/snap.js";
 import { MOUNT_BY_TASK } from "../config/task-flow.js";
 import { getPart } from "../helpers/parts.js";
 import { popInFromZero } from "../helpers/pop.js";
+import {
+  isCarriagePart,
+  reparentPartToPhonographStaging,
+} from "../helpers/carriage-attach.js";
+import { firstEntity } from "../helpers/entity-query.js";
 
 export class PartMountSystem extends createSystem({
   activeTask: {
@@ -14,6 +20,7 @@ export class PartMountSystem extends createSystem({
     excluded: [CompletedTask],
   },
   parts: { required: [PhonographPart] },
+  phonograph: { required: [Phonograph] },
 }) {
   init() {
     this.cleanupFuncs.push(
@@ -39,6 +46,12 @@ export class PartMountSystem extends createSystem({
     snapPointId: string,
     taskId: string,
   ): void {
+    const partId = part.getValue(PhonographPart, "id");
+    const phonograph = firstEntity(this.queries.phonograph.entities);
+    if (isCarriagePart(partId) && phonograph?.object3D) {
+      reparentPartToPhonographStaging(part, phonograph.object3D);
+    }
+
     popInFromZero(part);
     part
       .addComponent(OneHandGrabbable)

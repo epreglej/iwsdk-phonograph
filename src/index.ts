@@ -22,6 +22,7 @@ import { CrankSystem } from "./systems/crank.js";
 import { BrakeSystem } from "./systems/brake.js";
 import { InteractionGateSystem } from "./systems/interaction-gate.js";
 import { RecordingSystem } from "./systems/recording.js";
+import { CarriageSystem } from "./systems/carriage.js";
 
 const assets: AssetManifest = {
   chimeSound: {
@@ -66,6 +67,11 @@ const assets: AssetManifest = {
   },
   brake: {
     url: "./gltf/brake.glb",
+    type: AssetType.GLTF,
+    priority: "critical",
+  },
+  carriage: {
+    url: "./gltf/carriage.glb",
     type: AssetType.GLTF,
     priority: "critical",
   },
@@ -118,7 +124,8 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       .registerSystem(CylinderSystem)
       .registerSystem(CrankSystem)
       .registerSystem(BrakeSystem)
-      .registerSystem(RecordingSystem);
+      .registerSystem(RecordingSystem)
+      .registerSystem(CarriageSystem);
 
     world
       .createEntity()

@@ -54,10 +54,10 @@
 </style>
 
 <div id="panel-root" class="menu-card">
-  <span class="title">Playback Complete</span>
-  <span class="subtitle">Start over from the main menu?</span>
+  <span class="title">You Did It</span>
+  <span class="subtitle">You just recorded and played back your voice on a phonograph</span>
 
   <button id="end-menu-restart-button" class="menu-button">
-    <span class="menu-button-label">Restart</span>
+    <span class="menu-button-label">Try Again</span>
   </button>
 </div>

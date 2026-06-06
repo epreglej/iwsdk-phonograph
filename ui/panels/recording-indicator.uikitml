@@ -49,7 +49,7 @@
 <div id="panel-root" class="indicator">
   <div class="rec-row">
     <div class="rec-dot"></div>
-    <span class="rec-title">Recording</span>
+    <span class="rec-title">Recording...</span>
   </div>
-  <p class="rec-body">Speak into the recording horn</p>
+  <p class="rec-body">Talk into the horn</p>
 </div>

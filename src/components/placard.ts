@@ -2,6 +2,7 @@ import { createComponent, Types } from "@iwsdk/core";
 
 export const Placard = createComponent("Placard", {
   panelConfig: { type: Types.String, default: "" },
+  maxWidth: { type: Types.Float32, default: 0.221 },
   offsetX: { type: Types.Float32, default: 0 },
   offsetY: { type: Types.Float32, default: 0 },
   offsetZ: { type: Types.Float32, default: 0 },

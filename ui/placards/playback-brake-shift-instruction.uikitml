@@ -55,16 +55,36 @@
     flex-shrink: 0;
   }
 
+  .placard-body {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .description-accent {
+    width: 2px;
+    flex-shrink: 0;
+    align-self: stretch;
+    margin-top: 2px;
+    margin-bottom: 2px;
+    background-color: rgba(255, 255, 255, 0.35);
+  }
+
   .placard-description {
     font-size: 11px;
     font-weight: 500;
     line-height: 1.45;
     color: rgba(255, 255, 255, 0.95);
     margin: 0;
+    flex-grow: 1;
   }
 </style>
 
 <div id="panel-root" class="placard">
-  <div class="placard-title"><span class="title-text">Release the</span><span class="kw">Brake</span><span class="title-tail">and Listen</span></div>
-  <p class="placard-description">As the cylinder spins, the sapphire ball rides the physical bumps of your voice, vibrating the speaker diaphragm to recreate your original sound.</p>
+  <div class="placard-title"><span class="title-text">Release the</span><span class="kw">Brake</span></div>
+  <div class="placard-body">
+    <div class="description-accent"></div>
+    <p class="placard-description">Releasing the brake will let the motor spin the cylinder and send your recorded voice out through the listening horn</p>
+  </div>
 </div>

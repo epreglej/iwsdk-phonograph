@@ -10,4 +10,4 @@ export const STOP_HIGHLIGHT_COLOR: [number, number, number, number] = [
 ];
 
 export const RECORDING_INPUT_HIGHLIGHT_COLOR: [number, number, number, number] =
-  [1, 0.45, 0.08, 0.32];
+  [1, 0.45, 0.08, 0.12];

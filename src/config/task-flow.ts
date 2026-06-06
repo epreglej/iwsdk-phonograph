@@ -1,5 +1,6 @@
 export interface PlacardSpec {
   panelConfig: string;
+  maxWidth?: number;
   offsetX?: number;
   offsetY?: number;
   offsetZ?: number;
@@ -19,11 +20,12 @@ export interface TaskPanelSpec {
   billboard?: boolean;
   buttonId?: string;
   deferCompleteOnDismiss?: boolean;
+  autoCompleteMs?: number;
 }
 
 export type TaskDef =
   | { id: string; kind: "menu"; panel: TaskPanelSpec }
-  | { id: string; kind: "info"; panel: TaskPanelSpec }
+  | { id: string; kind: "intro"; placard: PlacardSpec }
   | { id: string; kind: "mount"; partId: string; snapPointId: string; placard: PlacardSpec }
   | { id: string; kind: "crank"; partId: string; placard: PlacardSpec }
   | { id: string; kind: "unmount"; partId: string; placard: PlacardSpec }
@@ -77,14 +79,22 @@ const HEAD_MENU_PANEL = {
   faceTarget: true,
 };
 
-const PHONOGRAPH_INFO_PANEL = {
+const PHONOGRAPH_MENU_PANEL = {
   maxWidth: 0.35,
   anchor: "phonograph" as const,
   offsetY: 0.55,
   billboard: true,
-  buttonId: "continue-button",
-  deferCompleteOnDismiss: true,
 };
+
+const PHONOGRAPH_INTRO_PLACARD_DEFAULTS = {
+  maxWidth: 0.35,
+  offsetX: 0,
+  offsetY: 0.55,
+  offsetZ: 0,
+  dismissOnGrab: false,
+  dismissOnSnap: false,
+  autoDismissMs: 5000,
+} as const;
 
 const RECORDING_INDICATOR_PANEL: TaskPanelSpec = {
   panelConfig: "./ui/panels/recording-indicator.json",
@@ -105,11 +115,11 @@ export const TASK_FLOW: TaskDef[] = [
     },
   },
   {
-    id: "recording_setup_info",
-    kind: "info",
-    panel: {
-      ...PHONOGRAPH_INFO_PANEL,
-      panelConfig: "./ui/info/recording-setup-info.json",
+    id: "assembly_intro",
+    kind: "intro",
+    placard: {
+      ...PHONOGRAPH_INTRO_PLACARD_DEFAULTS,
+      panelConfig: "./ui/intros/assembly-intro.json",
     },
   },
   {
@@ -158,11 +168,11 @@ export const TASK_FLOW: TaskDef[] = [
     },
   },
   {
-    id: "recording_ready_info",
-    kind: "info",
-    panel: {
-      ...PHONOGRAPH_INFO_PANEL,
-      panelConfig: "./ui/info/recording-ready-info.json",
+    id: "recording_intro",
+    kind: "intro",
+    placard: {
+      ...PHONOGRAPH_INTRO_PLACARD_DEFAULTS,
+      panelConfig: "./ui/intros/recording-intro.json",
     },
   },
   {
@@ -179,11 +189,11 @@ export const TASK_FLOW: TaskDef[] = [
     panel: RECORDING_INDICATOR_PANEL,
   },
   {
-    id: "playback_setup_info",
-    kind: "info",
-    panel: {
-      ...PHONOGRAPH_INFO_PANEL,
-      panelConfig: "./ui/info/playback-setup-info.json",
+    id: "reassembly_intro",
+    kind: "intro",
+    placard: {
+      ...PHONOGRAPH_INTRO_PLACARD_DEFAULTS,
+      panelConfig: "./ui/intros/reassembly-intro.json",
     },
   },
   { id: "recording_horn_unmount", kind: "unmount", partId: "recording_horn", placard: {
@@ -232,11 +242,11 @@ export const TASK_FLOW: TaskDef[] = [
     },
   },
   {
-    id: "playback_ready_info",
-    kind: "info",
-    panel: {
-      ...PHONOGRAPH_INFO_PANEL,
-      panelConfig: "./ui/info/playback-ready-info.json",
+    id: "playback_intro",
+    kind: "intro",
+    placard: {
+      ...PHONOGRAPH_INTRO_PLACARD_DEFAULTS,
+      panelConfig: "./ui/intros/playback-intro.json",
     },
   },
   {
@@ -250,7 +260,7 @@ export const TASK_FLOW: TaskDef[] = [
     id: "done",
     kind: "menu",
     panel: {
-      ...PHONOGRAPH_INFO_PANEL,
+      ...PHONOGRAPH_MENU_PANEL,
       panelConfig: "./ui/menus/end-menu.json",
       buttonId: "end-menu-restart-button",
       deferCompleteOnDismiss: false,
@@ -301,7 +311,12 @@ for (const task of TASK_FLOW) {
       UNMOUNT_BY_TASK[task.id] = { partId: task.partId };
       PLACARD_BY_TASK[task.id] = { partId: task.partId, placard: task.placard };
       break;
-    case "info":
+    case "intro":
+      PLACARD_BY_TASK[task.id] = {
+        partId: "phonograph",
+        placard: task.placard,
+      };
+      break;
     case "menu":
       TASK_PANEL_BY_TASK[task.id] = task.panel;
       break;
@@ -323,3 +338,7 @@ export function isInteractiveTask(taskId: string): boolean {
   const task = TASK_FLOW.find((entry) => entry.id === taskId);
   return task != null && INTERACTIVE_TASK_KINDS.has(task.kind);
 }
+
+export const INTRO_TASK_IDS = new Set(
+  TASK_FLOW.filter((task) => task.kind === "intro").map((task) => task.id),
+);

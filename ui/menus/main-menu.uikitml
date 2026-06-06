@@ -55,10 +55,10 @@
 
 <div id="panel-root" class="menu-card">
   <span class="title">The Phonograph</span>
-  <span class="subtitle">Learn how sound was first recorded</span>
+  <span class="subtitle">Record your voice on a wax cylinder phonograph</span>
 
   <button id="start-learning-button" class="menu-button">
-    <span class="menu-button-label">Start Learning</span>
+    <span class="menu-button-label">Begin</span>
   </button>
 
   <button id="settings-button" class="menu-button">

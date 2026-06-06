@@ -24,6 +24,8 @@ export class TaskPanelSystem extends createSystem({
 }) {
   private wired = new Set<number>();
   private pendingDismiss = new Set<number>();
+  private pendingDispose = new Set<number>();
+  private autoCompleteTimers = new Map<number, ReturnType<typeof setTimeout>>();
 
   init() {
     this.cleanupFuncs.push(
@@ -38,19 +40,25 @@ export class TaskPanelSystem extends createSystem({
       this.queries.instances.subscribe("disqualify", (panel) => {
         this.wired.delete(panel.index);
         this.pendingDismiss.delete(panel.index);
+        this.clearAutoCompleteTimer(panel.index);
         panel.dispose();
       }),
 
       this.queries.instanceDocs.subscribe("qualify", (panel) => {
         this.popInPanel(panel);
         this.wireButton(panel);
+        this.scheduleAutoComplete(panel);
       }),
 
       this.queries.poppedOut.subscribe("qualify", (panel) => {
-        if (this.pendingDismiss.delete(panel.index)) {
+        const shouldComplete = this.pendingDismiss.delete(panel.index);
+        this.teardownPanel(panel);
+        if (shouldComplete) {
           this.completeTask(panel.getValue(TaskPanelInstance, "taskId")!);
         }
-        this.teardownPanel(panel);
+        if (this.pendingDispose.delete(panel.index)) {
+          panel.dispose();
+        }
       }),
     );
   }
@@ -87,7 +95,11 @@ export class TaskPanelSystem extends createSystem({
       panel.addComponent(Billboard);
     }
 
-    panel.addComponent(PokeInteractable);
+    const autoCompleteMs = anchor.getValue(TaskPanel, "autoCompleteMs") ?? 0;
+    if (autoCompleteMs <= 0) {
+      panel.addComponent(PokeInteractable);
+    }
+
     panel.object3D!.scale.set(0.001, 0.001, 0.001);
     panel.object3D!.visible = true;
   }
@@ -138,6 +150,36 @@ export class TaskPanelSystem extends createSystem({
     this.wired.add(panel.index);
   }
 
+  private scheduleAutoComplete(panel: Entity): void {
+    if (this.autoCompleteTimers.has(panel.index)) return;
+
+    const anchor = panel.getValue(TaskPanelInstance, "anchor");
+    if (!anchor?.hasComponent(TaskPanel)) return;
+
+    const ms = anchor.getValue(TaskPanel, "autoCompleteMs") ?? 0;
+    if (ms <= 0) return;
+
+    const timer = setTimeout(() => {
+      this.autoCompleteTimers.delete(panel.index);
+      if (!panel.active) return;
+
+      this.pendingDismiss.add(panel.index);
+      if (panel.hasComponent(PokeInteractable)) {
+        panel.removeComponent(PokeInteractable);
+      }
+      hidePanel(panel);
+    }, ms);
+
+    this.autoCompleteTimers.set(panel.index, timer);
+  }
+
+  private clearAutoCompleteTimer(panelIndex: number): void {
+    const timer = this.autoCompleteTimers.get(panelIndex);
+    if (timer === undefined) return;
+    clearTimeout(timer);
+    this.autoCompleteTimers.delete(panelIndex);
+  }
+
   private completeTask(taskId: string): void {
     for (const task of this.queries.activeTask.entities) {
       if (
@@ -170,6 +212,22 @@ export class TaskPanelSystem extends createSystem({
 
   private destroyPanelForAnchor(anchor: Entity): void {
     const panel = this.findPanelForAnchor(anchor);
-    panel?.dispose();
+    if (!panel) return;
+
+    this.clearAutoCompleteTimer(panel.index);
+
+    if (
+      panel.active &&
+      panel.object3D?.visible &&
+      !panel.hasComponent(PopOut2D) &&
+      !panel.hasComponent(PopOut2DDone) &&
+      !this.pendingDismiss.has(panel.index)
+    ) {
+      this.pendingDispose.add(panel.index);
+      hidePanel(panel);
+      return;
+    }
+
+    panel.dispose();
   }
 }

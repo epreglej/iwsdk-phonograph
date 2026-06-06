@@ -88,10 +88,11 @@ export class PlacardSystem extends createSystem({
     if (existing) existing.dispose();
 
     const config = target.getValue(Placard, "panelConfig")!;
+    const maxWidth = target.getValue(Placard, "maxWidth") ?? 0.221;
 
     const placard = this.world
       .createTransformEntity(undefined, { parent: this.world.sceneEntity })
-      .addComponent(PanelUI, { config, maxWidth: 0.221 })
+      .addComponent(PanelUI, { config, maxWidth })
       .addComponent(PlacardInstance, { target })
       .addComponent(Follower, {
         behavior: FollowBehavior.NoRotation,

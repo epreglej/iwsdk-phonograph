@@ -9,7 +9,7 @@ import {
 import { Task, ActiveTask, CompletedTask } from "../components/task.js";
 import { Carriage, CarriageMesh, CarriageReturning } from "../components/phonograph.js";
 import { SnapAnimation, SnapDone } from "../components/animation.js";
-import { Highlight } from "../components/highlight.js";
+import { Highlight, STOP_HIGHLIGHT_COLOR } from "../components/highlight.js";
 import { CARRIAGE_LAYOUT } from "../config/phonograph-layout.js";
 import { stopActiveRecording } from "../audio/recording-store.js";
 import { forceReleaseGrab } from "../helpers/grab-release.js";
@@ -158,7 +158,7 @@ export class CarriageSystem extends createSystem({
       .removeComponent(Highlight)
       .removeComponent(OneHandGrabbable)
       .addComponent(OneHandGrabbable)
-      .addComponent(Highlight);
+      .addComponent(Highlight, { color: STOP_HIGHLIGHT_COLOR });
   }
 
   private onCarriageReturnDisqualify(): void {

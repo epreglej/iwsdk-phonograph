@@ -11,6 +11,7 @@ export const TaskPanel = createComponent("TaskPanel", {
   billboard: { type: Types.Boolean, default: false },
   buttonId: { type: Types.String, default: "" },
   deferCompleteOnDismiss: { type: Types.Boolean, default: false },
+  autoCompleteMs: { type: Types.Float32, default: 0 },
 });
 
 export const TaskPanelInstance = createComponent("TaskPanelInstance", {

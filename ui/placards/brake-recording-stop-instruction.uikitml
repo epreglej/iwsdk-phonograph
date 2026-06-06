@@ -55,16 +55,36 @@
     flex-shrink: 0;
   }
 
+  .placard-body {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .description-accent {
+    width: 2px;
+    flex-shrink: 0;
+    align-self: stretch;
+    margin-top: 2px;
+    margin-bottom: 2px;
+    background-color: rgba(255, 255, 255, 0.35);
+  }
+
   .placard-description {
     font-size: 11px;
     font-weight: 500;
     line-height: 1.45;
     color: rgba(255, 255, 255, 0.95);
     margin: 0;
+    flex-grow: 1;
   }
 </style>
 
 <div id="panel-root" class="placard">
-  <div class="placard-title"><span class="title-text">Engage the</span><span class="kw-stop">Brake</span></div>
-  <p class="placard-description">This stops the cylinder from spinning so you don't accidentally cut over your recording.</p>
+  <div class="placard-title"><span class="kw-stop">Stop Recording</span></div>
+  <div class="placard-body">
+    <div class="description-accent"></div>
+    <p class="placard-description">Engaging the brake will stop the cylinder and seal your voice permanently into the wax</p>
+  </div>
 </div>

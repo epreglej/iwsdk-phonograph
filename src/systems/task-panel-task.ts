@@ -64,6 +64,7 @@ export class TaskPanelTaskSystem extends createSystem({
       billboard: spec.billboard ?? false,
       buttonId: spec.buttonId ?? "",
       deferCompleteOnDismiss: spec.deferCompleteOnDismiss ?? false,
+      autoCompleteMs: spec.autoCompleteMs ?? 0,
     });
   }
 

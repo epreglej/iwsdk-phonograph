@@ -8,11 +8,12 @@ import {
   Object3D,
 } from "@iwsdk/core";
 import { Task, ActiveTask, CompletedTask } from "../components/task.js";
+import { PhonographPart } from "../components/phonograph-part.js";
 import { Crank, CrankingComplete, CrankHeld } from "../components/phonograph.js";
 import { CrankRotation } from "../components/crank-rotation.js";
 import { Highlight } from "../components/highlight.js";
 import { playCrankTick } from "../audio/sfx.js";
-import { firstEntity } from "../helpers/entity-query.js";
+import { getPart } from "../helpers/parts.js";
 import { popInFromZero } from "../helpers/pop.js";
 
 export class CrankSystem extends createSystem(
@@ -32,9 +33,7 @@ export class CrankSystem extends createSystem(
     crankHeld: {
       required: [Crank, CrankHeld, CrankRotation],
     },
-    crankComplete: {
-      required: [Crank, CrankingComplete],
-    },
+    parts: { required: [PhonographPart] },
   },
   {
     sensitivity: { type: Types.Float32, default: 1 },
@@ -46,9 +45,14 @@ export class CrankSystem extends createSystem(
   init() {
     this.cleanupFuncs.push(
       this.queries.activeCrankCrankingTask.subscribe("qualify", () => {
-        const crankEntity = firstEntity(this.queries.crank.entities);
+        const crankEntity = getPart(this.queries.parts.entities, "crank");
         const crankRoot = crankEntity?.object3D;
         if (!crankEntity || !crankRoot) return;
+
+        crankEntity
+          .removeComponent(CrankingComplete)
+          .removeComponent(CrankHeld)
+          .removeComponent(CrankRotation);
 
         popInFromZero(crankEntity);
         crankEntity
@@ -71,7 +75,7 @@ export class CrankSystem extends createSystem(
       }),
 
       this.queries.activeCrankCrankingTask.subscribe("disqualify", () => {
-        const crankEntity = firstEntity(this.queries.crank.entities);
+        const crankEntity = getPart(this.queries.parts.entities, "crank");
         crankEntity
           ?.removeComponent(CrankHeld)
           .removeComponent(CrankRotation)
@@ -89,12 +93,6 @@ export class CrankSystem extends createSystem(
 
       this.queries.crankGrabbed.subscribe("disqualify", (entity) => {
         entity.removeComponent(CrankHeld);
-      }),
-
-      this.queries.crankComplete.subscribe("qualify", () => {
-        for (const task of this.queries.activeCrankCrankingTask.entities) {
-          task.addComponent(CompletedTask);
-        }
       }),
     );
   }
@@ -154,6 +152,12 @@ export class CrankSystem extends createSystem(
           .removeComponent(OneHandGrabbable)
           .removeComponent(Highlight)
           .addComponent(CrankingComplete);
+
+        for (const task of this.queries.activeCrankCrankingTask.entities) {
+          if (!task.hasComponent(CompletedTask)) {
+            task.addComponent(CompletedTask);
+          }
+        }
       }
     }
   }

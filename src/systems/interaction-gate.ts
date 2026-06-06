@@ -23,6 +23,8 @@ export class InteractionGateSystem extends createSystem({
         const taskId = taskEntity.getValue(Task, "id")!;
         if (isInteractiveTask(taskId)) {
           openInteractionGate();
+        } else {
+          closeInteractionGate();
         }
       }),
     );

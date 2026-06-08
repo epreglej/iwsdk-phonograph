@@ -69,7 +69,7 @@ export const PART_LAYOUT: PartLayout[] = [
   {
     id: "crank",
     assetKey: "crank",
-    position: [0.235, 0.078, -0.0365],
+    position: [0.185, 0.085, -0.0365],
     quaternion: IDENTITY_QUAT,
     visible: false,
     behaviorTag: "crank",

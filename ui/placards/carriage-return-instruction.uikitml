@@ -85,6 +85,6 @@
   <div class="placard-title"><span class="title-text">Return the</span><span class="kw-stop">Carriage</span></div>
   <div class="placard-body">
     <div class="description-accent"></div>
-    <p class="placard-description">Sliding the carriage back to the start will position the needle at the very first groove of your recording</p>
+    <p class="placard-description">Sliding the carriage back to the start will reset its position so your recording can be played back from the beginning</p>
   </div>
 </div>

@@ -82,7 +82,7 @@
 </style>
 
 <div id="panel-root" class="placard">
-  <div class="placard-title"><span class="title-text">Recording</span></div>
+  <div class="placard-title"><span class="title-text">Phase 2: Recording</span></div>
   <div class="placard-body">
     <div class="description-accent"></div>
     <p class="placard-description">Create a recording of your voice</p>

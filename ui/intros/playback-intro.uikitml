@@ -82,7 +82,7 @@
 </style>
 
 <div id="panel-root" class="placard">
-  <div class="placard-title"><span class="title-text">Playback</span></div>
+  <div class="placard-title"><span class="title-text">Phase 4: Playback</span></div>
   <div class="placard-body">
     <div class="description-accent"></div>
     <p class="placard-description">Listen to your recording</p>

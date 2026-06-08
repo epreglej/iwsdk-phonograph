@@ -82,9 +82,9 @@
 </style>
 
 <div id="panel-root" class="placard">
-  <div class="placard-title"><span class="title-text">Release the</span><span class="kw">Brake</span></div>
+  <div class="placard-title"><span class="kw">Play the Recording</span></div>
   <div class="placard-body">
     <div class="description-accent"></div>
-    <p class="placard-description">Releasing the brake will let the motor spin the cylinder and send your recorded voice out through the listening horn</p>
+    <p class="placard-description">Releasing the brake will let the motor spin the cylinder and play your recorded voice out through the listening horn</p>
   </div>
 </div>

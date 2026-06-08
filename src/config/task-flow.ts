@@ -25,7 +25,7 @@ export interface TaskPanelSpec {
 
 export type TaskDef =
   | { id: string; kind: "menu"; panel: TaskPanelSpec }
-  | { id: string; kind: "intro"; placard: PlacardSpec }
+  | { id: string; kind: "intro"; panel: TaskPanelSpec }
   | { id: string; kind: "mount"; partId: string; snapPointId: string; placard: PlacardSpec }
   | { id: string; kind: "crank"; partId: string; placard: PlacardSpec }
   | { id: string; kind: "unmount"; partId: string; placard: PlacardSpec }
@@ -86,14 +86,12 @@ const PHONOGRAPH_MENU_PANEL = {
   billboard: true,
 };
 
-const PHONOGRAPH_INTRO_PLACARD_DEFAULTS = {
+const PHONOGRAPH_INTRO_PANEL_DEFAULTS = {
   maxWidth: 0.35,
-  offsetX: 0,
+  anchor: "phonograph" as const,
   offsetY: 0.55,
-  offsetZ: 0,
-  dismissOnGrab: false,
-  dismissOnSnap: false,
-  autoDismissMs: 5000,
+  billboard: true,
+  autoCompleteMs: 5000,
 } as const;
 
 const RECORDING_INDICATOR_PANEL: TaskPanelSpec = {
@@ -117,8 +115,8 @@ export const TASK_FLOW: TaskDef[] = [
   {
     id: "assembly_intro",
     kind: "intro",
-    placard: {
-      ...PHONOGRAPH_INTRO_PLACARD_DEFAULTS,
+    panel: {
+      ...PHONOGRAPH_INTRO_PANEL_DEFAULTS,
       panelConfig: "./ui/intros/assembly-intro.json",
     },
   },
@@ -170,8 +168,8 @@ export const TASK_FLOW: TaskDef[] = [
   {
     id: "recording_intro",
     kind: "intro",
-    placard: {
-      ...PHONOGRAPH_INTRO_PLACARD_DEFAULTS,
+    panel: {
+      ...PHONOGRAPH_INTRO_PANEL_DEFAULTS,
       panelConfig: "./ui/intros/recording-intro.json",
     },
   },
@@ -191,8 +189,8 @@ export const TASK_FLOW: TaskDef[] = [
   {
     id: "reassembly_intro",
     kind: "intro",
-    placard: {
-      ...PHONOGRAPH_INTRO_PLACARD_DEFAULTS,
+    panel: {
+      ...PHONOGRAPH_INTRO_PANEL_DEFAULTS,
       panelConfig: "./ui/intros/reassembly-intro.json",
     },
   },
@@ -244,8 +242,8 @@ export const TASK_FLOW: TaskDef[] = [
   {
     id: "playback_intro",
     kind: "intro",
-    placard: {
-      ...PHONOGRAPH_INTRO_PLACARD_DEFAULTS,
+    panel: {
+      ...PHONOGRAPH_INTRO_PANEL_DEFAULTS,
       panelConfig: "./ui/intros/playback-intro.json",
     },
   },
@@ -312,11 +310,6 @@ for (const task of TASK_FLOW) {
       PLACARD_BY_TASK[task.id] = { partId: task.partId, placard: task.placard };
       break;
     case "intro":
-      PLACARD_BY_TASK[task.id] = {
-        partId: "phonograph",
-        placard: task.placard,
-      };
-      break;
     case "menu":
       TASK_PANEL_BY_TASK[task.id] = task.panel;
       break;
@@ -339,6 +332,3 @@ export function isInteractiveTask(taskId: string): boolean {
   return task != null && INTERACTIVE_TASK_KINDS.has(task.kind);
 }
 
-export const INTRO_TASK_IDS = new Set(
-  TASK_FLOW.filter((task) => task.kind === "intro").map((task) => task.id),
-);

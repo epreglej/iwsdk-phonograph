@@ -4,7 +4,6 @@ import { PhonographPart } from "../components/phonograph-part.js";
 import { Crank, CrankingComplete } from "../components/phonograph.js";
 import { Placard, PlacardDismissed } from "../components/placard.js";
 import {
-  INTRO_TASK_IDS,
   PLACARD_BY_TASK,
   nextTaskId,
   type PlacardSpec,
@@ -18,9 +17,6 @@ export class PlacardTaskSystem extends createSystem({
   },
   parts: { required: [PhonographPart] },
   crankComplete: { required: [Crank, CrankingComplete] },
-  introPlacardDismissed: {
-    required: [PhonographPart, PlacardDismissed],
-  },
 }) {
   init() {
     this.cleanupFuncs.push(
@@ -58,28 +54,7 @@ export class PlacardTaskSystem extends createSystem({
         const crank = getPart(this.queries.parts.entities, "crank");
         if (crank) this.stripPlacard(crank);
       }),
-
-      this.queries.introPlacardDismissed.subscribe("qualify", (target) => {
-        this.completeIntroTaskForTarget(target);
-      }),
     );
-  }
-
-  private completeIntroTaskForTarget(target: Entity): void {
-    const partId = target.getValue(PhonographPart, "id")!;
-
-    for (const taskEntity of this.queries.activeTask.entities) {
-      const taskId = taskEntity.getValue(Task, "id")!;
-      if (!INTRO_TASK_IDS.has(taskId)) continue;
-
-      const binding = PLACARD_BY_TASK[taskId];
-      if (binding?.partId !== partId) continue;
-
-      if (!taskEntity.hasComponent(CompletedTask)) {
-        taskEntity.addComponent(CompletedTask);
-      }
-      return;
-    }
   }
 
   private attachPlacard(entity: Entity, spec: PlacardSpec): void {

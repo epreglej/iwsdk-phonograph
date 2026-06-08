@@ -1,4 +1,5 @@
 import {
+  createComponent,
   createSystem,
   Entity,
   eq,
@@ -6,15 +7,19 @@ import {
   Object3D,
   OneHandGrabbable,
 } from "@iwsdk/core";
-import { Task, ActiveTask, CompletedTask } from "../components/task.js";
-import { Carriage, CarriageMesh, CarriageReturning } from "../components/phonograph.js";
-import { SnapAnimation, SnapDone } from "../components/animation.js";
-import { Highlight, STOP_HIGHLIGHT_COLOR } from "../components/highlight.js";
-import { CARRIAGE_LAYOUT } from "../config/phonograph-layout.js";
-import { stopActiveRecording } from "../audio/recording-store.js";
-import { forceReleaseGrab } from "../helpers/grab-release.js";
+import { Handle } from "@iwsdk/core/dist/grab/handles.js";
+import { Task, ActiveTask, CompletedTask } from "./task-flow.js";
+import { SnapAnimation, SnapDone } from "./animation.js";
+import { Highlight, STOP_HIGHLIGHT_COLOR } from "./highlight.js";
+import { CARRIAGE_LAYOUT } from "../config.js";
+import { stopActiveRecording } from "./recording.js";
 import { playSnap } from "../audio/sfx.js";
-import { firstEntity } from "../helpers/entity-query.js";
+
+export const Carriage = createComponent("Carriage", {});
+export const CarriageMesh = createComponent("CarriageMesh", {});
+export const CarriageReturning = createComponent("CarriageReturning", {});
+
+type CancellableHandle = { cancel?: () => void };
 
 const CARRIAGE_TRAVEL =
   CARRIAGE_LAYOUT.endX - CARRIAGE_LAYOUT.startX;
@@ -115,7 +120,7 @@ export class CarriageSystem extends createSystem({
   update(delta: number): void {
     if (!this.recording && !this.playback) return;
 
-    const rig = firstEntity(this.queries.carriage.entities);
+    const rig = this.first(this.queries.carriage.entities);
     const obj = rig?.object3D;
     if (!obj) return;
 
@@ -143,8 +148,8 @@ export class CarriageSystem extends createSystem({
   }
 
   private onCarriageReturnQualify(): void {
-    const mesh = firstEntity(this.queries.carriageMesh.entities);
-    const rig = firstEntity(this.queries.carriage.entities);
+    const mesh = this.first(this.queries.carriageMesh.entities);
+    const rig = this.first(this.queries.carriage.entities);
     if (!mesh || !rig?.object3D) return;
 
     rig
@@ -162,8 +167,8 @@ export class CarriageSystem extends createSystem({
   }
 
   private onCarriageReturnDisqualify(): void {
-    const mesh = firstEntity(this.queries.carriageMesh.entities);
-    const rig = firstEntity(this.queries.carriage.entities);
+    const mesh = this.first(this.queries.carriageMesh.entities);
+    const rig = this.first(this.queries.carriage.entities);
     if (!rig) return;
 
     rig
@@ -189,7 +194,7 @@ export class CarriageSystem extends createSystem({
       return;
     }
 
-    forceReleaseGrab(mesh);
+    this.forceReleaseGrab(mesh);
     mesh
       .removeComponent(Highlight)
       .removeComponent(OneHandGrabbable)
@@ -233,7 +238,7 @@ export class CarriageSystem extends createSystem({
   }
 
   private resetCarriageToStart(): void {
-    const rig = firstEntity(this.queries.carriage.entities);
+    const rig = this.first(this.queries.carriage.entities);
     if (!rig?.object3D) return;
 
     rig.object3D.position.set(...CARRIAGE_LAYOUT.position);
@@ -247,6 +252,32 @@ export class CarriageSystem extends createSystem({
     for (const rig of this.queries.carriage.entities) {
       if (rig.object3D === meshObj.parent) return rig;
     }
+    return undefined;
+  }
+
+  private forceReleaseGrab(entity: Entity): void {
+    const handle = entity.getValue(Handle, "instance") as
+      | CancellableHandle
+      | undefined;
+    if (handle?.cancel) {
+      try {
+        handle.cancel();
+      } catch {
+      }
+    }
+    if (entity.hasComponent(Handle)) {
+      entity.removeComponent(Handle);
+    }
+    if (entity.hasComponent(Grabbed)) {
+      entity.removeComponent(Grabbed);
+    }
+    if (entity.hasComponent(OneHandGrabbable)) {
+      entity.removeComponent(OneHandGrabbable);
+    }
+  }
+
+  private first(entities: Iterable<Entity>): Entity | undefined {
+    for (const entity of entities) return entity;
     return undefined;
   }
 }

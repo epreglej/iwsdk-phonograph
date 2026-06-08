@@ -1,17 +1,22 @@
 import { createSystem, Entity, eq, Grabbed, OneHandGrabbable } from "@iwsdk/core";
-import { Task, ActiveTask, CompletedTask } from "../components/task.js";
-import { PhonographPart } from "../components/phonograph-part.js";
-import { Phonograph, Carriage, CarriageMesh, CarriageReturning, BrakeShifted, BrakeReturning, CrankHeld, CrankingComplete } from "../components/phonograph.js";
-import { CrankRotation } from "../components/crank-rotation.js";
-import { Highlight } from "../components/highlight.js";
-import { MountTaskBinding } from "../components/mount-task-binding.js";
-import { PopIn, PopOut, SnapAnimation, Spin } from "../components/animation.js";
-import { Snappable, Snapped, SnapGhost, SnapPoint } from "../components/snap.js";
-import { Unmounting, UnmountPopping } from "../components/unmounting.js";
-import { clearRecordedAudio } from "../audio/recording-store.js";
-import { getPart } from "../helpers/parts.js";
-import { isCarriagePart, reparentPartToPhonographStaging } from "../helpers/carriage-attach.js";
-import { CARRIAGE_LAYOUT, PART_LAYOUT } from "../config/phonograph-layout.js";
+import { Task, ActiveTask, CompletedTask } from "./task-flow.js";
+import { PhonographPart } from "./phonograph.js";
+import { Phonograph } from "./phonograph.js";
+import { Carriage, CarriageMesh, CarriageReturning } from "./carriage.js";
+import { BrakeShifted, BrakeReturning } from "./brake.js";
+import { CrankHeld, CrankingComplete, CrankRotation } from "./crank.js";
+import { Highlight } from "./highlight.js";
+import { MountTaskBinding } from "./mount.js";
+import { PopIn, PopOut, SnapAnimation, Spin } from "./animation.js";
+import { Snappable, Snapped, SnapGhost, SnapPoint } from "./snap.js";
+import { Unmounting, UnmountPopping } from "./unmount.js";
+import { clearRecordedAudio } from "./recording.js";
+import {
+  CARRIAGE_LAYOUT,
+  PART_LAYOUT,
+  isCarriagePart,
+  reparentObject3D,
+} from "../config.js";
 
 const GAMEPLAY_COMPONENTS = [
   MountTaskBinding,
@@ -63,14 +68,13 @@ export class WorldResetSystem extends createSystem({
       this.stripGameplay(phonograph);
     }
 
-    const phonographRoot = this.queries.phonograph.entities.values().next().value
-      ?.object3D;
+    const phonographRoot = this.first(this.queries.phonograph.entities)?.object3D;
 
     for (const layout of PART_LAYOUT) {
-      const part = getPart(this.queries.parts.entities, layout.id);
+      const part = this.partById(layout.id);
       if (!part?.object3D) continue;
       if (phonographRoot && isCarriagePart(layout.id)) {
-        reparentPartToPhonographStaging(part, phonographRoot);
+        this.reparentPartToPhonographStaging(part, phonographRoot);
       } else {
         part.object3D.position.set(...layout.position);
         part.object3D.quaternion.set(...layout.quaternion);
@@ -100,9 +104,40 @@ export class WorldResetSystem extends createSystem({
     }
   }
 
+  private reparentPartToPhonographStaging(
+    part: Entity,
+    phonographRoot: import("@iwsdk/core").Object3D,
+  ): void {
+    const partId = part.getValue(PhonographPart, "id");
+    const layout = PART_LAYOUT.find((entry) => entry.id === partId);
+    if (!layout) return;
+
+    const obj = part.object3D;
+    if (!obj) return;
+
+    if (obj.parent !== phonographRoot) {
+      reparentObject3D(obj, phonographRoot);
+    }
+
+    obj.position.set(...layout.position);
+    obj.quaternion.set(...layout.quaternion);
+  }
+
   private stripGameplay(entity: Entity): void {
     for (const component of GAMEPLAY_COMPONENTS) {
       entity.removeComponent(component);
     }
+  }
+
+  private partById(id: string): Entity | undefined {
+    for (const part of this.queries.parts.entities) {
+      if (part.getValue(PhonographPart, "id") === id) return part;
+    }
+    return undefined;
+  }
+
+  private first(entities: Iterable<Entity>): Entity | undefined {
+    for (const entity of entities) return entity;
+    return undefined;
   }
 }

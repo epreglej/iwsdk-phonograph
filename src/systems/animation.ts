@@ -1,27 +1,55 @@
 import {
+  createComponent,
   createSystem,
   Entity,
   PanelDocument,
   Quaternion,
+  Types,
   UIKit,
   UIKitDocument,
   Vector3,
 } from "@iwsdk/core";
-import {
-  PopIn,
-  PopIn2D,
-  PopOut,
-  PopOut2D,
-  PopInDone,
-  PopOutDone,
-  PopOut2DDone,
-  SnapDone,
-  Spin,
-  SnapAnimation,
-  POP_IN_MS,
-  POP_OUT_MS,
-  SPIN_PERIOD_MS,
-} from "../components/animation.js";
+
+export const POP_IN_MS = 700;
+export const POP_OUT_MS = 550;
+export const SPIN_PERIOD_MS = 1000;
+
+const POP_FIELDS = {
+  elapsed: { type: Types.Float32, default: 0 },
+  from: { type: Types.Float32, default: -1 },
+} as const;
+
+export const PopIn = createComponent("PopIn", { ...POP_FIELDS });
+export const PopIn2D = createComponent("PopIn2D", { ...POP_FIELDS });
+export const PopOut = createComponent("PopOut", { ...POP_FIELDS });
+export const PopOut2D = createComponent("PopOut2D", { ...POP_FIELDS });
+
+export const PopInDone = createComponent("PopInDone", {});
+export const PopOutDone = createComponent("PopOutDone", {});
+export const PopOut2DDone = createComponent("PopOut2DDone", {});
+export const SnapDone = createComponent("SnapDone", {});
+
+export const Spin = createComponent("Spin", {});
+
+export const SnapAnimation = createComponent("SnapAnimation", {
+  targetX: { type: Types.Float32, default: 0 },
+  targetY: { type: Types.Float32, default: 0 },
+  targetZ: { type: Types.Float32, default: 0 },
+  targetQX: { type: Types.Float32, default: 0 },
+  targetQY: { type: Types.Float32, default: 0 },
+  targetQZ: { type: Types.Float32, default: 0 },
+  targetQW: { type: Types.Float32, default: 1 },
+  duration: { type: Types.Float32, default: 300 },
+  elapsed: { type: Types.Float32, default: 0 },
+  started: { type: Types.Boolean, default: false },
+  fromX: { type: Types.Float32, default: 0 },
+  fromY: { type: Types.Float32, default: 0 },
+  fromZ: { type: Types.Float32, default: 0 },
+  fromQX: { type: Types.Float32, default: 0 },
+  fromQY: { type: Types.Float32, default: 0 },
+  fromQZ: { type: Types.Float32, default: 0 },
+  fromQW: { type: Types.Float32, default: 1 },
+});
 
 const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
 const easeInCubic = (t: number) => t * t * t;
@@ -73,7 +101,10 @@ export class AnimationSystem extends createSystem({
       entity.setValue(component, "from", -1);
     };
     this.cleanupFuncs.push(
-      this.queries.popIn.subscribe("qualify", (e) => resetPop(e, PopIn)),
+      this.queries.popIn.subscribe("qualify", (e) => {
+        if (e.object3D) e.object3D.visible = true;
+        resetPop(e, PopIn);
+      }),
       this.queries.popOut.subscribe("qualify", (e) => resetPop(e, PopOut)),
       this.queries.popIn2D.subscribe("qualify", (e) => resetPop(e, PopIn2D)),
       this.queries.popOut2D.subscribe("qualify", (e) => resetPop(e, PopOut2D)),

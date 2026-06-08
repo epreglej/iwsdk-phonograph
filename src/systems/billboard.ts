@@ -1,5 +1,8 @@
-import { createSystem, Vector3 } from "@iwsdk/core";
-import { Billboard } from "../components/billboard.js";
+import { createComponent, createSystem, Types, Vector3 } from "@iwsdk/core";
+
+export const Billboard = createComponent("Billboard", {
+  lockY: { type: Types.Boolean, default: false },
+});
 
 export class BillboardSystem extends createSystem({
   billboards: { required: [Billboard] },

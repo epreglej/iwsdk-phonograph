@@ -1,21 +1,17 @@
 import { AssetManifest, AssetType, SessionMode, World } from "@iwsdk/core";
 
-import { ActiveTask, Task } from "./components/task.js";
-import { TaskFlowSystem } from "./systems/task.js";
+import { Task, ActiveTask } from "./systems/task-flow.js";
+import { TaskFlowSystem } from "./systems/task-flow.js";
 import { SpawnSystem } from "./systems/spawn.js";
 import { AnimationSystem } from "./systems/animation.js";
 import { BillboardSystem } from "./systems/billboard.js";
 import { PlacardSystem } from "./systems/placard.js";
-import { PlacardTaskSystem } from "./systems/placard-task.js";
 import { TaskPanelSystem } from "./systems/task-panel.js";
-import { TaskPanelTaskSystem } from "./systems/task-panel-task.js";
 import { WorldResetSystem } from "./systems/world-reset.js";
 import { HighlightSystem } from "./systems/highlight.js";
 import { SnapSystem } from "./systems/snap.js";
-import { SnapGhostSystem } from "./systems/snap-ghost.js";
-import { PartMountSystem } from "./systems/part-mount.js";
-import { TaskSnapCompletionSystem } from "./systems/task-snap-completion.js";
-import { PartUnmountSystem } from "./systems/part-unmount.js";
+import { MountSystem } from "./systems/mount.js";
+import { UnmountSystem } from "./systems/unmount.js";
 import { PhonographSystem } from "./systems/phonograph.js";
 import { CylinderSystem } from "./systems/cylinder.js";
 import { CrankSystem } from "./systems/crank.js";
@@ -110,16 +106,12 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       .registerSystem(TaskFlowSystem)
       .registerSystem(BillboardSystem)
       .registerSystem(PlacardSystem)
-      .registerSystem(PlacardTaskSystem)
       .registerSystem(TaskPanelSystem)
-      .registerSystem(TaskPanelTaskSystem)
       .registerSystem(InteractionGateSystem)
       .registerSystem(WorldResetSystem)
       .registerSystem(SnapSystem)
-      .registerSystem(SnapGhostSystem)
-      .registerSystem(PartMountSystem)
-      .registerSystem(TaskSnapCompletionSystem)
-      .registerSystem(PartUnmountSystem)
+      .registerSystem(MountSystem)
+      .registerSystem(UnmountSystem)
       .registerSystem(PhonographSystem)
       .registerSystem(CylinderSystem)
       .registerSystem(CrankSystem)

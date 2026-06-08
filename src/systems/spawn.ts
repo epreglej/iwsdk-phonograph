@@ -1,15 +1,24 @@
-import { AssetManager, createSystem, Entity, Mesh, Object3D } from "@iwsdk/core";
-import { Phonograph, Cylinder, Crank, Brake, Carriage, CarriageMesh } from "../components/phonograph.js";
-import { PhonographPart } from "../components/phonograph-part.js";
-import { Highlight } from "../components/highlight.js";
-import { SnapPoint } from "../components/snap.js";
+import {
+  AssetManager,
+  createSystem,
+  Entity,
+  Mesh,
+  Object3D,
+} from "@iwsdk/core";
+import { Phonograph, PhonographPart } from "./phonograph.js";
+import { Cylinder } from "./cylinder.js";
+import { Crank } from "./crank.js";
+import { Brake } from "./brake.js";
+import { Carriage, CarriageMesh } from "./carriage.js";
+import { Highlight } from "./highlight.js";
+import { SnapPoint } from "./snap.js";
 import {
   CARRIAGE_LAYOUT,
   CARRIAGE_SNAP_POINT_IDS,
   PART_LAYOUT,
   SNAP_POINT_LAYOUT,
-} from "../config/phonograph-layout.js";
-import { snapPointLocalOnCarriage } from "../helpers/carriage-attach.js";
+  snapPointLocalOnCarriage,
+} from "../config.js";
 
 const BEHAVIOR_TAGS = { cylinder: Cylinder, crank: Crank, brake: Brake } as const;
 const CARRIAGE_SNAP_IDS = new Set<string>(CARRIAGE_SNAP_POINT_IDS);

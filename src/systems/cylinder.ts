@@ -1,8 +1,8 @@
-import { createSystem, eq } from "@iwsdk/core";
-import { Task, ActiveTask, CompletedTask } from "../components/task.js";
-import { Cylinder } from "../components/phonograph.js";
-import { Spin } from "../components/animation.js";
-import { firstEntity } from "../helpers/entity-query.js";
+import { createComponent, createSystem, eq } from "@iwsdk/core";
+import { Task, ActiveTask, CompletedTask } from "./task-flow.js";
+import { Spin } from "./animation.js";
+
+export const Cylinder = createComponent("Cylinder", {});
 
 export class CylinderSystem extends createSystem({
   activeRecordingTask: {
@@ -27,9 +27,14 @@ export class CylinderSystem extends createSystem({
   }
 
   private setSpin(spinning: boolean): void {
-    const cylinder = firstEntity(this.queries.cylinder.entities);
+    const cylinder = this.first(this.queries.cylinder.entities);
     if (!cylinder) return;
     if (spinning) cylinder.addComponent(Spin);
     else cylinder.removeComponent(Spin);
+  }
+
+  private first(entities: Iterable<import("@iwsdk/core").Entity>): import("@iwsdk/core").Entity | undefined {
+    for (const entity of entities) return entity;
+    return undefined;
   }
 }

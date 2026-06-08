@@ -1,4 +1,5 @@
 import {
+  createComponent,
   createSystem,
   eq,
   Grabbed,
@@ -7,14 +8,24 @@ import {
   Vector3,
   Object3D,
 } from "@iwsdk/core";
-import { Task, ActiveTask, CompletedTask } from "../components/task.js";
-import { PhonographPart } from "../components/phonograph-part.js";
-import { Crank, CrankingComplete, CrankHeld } from "../components/phonograph.js";
-import { CrankRotation } from "../components/crank-rotation.js";
-import { Highlight } from "../components/highlight.js";
+import { Task, ActiveTask, CompletedTask } from "./task-flow.js";
+import { PhonographPart } from "./phonograph.js";
+import { Highlight } from "./highlight.js";
+import { PopIn } from "./animation.js";
 import { playCrankTick } from "../audio/sfx.js";
-import { getPart } from "../helpers/parts.js";
-import { popInFromZero } from "../helpers/pop.js";
+
+export const Crank = createComponent("Crank", {
+  requiredRotations: { type: Types.Float32, default: 3 },
+});
+export const CrankingComplete = createComponent("CrankingComplete", {});
+export const CrankHeld = createComponent("CrankHeld", {});
+
+export const CrankRotation = createComponent("CrankRotation", {
+  lastAngle: { type: Types.Float32, default: 0 },
+  totalRotation: { type: Types.Float32, default: 0 },
+  lastTickProgress: { type: Types.Float32, default: 0 },
+  firstFrame: { type: Types.Boolean, default: true },
+});
 
 export class CrankSystem extends createSystem(
   {
@@ -45,7 +56,7 @@ export class CrankSystem extends createSystem(
   init() {
     this.cleanupFuncs.push(
       this.queries.activeCrankCrankingTask.subscribe("qualify", () => {
-        const crankEntity = getPart(this.queries.parts.entities, "crank");
+        const crankEntity = this.partById("crank");
         const crankRoot = crankEntity?.object3D;
         if (!crankEntity || !crankRoot) return;
 
@@ -54,7 +65,8 @@ export class CrankSystem extends createSystem(
           .removeComponent(CrankHeld)
           .removeComponent(CrankRotation);
 
-        popInFromZero(crankEntity);
+        crankRoot.scale.setScalar(0.001);
+        crankEntity.addComponent(PopIn);
         crankEntity
           .addComponent(OneHandGrabbable, {
             translate: false,
@@ -75,7 +87,7 @@ export class CrankSystem extends createSystem(
       }),
 
       this.queries.activeCrankCrankingTask.subscribe("disqualify", () => {
-        const crankEntity = getPart(this.queries.parts.entities, "crank");
+        const crankEntity = this.partById("crank");
         crankEntity
           ?.removeComponent(CrankHeld)
           .removeComponent(CrankRotation)
@@ -160,5 +172,12 @@ export class CrankSystem extends createSystem(
         }
       }
     }
+  }
+
+  private partById(id: string): import("@iwsdk/core").Entity | undefined {
+    for (const part of this.queries.parts.entities) {
+      if (part.getValue(PhonographPart, "id") === id) return part;
+    }
+    return undefined;
   }
 }

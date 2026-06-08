@@ -1,4 +1,5 @@
 import {
+  createComponent,
   createSystem,
   Entity,
   Grabbed,
@@ -6,8 +7,20 @@ import {
   MeshBasicMaterial,
   Color,
   Object3D,
+  Types,
 } from "@iwsdk/core";
-import { Highlight } from "../components/highlight.js";
+
+export const Highlight = createComponent("Highlight", {
+  color: { type: Types.Color, default: [0, 0.9, 0.15, 0.275] },
+  phase: { type: Types.Float32, default: 0 },
+});
+
+export const STOP_HIGHLIGHT_COLOR: [number, number, number, number] = [
+  1, 0.138, 0.092, 0.38,
+];
+
+export const RECORDING_INPUT_HIGHLIGHT_COLOR: [number, number, number, number] =
+  [1, 0.45, 0.08, 0.12];
 
 function isMesh(obj: Object3D): obj is Mesh {
   return (obj as Mesh).isMesh === true && !!(obj as Mesh).geometry;

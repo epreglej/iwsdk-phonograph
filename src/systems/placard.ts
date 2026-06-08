@@ -1,4 +1,5 @@
 import {
+  createComponent,
   createSystem,
   Entity,
   FollowBehavior,
@@ -6,15 +7,46 @@ import {
   Grabbed,
   PanelDocument,
   PanelUI,
+  Types,
   UIKit,
   UIKitDocument,
 } from "@iwsdk/core";
-import { Placard, PlacardDismissed, PlacardInstance } from "../components/placard.js";
-import { PopIn2D, PopOut2D } from "../components/animation.js";
-import { Billboard } from "../components/billboard.js";
-import { Snapped } from "../components/snap.js";
+import { Task, ActiveTask, CompletedTask } from "./task-flow.js";
+import { PhonographPart } from "./phonograph.js";
+import { Crank, CrankingComplete } from "./crank.js";
+import { PopIn2D, PopOut2D } from "./animation.js";
+import { Billboard } from "./billboard.js";
+import { Snapped } from "./snap.js";
+import {
+  PLACARD_BY_TASK,
+  TASK_ORDER,
+  type PlacardSpec,
+} from "../config.js";
+
+export const Placard = createComponent("Placard", {
+  panelConfig: { type: Types.String, default: "" },
+  maxWidth: { type: Types.Float32, default: 0.221 },
+  offsetX: { type: Types.Float32, default: 0 },
+  offsetY: { type: Types.Float32, default: 0 },
+  offsetZ: { type: Types.Float32, default: 0 },
+  dismissOnGrab: { type: Types.Boolean, default: false },
+  dismissOnSnap: { type: Types.Boolean, default: true },
+  autoDismissMs: { type: Types.Float32, default: 0 },
+});
+
+export const PlacardDismissed = createComponent("PlacardDismissed", {});
+
+export const PlacardInstance = createComponent("PlacardInstance", {
+  target: { type: Types.Entity, default: null },
+});
 
 export class PlacardSystem extends createSystem({
+  activeTask: {
+    required: [Task, ActiveTask],
+    excluded: [CompletedTask],
+  },
+  parts: { required: [PhonographPart] },
+  crankComplete: { required: [Crank, CrankingComplete] },
   targets: { required: [Placard], excluded: [PlacardDismissed] },
   instances: { required: [PlacardInstance] },
   instanceDocs: { required: [PlacardInstance, PanelDocument] },
@@ -25,6 +57,42 @@ export class PlacardSystem extends createSystem({
 
   init() {
     this.cleanupFuncs.push(
+      this.queries.activeTask.subscribe("qualify", (taskEntity) => {
+        const binding = PLACARD_BY_TASK[taskEntity.getValue(Task, "id")!];
+        const target = binding && this.partById(binding.partId);
+        if (binding && target) this.attachPlacard(target, binding.placard);
+      }),
+
+      this.queries.activeTask.subscribe("disqualify", (taskEntity) => {
+        const taskId = taskEntity.getValue(Task, "id")!;
+        const binding = PLACARD_BY_TASK[taskId];
+        if (!binding) return;
+
+        for (const other of this.queries.activeTask.entities) {
+          if (other.index === taskEntity.index) continue;
+          const otherBinding = PLACARD_BY_TASK[other.getValue(Task, "id")!];
+          if (otherBinding?.partId === binding.partId) return;
+        }
+
+        const nextId = this.nextTaskId(taskId);
+        const nextBinding = nextId ? PLACARD_BY_TASK[nextId] : undefined;
+        if (
+          nextBinding &&
+          nextBinding.partId === binding.partId &&
+          nextBinding.placard.panelConfig === binding.placard.panelConfig
+        ) {
+          return;
+        }
+
+        const target = this.partById(binding.partId);
+        if (target) this.stripPlacard(target);
+      }),
+
+      this.queries.crankComplete.subscribe("qualify", () => {
+        const crank = this.partById("crank");
+        if (crank) this.stripPlacard(crank);
+      }),
+
       this.queries.targets.subscribe("qualify", (target) => {
         this.spawnPlacard(target);
       }),
@@ -63,6 +131,45 @@ export class PlacardSystem extends createSystem({
         this.dismissPlacard(target);
       }),
     );
+  }
+
+  private attachPlacard(entity: Entity, spec: PlacardSpec): void {
+    if (
+      entity.hasComponent(Placard) &&
+      !entity.hasComponent(PlacardDismissed) &&
+      entity.getValue(Placard, "panelConfig") === spec.panelConfig
+    ) {
+      return;
+    }
+
+    entity.removeComponent(PlacardDismissed).removeComponent(Placard);
+    entity.addComponent(Placard, {
+      panelConfig: spec.panelConfig,
+      maxWidth: spec.maxWidth ?? 0.221,
+      offsetX: spec.offsetX ?? 0,
+      offsetY: spec.offsetY ?? 0,
+      offsetZ: spec.offsetZ ?? 0,
+      dismissOnGrab: spec.dismissOnGrab ?? false,
+      dismissOnSnap: spec.dismissOnSnap ?? true,
+      autoDismissMs: spec.autoDismissMs ?? 0,
+    });
+  }
+
+  private stripPlacard(entity: Entity): void {
+    entity.removeComponent(Placard).removeComponent(PlacardDismissed);
+  }
+
+  private nextTaskId(currentId: string): string | undefined {
+    const index = TASK_ORDER.indexOf(currentId);
+    if (index < 0) return undefined;
+    return TASK_ORDER[(index + 1) % TASK_ORDER.length];
+  }
+
+  private partById(id: string): Entity | undefined {
+    for (const part of this.queries.parts.entities) {
+      if (part.getValue(PhonographPart, "id") === id) return part;
+    }
+    return undefined;
   }
 
   private popInPlacard(placard: Entity): void {

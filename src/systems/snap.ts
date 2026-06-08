@@ -1,26 +1,46 @@
 import {
+  createComponent,
   createSystem,
   Entity,
   Grabbed,
   OneHandGrabbable,
+  Types,
   Vector3,
 } from "@iwsdk/core";
-import { Snappable, SnapPoint, Snapped } from "../components/snap.js";
-import { SnapAnimation } from "../components/animation.js";
-import { playSnap } from "../audio/sfx.js";
-import { Unmounting } from "../components/unmounting.js";
 import {
-  isCarriageSnapPoint,
-  reparentObject3D,
-} from "../helpers/carriage-attach.js";
+  PopIn,
+  PopOut,
+  PopOutDone,
+  SnapAnimation,
+} from "./animation.js";
+import { playSnap } from "../audio/sfx.js";
+import { isCarriageSnapPoint, reparentObject3D } from "../config.js";
+
+export const Snappable = createComponent("Snappable", {
+  snapRadius: { type: Types.Float32, default: 0.15 },
+  snapPointId: { type: Types.String, default: "" },
+});
+export const SnapPoint = createComponent("SnapPoint", {
+  id: { type: Types.String, default: "" },
+});
+export const Snapped = createComponent("Snapped", {
+  snapPointId: { type: Types.String, default: "" },
+});
+export const SnapGhost = createComponent("SnapGhost", {});
 
 export class SnapSystem extends createSystem({
   snappables: {
     required: [Snappable],
-    excluded: [Snapped, Grabbed, Unmounting],
+    excluded: [Snapped, Grabbed],
   },
   snappedAndGrabbed: { required: [Snappable, Snapped, Grabbed] },
   snapPoints: { required: [SnapPoint] },
+  grabbedWithSnapGhost: {
+    required: [Snappable, SnapGhost, Grabbed],
+    excluded: [Snapped],
+  },
+  snappedWithGhost: { required: [Snappable, SnapGhost, Snapped] },
+  ghostPoppedOut: { required: [SnapPoint, PopOutDone] },
 }) {
   private _pos1!: Vector3;
   private _pos2!: Vector3;
@@ -35,6 +55,33 @@ export class SnapSystem extends createSystem({
       }),
       this.queries.snappedAndGrabbed.subscribe("qualify", (entity) => {
         this.unsnap(entity);
+      }),
+
+      this.queries.grabbedWithSnapGhost.subscribe("qualify", (entity) => {
+        const sp = this.snapPointFor(entity);
+        if (!sp?.object3D) return;
+        sp.removeComponent(PopOut);
+        sp.object3D.visible = true;
+        sp.addComponent(PopIn);
+      }),
+
+      this.queries.grabbedWithSnapGhost.subscribe("disqualify", (entity) => {
+        if (entity.hasComponent(Snapped)) return;
+        const sp = this.snapPointFor(entity);
+        if (!sp) return;
+        sp.removeComponent(PopIn);
+        sp.addComponent(PopOut);
+      }),
+
+      this.queries.snappedWithGhost.subscribe("qualify", (entity) => {
+        const sp = this.snapPointFor(entity);
+        if (!sp?.object3D) return;
+        sp.removeComponent(PopIn).removeComponent(PopOut);
+        sp.object3D.visible = false;
+      }),
+
+      this.queries.ghostPoppedOut.subscribe("qualify", (sp) => {
+        if (sp.object3D) sp.object3D.visible = false;
       }),
     );
   }
@@ -92,5 +139,14 @@ export class SnapSystem extends createSystem({
     });
 
     playSnap();
+  }
+
+  private snapPointFor(entity: Entity): Entity | undefined {
+    const targetId = entity.getValue(Snappable, "snapPointId");
+    if (!targetId) return undefined;
+    for (const sp of this.queries.snapPoints.entities) {
+      if (sp.getValue(SnapPoint, "id") === targetId) return sp;
+    }
+    return undefined;
   }
 }

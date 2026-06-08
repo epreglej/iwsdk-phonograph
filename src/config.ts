@@ -1,3 +1,135 @@
+import { Object3D, Quaternion, Vector3 } from "@iwsdk/core";
+
+export type Vec3 = [number, number, number];
+type Quat = [number, number, number, number];
+
+const IDENTITY_QUAT: Quat = [0, 0, 0, 1];
+
+export const BRAKE_PLAY = { x: -0.1, y: 0.16, z: 0.0725 };
+const BRAKE_SHIFT_X = 0.035;
+export const BRAKE_STOP = {
+  x: BRAKE_PLAY.x + BRAKE_SHIFT_X,
+  y: BRAKE_PLAY.y,
+  z: BRAKE_PLAY.z,
+};
+
+export type PartBehaviorTag = "cylinder" | "crank" | "brake";
+
+export interface PartLayout {
+  id: string;
+  assetKey: string;
+  position: Vec3;
+  quaternion: Quat;
+  visible: boolean;
+  behaviorTag?: PartBehaviorTag;
+}
+
+export interface SnapPointLayout {
+  id: string;
+  ghostAssetKey: string;
+  position: Vec3;
+  quaternion: Quat;
+}
+
+export const PART_LAYOUT: PartLayout[] = [
+  {
+    id: "cylinder",
+    assetKey: "cylinder",
+    position: [0.4, 0.05, 0.1],
+    quaternion: IDENTITY_QUAT,
+    visible: false,
+    behaviorTag: "cylinder",
+  },
+  {
+    id: "recorder",
+    assetKey: "recorder",
+    position: [-0.4, 0.015, 0.1],
+    quaternion: IDENTITY_QUAT,
+    visible: false,
+  },
+  {
+    id: "reproducer",
+    assetKey: "reproducer",
+    position: [-0.4, 0.015, 0.1],
+    quaternion: IDENTITY_QUAT,
+    visible: false,
+  },
+  {
+    id: "recording_horn",
+    assetKey: "recording_horn",
+    position: [-0.4, 0.1225, 0.1],
+    quaternion: [-0.766, 0, 0, 0.6428],
+    visible: false,
+  },
+  {
+    id: "listening_horn",
+    assetKey: "listening_horn",
+    position: [-0.4, 0.1225, 0.1],
+    quaternion: [-0.766, 0, 0, 0.6428],
+    visible: false,
+  },
+  {
+    id: "crank",
+    assetKey: "crank",
+    position: [0.185, 0.085, -0.0365],
+    quaternion: IDENTITY_QUAT,
+    visible: false,
+    behaviorTag: "crank",
+  },
+  {
+    id: "brake",
+    assetKey: "brake",
+    position: [BRAKE_STOP.x, BRAKE_STOP.y, BRAKE_STOP.z],
+    quaternion: IDENTITY_QUAT,
+    visible: true,
+    behaviorTag: "brake",
+  },
+];
+
+export const CARRIAGE_SNAP_POINT_IDS = [
+  "recorder_snap_point",
+  "horn_snap_point",
+] as const;
+
+export const CARRIAGE_PART_IDS = [
+  "recorder",
+  "reproducer",
+  "recording_horn",
+  "listening_horn",
+] as const;
+
+export const CARRIAGE_LAYOUT = {
+  assetKey: "carriage",
+  position: [0.08, 0.2375, 0.03885] as Vec3,
+  quaternion: IDENTITY_QUAT,
+  startX: 0.08,
+  endX: -0.08,
+  travelDurationS: 120,
+};
+
+export const SNAP_POINT_LAYOUT: SnapPointLayout[] = [
+  {
+    id: "cylinder_snap_point",
+    ghostAssetKey: "cylinder",
+    position: [0.01, 0.23, -0.05],
+    quaternion: [-0.000111, 0.005654, -0.019514, 1],
+  },
+  {
+    id: "recorder_snap_point",
+    ghostAssetKey: "recorder",
+    position: [0.09, 0.2945, -0.01625],
+    quaternion: [-0.1, -0.002, -0.02, 0.995],
+  },
+  {
+    id: "horn_snap_point",
+    ghostAssetKey: "recording_horn",
+    position: [0.09025, 0.3975, 0.455],
+    quaternion: [-0.78, 0, 0, 0.625],
+  },
+];
+
+// --- Task flow data ---
+
 export interface PlacardSpec {
   panelConfig: string;
   maxWidth?: number;
@@ -194,7 +326,11 @@ export const TASK_FLOW: TaskDef[] = [
       panelConfig: "./ui/intros/reassembly-intro.json",
     },
   },
-  { id: "recording_horn_unmount", kind: "unmount", partId: "recording_horn", placard: {
+  {
+    id: "recording_horn_unmount",
+    kind: "unmount",
+    partId: "recording_horn",
+    placard: {
       ...MOUNT_PLACARD_DEFAULTS,
       dismissOnGrab: true,
       dismissOnSnap: false,
@@ -202,7 +338,11 @@ export const TASK_FLOW: TaskDef[] = [
       offsetZ: 0.25,
     },
   },
-  { id: "recorder_unmount", kind: "unmount", partId: "recorder", placard: {
+  {
+    id: "recorder_unmount",
+    kind: "unmount",
+    partId: "recorder",
+    placard: {
       ...MOUNT_PLACARD_DEFAULTS,
       dismissOnGrab: true,
       dismissOnSnap: false,
@@ -268,12 +408,6 @@ export const TASK_FLOW: TaskDef[] = [
 
 export const TASK_ORDER: string[] = TASK_FLOW.map((task) => task.id);
 
-export function nextTaskId(currentId: string): string | undefined {
-  const index = TASK_ORDER.indexOf(currentId);
-  if (index < 0) return undefined;
-  return TASK_ORDER[(index + 1) % TASK_ORDER.length];
-}
-
 export interface MountBinding {
   partId: string;
   snapPointId: string;
@@ -318,17 +452,38 @@ for (const task of TASK_FLOW) {
   }
 }
 
-const INTERACTIVE_TASK_KINDS = new Set<TaskDef["kind"]>([
-  "mount",
-  "crank",
-  "unmount",
-  "brakeShift",
-  "carriageReturn",
-  "recording",
-]);
+// --- Carriage spatial helpers ---
 
-export function isInteractiveTask(taskId: string): boolean {
-  const task = TASK_FLOW.find((entry) => entry.id === taskId);
-  return task != null && INTERACTIVE_TASK_KINDS.has(task.kind);
+const _worldPos = new Vector3();
+const _worldQuat = new Quaternion();
+const _parentWorldQuat = new Quaternion();
+const _localQuat = new Quaternion();
+
+export function isCarriageSnapPoint(snapPointId: string): boolean {
+  return (CARRIAGE_SNAP_POINT_IDS as readonly string[]).includes(snapPointId);
 }
 
+export function isCarriagePart(partId: string | null | undefined): boolean {
+  return partId != null && (CARRIAGE_PART_IDS as readonly string[]).includes(partId);
+}
+
+export function snapPointLocalOnCarriage(phonographLocal: Vec3): Vec3 {
+  const [, cy, cz] = CARRIAGE_LAYOUT.position;
+  return [0, phonographLocal[1] - cy, phonographLocal[2] - cz];
+}
+
+export function reparentObject3D(child: Object3D, newParent: Object3D): void {
+  child.updateWorldMatrix(true, false);
+  child.getWorldPosition(_worldPos);
+  child.getWorldQuaternion(_worldQuat);
+
+  newParent.add(child);
+  newParent.updateWorldMatrix(true, false);
+  newParent.worldToLocal(_worldPos);
+  child.position.copy(_worldPos);
+
+  newParent.getWorldQuaternion(_parentWorldQuat);
+  _parentWorldQuat.invert();
+  _localQuat.copy(_parentWorldQuat).multiply(_worldQuat);
+  child.quaternion.copy(_localQuat);
+}

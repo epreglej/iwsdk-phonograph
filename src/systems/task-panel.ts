@@ -1,4 +1,5 @@
 import {
+  createComponent,
   createSystem,
   Entity,
   FollowBehavior,
@@ -6,29 +7,80 @@ import {
   PanelDocument,
   PanelUI,
   PokeInteractable,
+  Types,
   UIKit,
   UIKitDocument,
 } from "@iwsdk/core";
-import { Task, ActiveTask, CompletedTask } from "../components/task.js";
-import { TaskPanel, TaskPanelInstance } from "../components/task-panel.js";
-import { PopIn2D, PopOut2D, PopOut2DDone } from "../components/animation.js";
-import { Billboard } from "../components/billboard.js";
-import { hidePanel } from "../ui/panel-lifecycle.js";
+import { Task, ActiveTask, CompletedTask } from "./task-flow.js";
+import { Phonograph } from "./phonograph.js";
+import { PopIn2D, PopOut2D, PopOut2DDone } from "./animation.js";
+import { Billboard } from "./billboard.js";
+import { TASK_PANEL_BY_TASK, type TaskPanelSpec } from "../config.js";
+
+export const TaskPanel = createComponent("TaskPanel", {
+  panelConfig: { type: Types.String, default: "" },
+  taskId: { type: Types.String, default: "" },
+  maxWidth: { type: Types.Float32, default: 0.35 },
+  offsetX: { type: Types.Float32, default: 0 },
+  offsetY: { type: Types.Float32, default: 0 },
+  offsetZ: { type: Types.Float32, default: 0 },
+  faceTarget: { type: Types.Boolean, default: false },
+  billboard: { type: Types.Boolean, default: false },
+  buttonId: { type: Types.String, default: "" },
+  deferCompleteOnDismiss: { type: Types.Boolean, default: false },
+  autoCompleteMs: { type: Types.Float32, default: 0 },
+});
+
+export const TaskPanelInstance = createComponent("TaskPanelInstance", {
+  anchor: { type: Types.Entity, default: null },
+  taskId: { type: Types.String, default: "" },
+});
+
+export const TaskPanelWired = createComponent("TaskPanelWired", {});
+export const TaskPanelPendingDismiss = createComponent("TaskPanelPendingDismiss", {});
+export const TaskPanelPendingDispose = createComponent("TaskPanelPendingDispose", {});
 
 export class TaskPanelSystem extends createSystem({
+  activeTask: {
+    required: [Task, ActiveTask],
+    excluded: [CompletedTask],
+  },
+  phonograph: { required: [Phonograph] },
+  panelAnchors: { required: [TaskPanel] },
   anchors: { required: [TaskPanel] },
   instances: { required: [TaskPanelInstance] },
   instanceDocs: { required: [TaskPanelInstance, PanelDocument] },
+  wiredPanels: { required: [TaskPanelInstance, TaskPanelWired] },
+  pendingDismissPanels: {
+    required: [TaskPanelInstance, TaskPanelPendingDismiss],
+  },
+  pendingDisposePanels: {
+    required: [TaskPanelInstance, TaskPanelPendingDispose],
+  },
   poppedOut: { required: [TaskPanelInstance, PopOut2DDone] },
-  activeTask: { required: [Task, ActiveTask], excluded: [CompletedTask] },
+  activeTasks: { required: [Task, ActiveTask], excluded: [CompletedTask] },
 }) {
-  private wired = new Set<number>();
-  private pendingDismiss = new Set<number>();
-  private pendingDispose = new Set<number>();
   private autoCompleteTimers = new Map<number, ReturnType<typeof setTimeout>>();
 
   init() {
     this.cleanupFuncs.push(
+      this.queries.activeTask.subscribe("qualify", (taskEntity) => {
+        const taskId = taskEntity.getValue(Task, "id")!;
+        const spec = TASK_PANEL_BY_TASK[taskId];
+        if (!spec) return;
+
+        const anchor = this.resolveAnchor(spec.anchor);
+        if (!anchor) return;
+
+        this.attachPanel(anchor, taskId, spec);
+      }),
+
+      this.queries.activeTask.subscribe("disqualify", (taskEntity) => {
+        const taskId = taskEntity.getValue(Task, "id")!;
+        if (!TASK_PANEL_BY_TASK[taskId]) return;
+        this.stripPanel(taskId);
+      }),
+
       this.queries.anchors.subscribe("qualify", (anchor) => {
         this.spawnPanel(anchor);
       }),
@@ -38,8 +90,10 @@ export class TaskPanelSystem extends createSystem({
       }),
 
       this.queries.instances.subscribe("disqualify", (panel) => {
-        this.wired.delete(panel.index);
-        this.pendingDismiss.delete(panel.index);
+        panel
+          .removeComponent(TaskPanelWired)
+          .removeComponent(TaskPanelPendingDismiss)
+          .removeComponent(TaskPanelPendingDispose);
         this.clearAutoCompleteTimer(panel.index);
         panel.dispose();
       }),
@@ -51,16 +105,60 @@ export class TaskPanelSystem extends createSystem({
       }),
 
       this.queries.poppedOut.subscribe("qualify", (panel) => {
-        const shouldComplete = this.pendingDismiss.delete(panel.index);
+        const shouldComplete = this.hasPendingDismiss(panel);
         this.teardownPanel(panel);
         if (shouldComplete) {
+          panel.removeComponent(TaskPanelPendingDismiss);
           this.completeTask(panel.getValue(TaskPanelInstance, "taskId")!);
         }
-        if (this.pendingDispose.delete(panel.index)) {
+        if (this.hasPendingDispose(panel)) {
+          panel.removeComponent(TaskPanelPendingDispose);
           panel.dispose();
         }
       }),
     );
+  }
+
+  private resolveAnchor(anchor: TaskPanelSpec["anchor"]): Entity | undefined {
+    if (anchor === "head") return this.playerHeadEntity;
+    return this.first(this.queries.phonograph.entities);
+  }
+
+  private attachPanel(
+    anchor: Entity,
+    taskId: string,
+    spec: TaskPanelSpec,
+  ): void {
+    if (
+      anchor.hasComponent(TaskPanel) &&
+      anchor.getValue(TaskPanel, "taskId") === taskId &&
+      anchor.getValue(TaskPanel, "panelConfig") === spec.panelConfig
+    ) {
+      return;
+    }
+
+    anchor.removeComponent(TaskPanel);
+    anchor.addComponent(TaskPanel, {
+      panelConfig: spec.panelConfig,
+      taskId,
+      maxWidth: spec.maxWidth ?? 0.35,
+      offsetX: spec.offsetX ?? 0,
+      offsetY: spec.offsetY ?? 0,
+      offsetZ: spec.offsetZ ?? 0,
+      faceTarget: spec.faceTarget ?? false,
+      billboard: spec.billboard ?? false,
+      buttonId: spec.buttonId ?? "",
+      deferCompleteOnDismiss: spec.deferCompleteOnDismiss ?? false,
+      autoCompleteMs: spec.autoCompleteMs ?? 0,
+    });
+  }
+
+  private stripPanel(taskId: string): void {
+    for (const anchor of this.queries.panelAnchors.entities) {
+      if (anchor.getValue(TaskPanel, "taskId") === taskId) {
+        anchor.removeComponent(TaskPanel);
+      }
+    }
   }
 
   private spawnPanel(anchor: Entity): void {
@@ -120,14 +218,14 @@ export class TaskPanelSystem extends createSystem({
   }
 
   private wireButton(panel: Entity): void {
-    if (this.wired.has(panel.index)) return;
+    if (!panel.active || this.isWired(panel)) return;
 
     const anchor = panel.getValue(TaskPanelInstance, "anchor");
-    if (!anchor?.hasComponent(TaskPanel)) return;
+    if (!anchor?.active || !anchor.hasComponent(TaskPanel)) return;
 
     const buttonId = anchor.getValue(TaskPanel, "buttonId") ?? "";
     if (!buttonId) {
-      this.wired.add(panel.index);
+      panel.addComponent(TaskPanelWired);
       return;
     }
 
@@ -138,23 +236,23 @@ export class TaskPanelSystem extends createSystem({
       const defer = anchor.getValue(TaskPanel, "deferCompleteOnDismiss") ?? false;
 
       if (defer) {
-        this.pendingDismiss.add(panel.index);
+        panel.addComponent(TaskPanelPendingDismiss);
         panel.removeComponent(PokeInteractable);
-        hidePanel(panel);
+        this.hidePanel(panel);
         return;
       }
 
       this.completeTask(taskId);
     });
 
-    this.wired.add(panel.index);
+    panel.addComponent(TaskPanelWired);
   }
 
   private scheduleAutoComplete(panel: Entity): void {
     if (this.autoCompleteTimers.has(panel.index)) return;
 
     const anchor = panel.getValue(TaskPanelInstance, "anchor");
-    if (!anchor?.hasComponent(TaskPanel)) return;
+    if (!anchor?.active || !anchor.hasComponent(TaskPanel)) return;
 
     const ms = anchor.getValue(TaskPanel, "autoCompleteMs") ?? 0;
     if (ms <= 0) return;
@@ -163,14 +261,21 @@ export class TaskPanelSystem extends createSystem({
       this.autoCompleteTimers.delete(panel.index);
       if (!panel.active) return;
 
-      this.pendingDismiss.add(panel.index);
+      panel.addComponent(TaskPanelPendingDismiss);
       if (panel.hasComponent(PokeInteractable)) {
         panel.removeComponent(PokeInteractable);
       }
-      hidePanel(panel);
+      this.hidePanel(panel);
     }, ms);
 
     this.autoCompleteTimers.set(panel.index, timer);
+  }
+
+  private hidePanel(entity: Entity): void {
+    entity.removeComponent(PopIn2D);
+    if (!entity.hasComponent(PopOut2D)) {
+      entity.addComponent(PopOut2D);
+    }
   }
 
   private clearAutoCompleteTimer(panelIndex: number): void {
@@ -181,7 +286,7 @@ export class TaskPanelSystem extends createSystem({
   }
 
   private completeTask(taskId: string): void {
-    for (const task of this.queries.activeTask.entities) {
+    for (const task of this.queries.activeTasks.entities) {
       if (
         task.getValue(Task, "id") === taskId &&
         !task.hasComponent(CompletedTask)
@@ -221,13 +326,39 @@ export class TaskPanelSystem extends createSystem({
       panel.object3D?.visible &&
       !panel.hasComponent(PopOut2D) &&
       !panel.hasComponent(PopOut2DDone) &&
-      !this.pendingDismiss.has(panel.index)
+      !this.hasPendingDismiss(panel)
     ) {
-      this.pendingDispose.add(panel.index);
-      hidePanel(panel);
+      panel.addComponent(TaskPanelPendingDispose);
+      this.hidePanel(panel);
       return;
     }
 
     panel.dispose();
+  }
+
+  private isWired(panel: Entity): boolean {
+    for (const wired of this.queries.wiredPanels.entities) {
+      if (wired.index === panel.index) return true;
+    }
+    return false;
+  }
+
+  private hasPendingDismiss(panel: Entity): boolean {
+    for (const pending of this.queries.pendingDismissPanels.entities) {
+      if (pending.index === panel.index) return true;
+    }
+    return false;
+  }
+
+  private hasPendingDispose(panel: Entity): boolean {
+    for (const pending of this.queries.pendingDisposePanels.entities) {
+      if (pending.index === panel.index) return true;
+    }
+    return false;
+  }
+
+  private first(entities: Iterable<Entity>): Entity | undefined {
+    for (const entity of entities) return entity;
+    return undefined;
   }
 }

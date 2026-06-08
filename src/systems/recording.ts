@@ -1,20 +1,66 @@
 import { createSystem, Entity, eq } from "@iwsdk/core";
-import { Task, ActiveTask, CompletedTask } from "../components/task.js";
-import { PhonographPart } from "../components/phonograph-part.js";
+import { Task, ActiveTask, CompletedTask } from "./task-flow.js";
+import { PhonographPart } from "./phonograph.js";
 import {
   Highlight,
   RECORDING_INPUT_HIGHLIGHT_COLOR,
-} from "../components/highlight.js";
-import {
-  abortActiveRecording,
-  clearActiveRecording,
-  getRecordedAudio,
-  registerActiveRecording,
-  setRecordedAudio,
-} from "../audio/recording-store.js";
-import { getPart } from "../helpers/parts.js";
-import { CARRIAGE_LAYOUT } from "../config/phonograph-layout.js";
-import { stopActiveRecording } from "../audio/recording-store.js";
+} from "./highlight.js";
+import { CARRIAGE_LAYOUT } from "../config.js";
+
+let recordedBuffer: AudioBuffer | null = null;
+let audioContext: AudioContext | null = null;
+let activeRecorder: MediaRecorder | null = null;
+let activeStream: MediaStream | null = null;
+
+function registerActiveRecording(
+  recorder: MediaRecorder,
+  stream: MediaStream,
+): void {
+  activeRecorder = recorder;
+  activeStream = stream;
+}
+
+function clearActiveRecording(): void {
+  activeRecorder = null;
+  activeStream = null;
+}
+
+export function stopActiveRecording(): boolean {
+  if (activeRecorder?.state === "recording") {
+    activeRecorder.stop();
+    return true;
+  }
+  return false;
+}
+
+function abortActiveRecording(): void {
+  if (activeRecorder?.state === "recording") {
+    activeRecorder.stop();
+  }
+  activeStream?.getTracks().forEach((track) => track.stop());
+  clearActiveRecording();
+}
+
+function setRecordedAudio(
+  ctx: AudioContext,
+  buffer: AudioBuffer,
+): void {
+  audioContext = ctx;
+  recordedBuffer = buffer;
+}
+
+function getRecordedAudio(): {
+  ctx: AudioContext;
+  buffer: AudioBuffer;
+} | null {
+  if (!audioContext || !recordedBuffer) return null;
+  return { ctx: audioContext, buffer: recordedBuffer };
+}
+
+export function clearRecordedAudio(): void {
+  recordedBuffer = null;
+  audioContext = null;
+}
 
 export class RecordingSystem extends createSystem({
   activeRecordingTask: {
@@ -65,7 +111,7 @@ export class RecordingSystem extends createSystem({
   private async startRecording(taskEntity: Entity) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const audioContext = new AudioContext();
+      const ctx = new AudioContext();
 
       const chunks: BlobPart[] = [];
       const recorder = new MediaRecorder(stream);
@@ -82,8 +128,8 @@ export class RecordingSystem extends createSystem({
 
         const blob = new Blob(chunks, { type: recorder.mimeType });
         const arrayBuffer = await blob.arrayBuffer();
-        const buffer = await audioContext.decodeAudioData(arrayBuffer);
-        setRecordedAudio(audioContext, buffer);
+        const buffer = await ctx.decodeAudioData(arrayBuffer);
+        setRecordedAudio(ctx, buffer);
 
         if (taskEntity.active && !taskEntity.hasComponent(CompletedTask)) {
           taskEntity.addComponent(CompletedTask);
@@ -103,7 +149,7 @@ export class RecordingSystem extends createSystem({
   }
 
   private onRecordingStart(): void {
-    const recordingHorn = getPart(this.queries.parts.entities, "recording_horn");
+    const recordingHorn = this.partById("recording_horn");
     if (recordingHorn && !recordingHorn.hasComponent(Highlight)) {
       recordingHorn.addComponent(Highlight, { color: RECORDING_INPUT_HIGHLIGHT_COLOR });
     }
@@ -111,7 +157,7 @@ export class RecordingSystem extends createSystem({
 
   private onRecordingStop(): void {
     this.clearRecordingLimitTimer();
-    const recordingHorn = getPart(this.queries.parts.entities, "recording_horn");
+    const recordingHorn = this.partById("recording_horn");
     recordingHorn?.removeComponent(Highlight);
   }
 
@@ -240,5 +286,12 @@ export class RecordingSystem extends createSystem({
       curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
     }
     return curve;
+  }
+
+  private partById(id: string): Entity | undefined {
+    for (const part of this.queries.parts.entities) {
+      if (part.getValue(PhonographPart, "id") === id) return part;
+    }
+    return undefined;
   }
 }

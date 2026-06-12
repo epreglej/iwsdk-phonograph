@@ -3,6 +3,7 @@ import {
   createSystem,
   Entity,
   eq,
+  Euler,
   Grabbed,
   Object3D,
   OneHandGrabbable,
@@ -17,6 +18,14 @@ import { ReleaseGrab } from "./interaction-gate.js";
 import { playSnap } from "../audio/sfx.js";
 
 type Vec3 = [number, number, number];
+type Quat4 = [number, number, number, number];
+
+const NEEDLE_TILT_X_DEG = 4;
+const NEEDLE_TILT_X_RAD = (NEEDLE_TILT_X_DEG * Math.PI) / 180;
+
+const _engagedQuat = new Quaternion().setFromEuler(
+  new Euler(-NEEDLE_TILT_X_RAD, 0, 0),
+);
 
 export const CARRIAGE_SNAP_POINT_IDS = [
   "recorder_snap_point",
@@ -33,7 +42,13 @@ export const CARRIAGE_PART_IDS = [
 export const CARRIAGE_LAYOUT = {
   assetKey: "carriage",
   position: [0.08, 0.2375, 0.03885] as Vec3,
-  quaternion: [0, 0, 0, 1] as [number, number, number, number],
+  quaternion: [0, 0, 0, 1] as Quat4,
+  engagedQuaternion: [
+    _engagedQuat.x,
+    _engagedQuat.y,
+    _engagedQuat.z,
+    _engagedQuat.w,
+  ] as Quat4,
   startX: 0.08,
   endX: -0.08,
   travelDurationS: 120,
@@ -43,6 +58,14 @@ const _worldPos = new Vector3();
 const _worldQuat = new Quaternion();
 const _parentWorldQuat = new Quaternion();
 const _localQuat = new Quaternion();
+
+export function carriageRestPosition(x: number): Vec3 {
+  return [x, CARRIAGE_LAYOUT.position[1], CARRIAGE_LAYOUT.position[2]];
+}
+
+export function carriageEngagedPosition(x: number): Vec3 {
+  return carriageRestPosition(x);
+}
 
 export function isCarriageSnapPoint(snapPointId: string): boolean {
   return (CARRIAGE_SNAP_POINT_IDS as readonly string[]).includes(snapPointId);
@@ -76,9 +99,10 @@ export function reparentObject3D(child: Object3D, newParent: Object3D): void {
 export const Carriage = createComponent("Carriage", {});
 export const CarriageMesh = createComponent("CarriageMesh", {});
 export const CarriageReturning = createComponent("CarriageReturning", {});
+export const CarriageLowering = createComponent("CarriageLowering", {});
 export const CarriageTraveling = createComponent("CarriageTraveling", {});
 
-const CARRIAGE_RETURN_DURATION_MS = 300;
+const CARRIAGE_MOVE_DURATION_MS = 300;
 const CARRIAGE_TRAVEL_DURATION_MS = CARRIAGE_LAYOUT.travelDurationS * 1000;
 
 export class CarriageSystem extends createSystem({
@@ -91,6 +115,16 @@ export class CarriageSystem extends createSystem({
     required: [Task, ActiveTask],
     excluded: [CompletedTask],
     where: [eq(Task, "id", "playback")],
+  },
+  activeRecordingCarriageLowerTask: {
+    required: [Task, ActiveTask],
+    excluded: [CompletedTask],
+    where: [eq(Task, "id", "recording_carriage_lower")],
+  },
+  activePlaybackCarriageLowerTask: {
+    required: [Task, ActiveTask],
+    excluded: [CompletedTask],
+    where: [eq(Task, "id", "playback_carriage_lower")],
   },
   activeCarriageReturnTask: {
     required: [Task, ActiveTask],
@@ -106,21 +140,24 @@ export class CarriageSystem extends createSystem({
   carriageMesh: { required: [CarriageMesh] },
   carriageMeshGrabbed: {
     required: [CarriageMesh, Grabbed],
-    excluded: [MoveTo, CarriageReturning],
+    excluded: [MoveTo, CarriageReturning, CarriageLowering],
   },
   carriageReturnDone: {
     required: [Carriage, MoveDone, CarriageReturning],
+  },
+  carriageLowerDone: {
+    required: [Carriage, MoveDone, CarriageLowering],
   },
   carriageTravelDone: {
     required: [Carriage, MoveDone, CarriageTraveling],
   },
 }) {
   init() {
-    this.resetCarriageToStart();
+    this.resetCarriageToRest();
 
     this.cleanupFuncs.push(
       this.queries.activeRecordingTask.subscribe("qualify", () => {
-        this.resetCarriageToStart();
+        this.resetCarriageToEngagedStart();
         this.startCarriageTravel();
       }),
 
@@ -129,7 +166,7 @@ export class CarriageSystem extends createSystem({
       }),
 
       this.queries.activePlaybackTask.subscribe("qualify", () => {
-        this.resetCarriageToStart();
+        this.resetCarriageToEngagedStart();
         this.startCarriageTravel();
       }),
 
@@ -139,8 +176,9 @@ export class CarriageSystem extends createSystem({
 
       this.queries.activeMainMenuTask.subscribe("qualify", () => {
         this.stopCarriageTravel();
-        this.resetCarriageToStart();
+        this.resetCarriageToRest();
         this.onCarriageReturnDisqualify();
+        this.onCarriageLowerDisqualify();
       }),
 
       this.queries.carriageTravelDone.subscribe("qualify", (rig) => {
@@ -148,6 +186,24 @@ export class CarriageSystem extends createSystem({
         if (this.queries.activeRecordingTask.entities.size > 0) {
           this.world.sceneEntity.addComponent(StopRecording);
         }
+      }),
+
+      this.queries.activeRecordingCarriageLowerTask.subscribe(
+        "qualify",
+        () => this.onCarriageLowerQualify(),
+        true,
+      ),
+      this.queries.activePlaybackCarriageLowerTask.subscribe(
+        "qualify",
+        () => this.onCarriageLowerQualify(),
+        true,
+      ),
+
+      this.queries.activeRecordingCarriageLowerTask.subscribe("disqualify", () => {
+        this.onCarriageLowerDisqualify();
+      }),
+      this.queries.activePlaybackCarriageLowerTask.subscribe("disqualify", () => {
+        this.onCarriageLowerDisqualify();
       }),
 
       this.queries.activeCarriageReturnTask.subscribe(
@@ -161,14 +217,33 @@ export class CarriageSystem extends createSystem({
       }),
 
       this.queries.carriageMeshGrabbed.subscribe("qualify", (mesh) => {
-        if (this.queries.activeCarriageReturnTask.entities.size === 0) return;
         const rig = this.rigForMesh(mesh);
-        if (rig) this.returnCarriage(rig, mesh);
+        if (!rig) return;
+
+        if (this.queries.activeCarriageReturnTask.entities.size > 0) {
+          this.returnCarriage(rig, mesh);
+          return;
+        }
+
+        if (this.isCarriageLowerActive()) {
+          this.lowerCarriage(rig, mesh);
+        }
       }),
 
       this.queries.carriageReturnDone.subscribe("qualify", (rig) => {
         this.finishCarriageReturn(rig);
       }),
+
+      this.queries.carriageLowerDone.subscribe("qualify", (rig) => {
+        this.finishCarriageLower(rig);
+      }),
+    );
+  }
+
+  private isCarriageLowerActive(): boolean {
+    return (
+      this.queries.activeRecordingCarriageLowerTask.entities.size > 0 ||
+      this.queries.activePlaybackCarriageLowerTask.entities.size > 0
     );
   }
 
@@ -176,12 +251,23 @@ export class CarriageSystem extends createSystem({
     const rig = this.first(this.queries.carriage.entities);
     if (!rig) return;
 
-    rig.removeComponent(CarriageReturning);
+    const [targetX, targetY, targetZ] = carriageEngagedPosition(
+      CARRIAGE_LAYOUT.endX,
+    );
+    const [targetQX, targetQY, targetQZ, targetQW] =
+      CARRIAGE_LAYOUT.engagedQuaternion;
+
+    rig.removeComponent(CarriageReturning).removeComponent(CarriageLowering);
     rig.addComponent(CarriageTraveling);
     rig.addComponent(MoveTo, {
-      targetX: CARRIAGE_LAYOUT.endX,
-      targetY: CARRIAGE_LAYOUT.position[1],
-      targetZ: CARRIAGE_LAYOUT.position[2],
+      targetX,
+      targetY,
+      targetZ,
+      targetQX,
+      targetQY,
+      targetQZ,
+      targetQW,
+      useTargetRotation: true,
       duration: CARRIAGE_TRAVEL_DURATION_MS,
       linear: true,
     });
@@ -192,6 +278,43 @@ export class CarriageSystem extends createSystem({
     if (!rig) return;
 
     rig.removeComponent(CarriageTraveling).removeComponent(MoveTo);
+  }
+
+  private onCarriageLowerQualify(): void {
+    const mesh = this.first(this.queries.carriageMesh.entities);
+    const rig = this.first(this.queries.carriage.entities);
+    if (!mesh || !rig?.object3D) return;
+
+    rig
+      .removeComponent(CarriageLowering)
+      .removeComponent(MoveTo)
+      .removeComponent(Grabbed);
+    rig.object3D.visible = true;
+
+    mesh
+      .removeComponent(Grabbed)
+      .removeComponent(Highlight)
+      .removeComponent(OneHandGrabbable)
+      .addComponent(OneHandGrabbable)
+      .addComponent(Highlight, { color: STOP_HIGHLIGHT_COLOR });
+  }
+
+  private onCarriageLowerDisqualify(): void {
+    const mesh = this.first(this.queries.carriageMesh.entities);
+    const rig = this.first(this.queries.carriage.entities);
+    if (!rig) return;
+
+    rig
+      .removeComponent(CarriageLowering)
+      .removeComponent(MoveTo)
+      .removeComponent(Grabbed);
+
+    if (mesh) {
+      mesh
+        .removeComponent(Grabbed)
+        .removeComponent(OneHandGrabbable)
+        .removeComponent(Highlight);
+    }
   }
 
   private onCarriageReturnQualify(): void {
@@ -231,10 +354,28 @@ export class CarriageSystem extends createSystem({
     }
   }
 
-  private returnCarriage(rig: Entity, mesh: Entity): void {
-    const obj = rig.object3D;
+  private lowerCarriage(rig: Entity, mesh: Entity): void {
     if (
-      !obj ||
+      !rig.object3D ||
+      rig.hasComponent(MoveTo) ||
+      rig.hasComponent(CarriageLowering)
+    ) {
+      return;
+    }
+
+    mesh.addComponent(ReleaseGrab, { removeGrabbable: true });
+    mesh
+      .removeComponent(Highlight)
+      .removeComponent(OneHandGrabbable)
+      .removeComponent(Grabbed);
+    rig.addComponent(CarriageLowering);
+
+    this.animateCarriageToEngaged(rig, CARRIAGE_LAYOUT.startX);
+  }
+
+  private returnCarriage(rig: Entity, mesh: Entity): void {
+    if (
+      !rig.object3D ||
       rig.hasComponent(MoveTo) ||
       rig.hasComponent(CarriageReturning)
     ) {
@@ -248,26 +389,64 @@ export class CarriageSystem extends createSystem({
       .removeComponent(Grabbed);
     rig.addComponent(CarriageReturning);
 
-    this.animateCarriageToStart(rig);
+    this.animateCarriageToRest(rig, CARRIAGE_LAYOUT.startX);
   }
 
-  private animateCarriageToStart(rig: Entity): void {
+  private animateCarriageToEngaged(rig: Entity, x: number): void {
+    const [targetX, targetY, targetZ] = carriageEngagedPosition(x);
+    const [targetQX, targetQY, targetQZ, targetQW] =
+      CARRIAGE_LAYOUT.engagedQuaternion;
+
     rig.addComponent(MoveTo, {
-      targetX: CARRIAGE_LAYOUT.startX,
-      targetY: CARRIAGE_LAYOUT.position[1],
-      targetZ: CARRIAGE_LAYOUT.position[2],
-      duration: CARRIAGE_RETURN_DURATION_MS,
+      targetX,
+      targetY,
+      targetZ,
+      targetQX,
+      targetQY,
+      targetQZ,
+      targetQW,
+      useTargetRotation: true,
+      duration: CARRIAGE_MOVE_DURATION_MS,
     });
     playSnap();
   }
 
-  private finishCarriageReturn(rig: Entity): void {
-    const obj = rig.object3D;
-    if (obj) {
-      obj.position.set(...CARRIAGE_LAYOUT.position);
-    }
+  private animateCarriageToRest(rig: Entity, x: number): void {
+    const [targetX, targetY, targetZ] = carriageRestPosition(x);
+    const [targetQX, targetQY, targetQZ, targetQW] = CARRIAGE_LAYOUT.quaternion;
 
+    rig.addComponent(MoveTo, {
+      targetX,
+      targetY,
+      targetZ,
+      targetQX,
+      targetQY,
+      targetQZ,
+      targetQW,
+      useTargetRotation: true,
+      duration: CARRIAGE_MOVE_DURATION_MS,
+    });
+    playSnap();
+  }
+
+  private finishCarriageLower(rig: Entity): void {
+    rig.removeComponent(CarriageLowering);
+
+    for (const task of this.queries.activeRecordingCarriageLowerTask.entities) {
+      if (!task.hasComponent(CompletedTask)) {
+        task.addComponent(CompletedTask);
+      }
+    }
+    for (const task of this.queries.activePlaybackCarriageLowerTask.entities) {
+      if (!task.hasComponent(CompletedTask)) {
+        task.addComponent(CompletedTask);
+      }
+    }
+  }
+
+  private finishCarriageReturn(rig: Entity): void {
     rig.removeComponent(CarriageReturning);
+    this.teleportCarriageToRest(rig, CARRIAGE_LAYOUT.startX);
 
     for (const task of this.queries.activeCarriageReturnTask.entities) {
       if (!task.hasComponent(CompletedTask)) {
@@ -276,19 +455,61 @@ export class CarriageSystem extends createSystem({
     }
   }
 
-  private resetCarriageToStart(): void {
-    const rig = this.first(this.queries.carriage.entities);
+  private resetCarriageToRest(): void {
+    this.teleportCarriageToRest(
+      this.first(this.queries.carriage.entities),
+      CARRIAGE_LAYOUT.startX,
+    );
+  }
+
+  private resetCarriageToEngagedStart(): void {
+    this.teleportCarriageToEngaged(
+      this.first(this.queries.carriage.entities),
+      CARRIAGE_LAYOUT.startX,
+    );
+  }
+
+  private teleportCarriageToRest(
+    rig: Entity | undefined,
+    x: number,
+  ): void {
     if (!rig?.object3D) return;
+
+    const [targetX, targetY, targetZ] = carriageRestPosition(x);
+    const [targetQX, targetQY, targetQZ, targetQW] = CARRIAGE_LAYOUT.quaternion;
 
     rig.removeComponent(MoveTo);
     rig.addComponent(TeleportTo, {
-      targetX: CARRIAGE_LAYOUT.position[0],
-      targetY: CARRIAGE_LAYOUT.position[1],
-      targetZ: CARRIAGE_LAYOUT.position[2],
-      targetQX: CARRIAGE_LAYOUT.quaternion[0],
-      targetQY: CARRIAGE_LAYOUT.quaternion[1],
-      targetQZ: CARRIAGE_LAYOUT.quaternion[2],
-      targetQW: CARRIAGE_LAYOUT.quaternion[3],
+      targetX,
+      targetY,
+      targetZ,
+      targetQX,
+      targetQY,
+      targetQZ,
+      targetQW,
+      useTargetRotation: true,
+    });
+  }
+
+  private teleportCarriageToEngaged(
+    rig: Entity | undefined,
+    x: number,
+  ): void {
+    if (!rig?.object3D) return;
+
+    const [targetX, targetY, targetZ] = carriageEngagedPosition(x);
+    const [targetQX, targetQY, targetQZ, targetQW] =
+      CARRIAGE_LAYOUT.engagedQuaternion;
+
+    rig.removeComponent(MoveTo);
+    rig.addComponent(TeleportTo, {
+      targetX,
+      targetY,
+      targetZ,
+      targetQX,
+      targetQY,
+      targetQZ,
+      targetQW,
       useTargetRotation: true,
     });
   }

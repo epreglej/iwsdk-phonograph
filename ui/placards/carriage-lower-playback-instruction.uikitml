@@ -31,26 +31,10 @@
     flex-shrink: 0;
   }
 
-  .title-tail {
-    font-size: 15px;
-    font-weight: 600;
-    color: #ffffff;
-    flex-grow: 0;
-    flex-shrink: 0;
-  }
-
   .kw {
     font-size: 15px;
     font-weight: 600;
     color: rgb(0, 230, 38);
-    flex-grow: 0;
-    flex-shrink: 0;
-  }
-
-  .kw-stop {
-    font-size: 15px;
-    font-weight: 600;
-    color: rgb(255, 35, 23);
     flex-grow: 0;
     flex-shrink: 0;
   }
@@ -82,9 +66,9 @@
 </style>
 
 <div id="panel-root" class="placard">
-  <div class="placard-title"><span class="kw">Play the Recording</span></div>
+  <div class="placard-title"><span class="title-text">Lower the</span><span class="kw">Carriage</span></div>
   <div class="placard-body">
     <div class="description-accent"></div>
-    <p class="placard-description">Releasing the brake will let the motor start spinning the cylinder, getting it ready to play back your voice</p>
+    <p class="placard-description">Lowering the carriage so the reproducer rests on the wax cylinder will start playing your recording</p>
   </div>
 </div>

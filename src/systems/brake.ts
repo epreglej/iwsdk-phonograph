@@ -24,6 +24,8 @@ export const BRAKE_STOP = {
 export const Brake = createComponent("Brake", {});
 export const BrakeShifted = createComponent("BrakeShifted", {});
 export const BrakeReturning = createComponent("BrakeReturning", {});
+/** Brake is disengaged (at play position); cylinder spins while this is present. */
+export const BrakeReleased = createComponent("BrakeReleased", {});
 
 const BRAKE_SHIFT_DURATION_MS = 300;
 
@@ -91,7 +93,10 @@ export class BrakeSystem extends createSystem({
         const brake = this.first(this.queries.brake.entities);
         if (!brake) return;
         this.deactivateRecordingStop(brake);
-        brake.removeComponent(BrakeReturning).removeComponent(MoveTo);
+        brake
+          .removeComponent(BrakeReturning)
+          .removeComponent(BrakeReleased)
+          .removeComponent(MoveTo);
         this.teleportBrake(brake, BRAKE_STOP);
       }),
 
@@ -135,6 +140,7 @@ export class BrakeSystem extends createSystem({
     brake
       .removeComponent(BrakeReturning)
       .removeComponent(BrakeShifted)
+      .removeComponent(BrakeReleased)
       .removeComponent(MoveTo)
       .removeComponent(Grabbed);
     this.teleportBrake(brake, BRAKE_STOP);
@@ -261,14 +267,14 @@ export class BrakeSystem extends createSystem({
 
   private finishReturnHome(brake: Entity): void {
     this.teleportBrake(brake, BRAKE_STOP);
-    brake.removeComponent(BrakeReturning);
+    brake.removeComponent(BrakeReturning).removeComponent(BrakeReleased);
   }
 
   private completeBrakeShiftTask(brake: Entity): void {
     if (!brake.hasComponent(BrakeShifted)) return;
 
     this.teleportBrake(brake, BRAKE_PLAY);
-    brake.removeComponent(BrakeShifted);
+    brake.removeComponent(BrakeShifted).addComponent(BrakeReleased);
 
     for (const task of this.queries.activeBrakeShiftTask.entities) {
       if (!task.hasComponent(CompletedTask)) {

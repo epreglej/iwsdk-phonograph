@@ -5,10 +5,11 @@ import { Phonograph } from "./phonograph.js";
 import {
   Carriage,
   CarriageMesh,
+  CarriageLowering,
   CarriageReturning,
   CarriageTraveling,
 } from "./carriage.js";
-import { BrakeShifted, BrakeReturning } from "./brake.js";
+import { BrakeShifted, BrakeReturning, BrakeReleased } from "./brake.js";
 import { CrankHeld, CrankingComplete, CrankRotation } from "./crank.js";
 import { Highlight } from "./highlight.js";
 import { MountTaskBinding } from "./mount.js";
@@ -43,6 +44,8 @@ const GAMEPLAY_COMPONENTS = [
   CrankRotation,
   BrakeShifted,
   BrakeReturning,
+  BrakeReleased,
+  CarriageLowering,
   CarriageReturning,
   CarriageTraveling,
   PlacardAutoDismiss,

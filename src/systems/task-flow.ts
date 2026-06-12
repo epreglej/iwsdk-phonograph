@@ -40,6 +40,7 @@ type TaskDef =
   | { id: string; kind: "crank"; partId: string; placard: PlacardSpec }
   | { id: string; kind: "unmount"; partId: string; placard: PlacardSpec }
   | { id: string; kind: "brakeShift"; partId: string; placard: PlacardSpec }
+  | { id: string; kind: "carriageLower"; partId: string; placard: PlacardSpec }
   | { id: string; kind: "carriageReturn"; partId: string; placard: PlacardSpec }
   | {
       id: string;
@@ -79,6 +80,16 @@ const BRAKE_RECORDING_STOP_PLACARD: PlacardSpec = {
 const BRAKE_PLAYBACK_PLACARD: PlacardSpec = {
   ...BRAKE_PLACARD_DEFAULTS,
   panelConfig: "./ui/placards/playback-brake-shift-instruction.json",
+};
+
+const CARRIAGE_LOWER_RECORDING_PLACARD: PlacardSpec = {
+  ...BRAKE_PLACARD_DEFAULTS,
+  panelConfig: "./ui/placards/carriage-lower-recording-instruction.json",
+};
+
+const CARRIAGE_LOWER_PLAYBACK_PLACARD: PlacardSpec = {
+  ...BRAKE_PLACARD_DEFAULTS,
+  panelConfig: "./ui/placards/carriage-lower-playback-instruction.json",
 };
 
 const HEAD_MENU_PANEL = {
@@ -190,6 +201,12 @@ const TASK_FLOW: TaskDef[] = [
     placard: BRAKE_RECORDING_PLACARD,
   },
   {
+    id: "recording_carriage_lower",
+    kind: "carriageLower",
+    partId: "carriage",
+    placard: CARRIAGE_LOWER_RECORDING_PLACARD,
+  },
+  {
     id: "recording",
     kind: "recording",
     partId: "brake",
@@ -271,6 +288,12 @@ const TASK_FLOW: TaskDef[] = [
     partId: "brake",
     placard: BRAKE_PLAYBACK_PLACARD,
   },
+  {
+    id: "playback_carriage_lower",
+    kind: "carriageLower",
+    partId: "carriage",
+    placard: CARRIAGE_LOWER_PLAYBACK_PLACARD,
+  },
   { id: "playback", kind: "playback" },
   {
     id: "done",
@@ -310,6 +333,7 @@ for (const task of TASK_FLOW) {
       PLACARD_BY_TASK[task.id] = { partId: task.partId, placard: task.placard };
       break;
     case "brakeShift":
+    case "carriageLower":
     case "carriageReturn":
       PLACARD_BY_TASK[task.id] = { partId: task.partId, placard: task.placard };
       break;
@@ -335,6 +359,7 @@ const INTERACTIVE_TASK_KINDS = new Set<TaskDef["kind"]>([
   "crank",
   "unmount",
   "brakeShift",
+  "carriageLower",
   "carriageReturn",
   "recording",
 ]);

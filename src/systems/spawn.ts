@@ -8,17 +8,115 @@ import {
 import { Phonograph, PhonographPart } from "./phonograph.js";
 import { Cylinder } from "./cylinder.js";
 import { Crank } from "./crank.js";
-import { Brake } from "./brake.js";
-import { Carriage, CarriageMesh } from "./carriage.js";
-import { Highlight } from "./highlight.js";
-import { SnapPoint } from "./snap.js";
+import { Brake, BRAKE_STOP } from "./brake.js";
 import {
+  Carriage,
+  CarriageMesh,
   CARRIAGE_LAYOUT,
   CARRIAGE_SNAP_POINT_IDS,
-  PART_LAYOUT,
-  SNAP_POINT_LAYOUT,
   snapPointLocalOnCarriage,
-} from "../config.js";
+} from "./carriage.js";
+import { Highlight } from "./highlight.js";
+import { SnapPoint } from "./snap.js";
+
+type Vec3 = [number, number, number];
+type Quat = [number, number, number, number];
+
+const IDENTITY_QUAT: Quat = [0, 0, 0, 1];
+
+type PartBehaviorTag = "cylinder" | "crank" | "brake";
+
+interface PartLayout {
+  id: string;
+  assetKey: string;
+  position: Vec3;
+  quaternion: Quat;
+  visible: boolean;
+  behaviorTag?: PartBehaviorTag;
+}
+
+interface SnapPointLayout {
+  id: string;
+  ghostAssetKey: string;
+  position: Vec3;
+  quaternion: Quat;
+}
+
+export const PART_LAYOUT: PartLayout[] = [
+  {
+    id: "cylinder",
+    assetKey: "cylinder",
+    position: [0.4, 0.05, 0.1],
+    quaternion: IDENTITY_QUAT,
+    visible: false,
+    behaviorTag: "cylinder",
+  },
+  {
+    id: "recorder",
+    assetKey: "recorder",
+    position: [-0.4, 0.015, 0.1],
+    quaternion: IDENTITY_QUAT,
+    visible: false,
+  },
+  {
+    id: "reproducer",
+    assetKey: "reproducer",
+    position: [-0.4, 0.015, 0.1],
+    quaternion: IDENTITY_QUAT,
+    visible: false,
+  },
+  {
+    id: "recording_horn",
+    assetKey: "recording_horn",
+    position: [-0.4, 0.1225, 0.1],
+    quaternion: [-0.766, 0, 0, 0.6428],
+    visible: false,
+  },
+  {
+    id: "listening_horn",
+    assetKey: "listening_horn",
+    position: [-0.4, 0.1225, 0.1],
+    quaternion: [-0.766, 0, 0, 0.6428],
+    visible: false,
+  },
+  {
+    id: "crank",
+    assetKey: "crank",
+    position: [0.185, 0.085, -0.0365],
+    quaternion: IDENTITY_QUAT,
+    visible: false,
+    behaviorTag: "crank",
+  },
+  {
+    id: "brake",
+    assetKey: "brake",
+    position: [BRAKE_STOP.x, BRAKE_STOP.y, BRAKE_STOP.z],
+    quaternion: IDENTITY_QUAT,
+    visible: true,
+    behaviorTag: "brake",
+  },
+];
+
+const SNAP_POINT_LAYOUT: SnapPointLayout[] = [
+  {
+    id: "cylinder_snap_point",
+    ghostAssetKey: "cylinder",
+    position: [0.01, 0.23, -0.05],
+    quaternion: [-0.000111, 0.005654, -0.019514, 1],
+  },
+  {
+    id: "recorder_snap_point",
+    ghostAssetKey: "recorder",
+    position: [0.09, 0.2945, -0.01625],
+    quaternion: [-0.1, -0.002, -0.02, 0.995],
+  },
+  {
+    id: "horn_snap_point",
+    ghostAssetKey: "recording_horn",
+    position: [0.09025, 0.3975, 0.455],
+    quaternion: [-0.78, 0, 0, 0.625],
+  },
+];
 
 const BEHAVIOR_TAGS = { cylinder: Cylinder, crank: Crank, brake: Brake } as const;
 const CARRIAGE_SNAP_IDS = new Set<string>(CARRIAGE_SNAP_POINT_IDS);

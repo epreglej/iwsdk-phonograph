@@ -5,16 +5,23 @@ import {
   Grabbed,
   InputActions,
   InputComponent,
+  OneHandGrabbable,
+  Types,
 } from "@iwsdk/core";
 import { Handle } from "@iwsdk/core/dist/grab/handles.js";
 
 export const InteractionGate = createComponent("InteractionGate", {});
+
+export const ReleaseGrab = createComponent("ReleaseGrab", {
+  removeGrabbable: { type: Types.Boolean, default: false },
+});
 
 type CancellableHandle = { cancel?: () => void };
 
 export class InteractionGateSystem extends createSystem({
   gateOpen: { required: [InteractionGate] },
   grabbed: { required: [Grabbed] },
+  releaseGrab: { required: [ReleaseGrab] },
 }) {
   private hands: readonly ["left", "right"] = ["left", "right"];
   private cancelGrabbedSub?: () => void;
@@ -31,6 +38,14 @@ export class InteractionGateSystem extends createSystem({
       this.queries.gateOpen.subscribe("disqualify", () => {
         this.cancelGrabbedSub?.();
         this.cancelGrabbedSub = undefined;
+      }),
+
+      this.queries.releaseGrab.subscribe("qualify", (entity) => {
+        this.cancelActiveGrab(entity);
+        if (entity.getValue(ReleaseGrab, "removeGrabbable")) {
+          entity.removeComponent(OneHandGrabbable);
+        }
+        entity.removeComponent(ReleaseGrab);
       }),
     );
   }

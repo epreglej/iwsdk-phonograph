@@ -6,27 +6,80 @@ import {
   Grabbed,
   Object3D,
   OneHandGrabbable,
+  Quaternion,
+  Vector3,
 } from "@iwsdk/core";
-import { Handle } from "@iwsdk/core/dist/grab/handles.js";
 import { Task, ActiveTask, CompletedTask } from "./task-flow.js";
-import { SnapAnimation, SnapDone } from "./animation.js";
+import { MoveDone, MoveTo, TeleportTo } from "./animation.js";
 import { Highlight, STOP_HIGHLIGHT_COLOR } from "./highlight.js";
-import { CARRIAGE_LAYOUT } from "../config.js";
-import { stopActiveRecording } from "./recording.js";
+import { StopRecording } from "./recording.js";
+import { ReleaseGrab } from "./interaction-gate.js";
 import { playSnap } from "../audio/sfx.js";
+
+type Vec3 = [number, number, number];
+
+export const CARRIAGE_SNAP_POINT_IDS = [
+  "recorder_snap_point",
+  "horn_snap_point",
+] as const;
+
+export const CARRIAGE_PART_IDS = [
+  "recorder",
+  "reproducer",
+  "recording_horn",
+  "listening_horn",
+] as const;
+
+export const CARRIAGE_LAYOUT = {
+  assetKey: "carriage",
+  position: [0.08, 0.2375, 0.03885] as Vec3,
+  quaternion: [0, 0, 0, 1] as [number, number, number, number],
+  startX: 0.08,
+  endX: -0.08,
+  travelDurationS: 120,
+};
+
+const _worldPos = new Vector3();
+const _worldQuat = new Quaternion();
+const _parentWorldQuat = new Quaternion();
+const _localQuat = new Quaternion();
+
+export function isCarriageSnapPoint(snapPointId: string): boolean {
+  return (CARRIAGE_SNAP_POINT_IDS as readonly string[]).includes(snapPointId);
+}
+
+export function isCarriagePart(partId: string | null | undefined): boolean {
+  return partId != null && (CARRIAGE_PART_IDS as readonly string[]).includes(partId);
+}
+
+export function snapPointLocalOnCarriage(phonographLocal: Vec3): Vec3 {
+  const [, cy, cz] = CARRIAGE_LAYOUT.position;
+  return [0, phonographLocal[1] - cy, phonographLocal[2] - cz];
+}
+
+export function reparentObject3D(child: Object3D, newParent: Object3D): void {
+  child.updateWorldMatrix(true, false);
+  child.getWorldPosition(_worldPos);
+  child.getWorldQuaternion(_worldQuat);
+
+  newParent.add(child);
+  newParent.updateWorldMatrix(true, false);
+  newParent.worldToLocal(_worldPos);
+  child.position.copy(_worldPos);
+
+  newParent.getWorldQuaternion(_parentWorldQuat);
+  _parentWorldQuat.invert();
+  _localQuat.copy(_parentWorldQuat).multiply(_worldQuat);
+  child.quaternion.copy(_localQuat);
+}
 
 export const Carriage = createComponent("Carriage", {});
 export const CarriageMesh = createComponent("CarriageMesh", {});
 export const CarriageReturning = createComponent("CarriageReturning", {});
+export const CarriageTraveling = createComponent("CarriageTraveling", {});
 
-type CancellableHandle = { cancel?: () => void };
-
-const CARRIAGE_TRAVEL =
-  CARRIAGE_LAYOUT.endX - CARRIAGE_LAYOUT.startX;
-const CARRIAGE_SPEED =
-  Math.abs(CARRIAGE_TRAVEL) / CARRIAGE_LAYOUT.travelDurationS;
-const CARRIAGE_DIRECTION = Math.sign(CARRIAGE_TRAVEL);
 const CARRIAGE_RETURN_DURATION_MS = 300;
+const CARRIAGE_TRAVEL_DURATION_MS = CARRIAGE_LAYOUT.travelDurationS * 1000;
 
 export class CarriageSystem extends createSystem({
   activeRecordingTask: {
@@ -53,46 +106,48 @@ export class CarriageSystem extends createSystem({
   carriageMesh: { required: [CarriageMesh] },
   carriageMeshGrabbed: {
     required: [CarriageMesh, Grabbed],
-    excluded: [SnapAnimation, CarriageReturning],
+    excluded: [MoveTo, CarriageReturning],
   },
   carriageReturnDone: {
-    required: [Carriage, SnapDone, CarriageReturning],
+    required: [Carriage, MoveDone, CarriageReturning],
+  },
+  carriageTravelDone: {
+    required: [Carriage, MoveDone, CarriageTraveling],
   },
 }) {
-  private recording = false;
-  private playback = false;
-  private recordingElapsed = 0;
-
   init() {
     this.resetCarriageToStart();
 
     this.cleanupFuncs.push(
       this.queries.activeRecordingTask.subscribe("qualify", () => {
-        this.recording = true;
-        this.recordingElapsed = 0;
         this.resetCarriageToStart();
+        this.startCarriageTravel();
       }),
 
       this.queries.activeRecordingTask.subscribe("disqualify", () => {
-        this.recording = false;
-        this.recordingElapsed = 0;
+        this.stopCarriageTravel();
       }),
 
       this.queries.activePlaybackTask.subscribe("qualify", () => {
-        this.playback = true;
         this.resetCarriageToStart();
+        this.startCarriageTravel();
       }),
 
       this.queries.activePlaybackTask.subscribe("disqualify", () => {
-        this.playback = false;
+        this.stopCarriageTravel();
       }),
 
       this.queries.activeMainMenuTask.subscribe("qualify", () => {
-        this.recording = false;
-        this.playback = false;
-        this.recordingElapsed = 0;
+        this.stopCarriageTravel();
         this.resetCarriageToStart();
         this.onCarriageReturnDisqualify();
+      }),
+
+      this.queries.carriageTravelDone.subscribe("qualify", (rig) => {
+        rig.removeComponent(CarriageTraveling);
+        if (this.queries.activeRecordingTask.entities.size > 0) {
+          this.world.sceneEntity.addComponent(StopRecording);
+        }
       }),
 
       this.queries.activeCarriageReturnTask.subscribe(
@@ -117,34 +172,26 @@ export class CarriageSystem extends createSystem({
     );
   }
 
-  update(delta: number): void {
-    if (!this.recording && !this.playback) return;
-
+  private startCarriageTravel(): void {
     const rig = this.first(this.queries.carriage.entities);
-    const obj = rig?.object3D;
-    if (!obj) return;
+    if (!rig) return;
 
-    if (this.recording) {
-      this.recordingElapsed += delta;
-    }
-
-    const atEnd = this.advanceCarriageX(obj, delta);
-
-    if (this.recording && (atEnd || this.recordingElapsed >= CARRIAGE_LAYOUT.travelDurationS)) {
-      stopActiveRecording();
-    }
+    rig.removeComponent(CarriageReturning);
+    rig.addComponent(CarriageTraveling);
+    rig.addComponent(MoveTo, {
+      targetX: CARRIAGE_LAYOUT.endX,
+      targetY: CARRIAGE_LAYOUT.position[1],
+      targetZ: CARRIAGE_LAYOUT.position[2],
+      duration: CARRIAGE_TRAVEL_DURATION_MS,
+      linear: true,
+    });
   }
 
-  private advanceCarriageX(obj: Object3D, delta: number): boolean {
-    const nextX = obj.position.x + CARRIAGE_DIRECTION * CARRIAGE_SPEED * delta;
-    obj.position.x =
-      CARRIAGE_DIRECTION > 0
-        ? Math.min(CARRIAGE_LAYOUT.endX, nextX)
-        : Math.max(CARRIAGE_LAYOUT.endX, nextX);
+  private stopCarriageTravel(): void {
+    const rig = this.first(this.queries.carriage.entities);
+    if (!rig) return;
 
-    return CARRIAGE_DIRECTION > 0
-      ? obj.position.x >= CARRIAGE_LAYOUT.endX
-      : obj.position.x <= CARRIAGE_LAYOUT.endX;
+    rig.removeComponent(CarriageTraveling).removeComponent(MoveTo);
   }
 
   private onCarriageReturnQualify(): void {
@@ -154,7 +201,7 @@ export class CarriageSystem extends createSystem({
 
     rig
       .removeComponent(CarriageReturning)
-      .removeComponent(SnapAnimation)
+      .removeComponent(MoveTo)
       .removeComponent(Grabbed);
     rig.object3D.visible = true;
 
@@ -173,7 +220,7 @@ export class CarriageSystem extends createSystem({
 
     rig
       .removeComponent(CarriageReturning)
-      .removeComponent(SnapAnimation)
+      .removeComponent(MoveTo)
       .removeComponent(Grabbed);
 
     if (mesh) {
@@ -188,13 +235,13 @@ export class CarriageSystem extends createSystem({
     const obj = rig.object3D;
     if (
       !obj ||
-      rig.hasComponent(SnapAnimation) ||
+      rig.hasComponent(MoveTo) ||
       rig.hasComponent(CarriageReturning)
     ) {
       return;
     }
 
-    this.forceReleaseGrab(mesh);
+    mesh.addComponent(ReleaseGrab, { removeGrabbable: true });
     mesh
       .removeComponent(Highlight)
       .removeComponent(OneHandGrabbable)
@@ -205,20 +252,12 @@ export class CarriageSystem extends createSystem({
   }
 
   private animateCarriageToStart(rig: Entity): void {
-    const obj = rig.object3D;
-    if (!obj) return;
-
-    rig.addComponent(SnapAnimation, {
+    rig.addComponent(MoveTo, {
       targetX: CARRIAGE_LAYOUT.startX,
       targetY: CARRIAGE_LAYOUT.position[1],
       targetZ: CARRIAGE_LAYOUT.position[2],
-      targetQX: obj.quaternion.x,
-      targetQY: obj.quaternion.y,
-      targetQZ: obj.quaternion.z,
-      targetQW: obj.quaternion.w,
       duration: CARRIAGE_RETURN_DURATION_MS,
     });
-
     playSnap();
   }
 
@@ -241,8 +280,17 @@ export class CarriageSystem extends createSystem({
     const rig = this.first(this.queries.carriage.entities);
     if (!rig?.object3D) return;
 
-    rig.object3D.position.set(...CARRIAGE_LAYOUT.position);
-    rig.object3D.quaternion.set(...CARRIAGE_LAYOUT.quaternion);
+    rig.removeComponent(MoveTo);
+    rig.addComponent(TeleportTo, {
+      targetX: CARRIAGE_LAYOUT.position[0],
+      targetY: CARRIAGE_LAYOUT.position[1],
+      targetZ: CARRIAGE_LAYOUT.position[2],
+      targetQX: CARRIAGE_LAYOUT.quaternion[0],
+      targetQY: CARRIAGE_LAYOUT.quaternion[1],
+      targetQZ: CARRIAGE_LAYOUT.quaternion[2],
+      targetQW: CARRIAGE_LAYOUT.quaternion[3],
+      useTargetRotation: true,
+    });
   }
 
   private rigForMesh(mesh: Entity): Entity | undefined {
@@ -253,27 +301,6 @@ export class CarriageSystem extends createSystem({
       if (rig.object3D === meshObj.parent) return rig;
     }
     return undefined;
-  }
-
-  private forceReleaseGrab(entity: Entity): void {
-    const handle = entity.getValue(Handle, "instance") as
-      | CancellableHandle
-      | undefined;
-    if (handle?.cancel) {
-      try {
-        handle.cancel();
-      } catch {
-      }
-    }
-    if (entity.hasComponent(Handle)) {
-      entity.removeComponent(Handle);
-    }
-    if (entity.hasComponent(Grabbed)) {
-      entity.removeComponent(Grabbed);
-    }
-    if (entity.hasComponent(OneHandGrabbable)) {
-      entity.removeComponent(OneHandGrabbable);
-    }
   }
 
   private first(entities: Iterable<Entity>): Entity | undefined {

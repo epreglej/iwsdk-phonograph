@@ -27,11 +27,14 @@ export const PopOut2D = createComponent("PopOut2D", { ...POP_FIELDS });
 export const PopInDone = createComponent("PopInDone", {});
 export const PopOutDone = createComponent("PopOutDone", {});
 export const PopOut2DDone = createComponent("PopOut2DDone", {});
-export const SnapDone = createComponent("SnapDone", {});
+export const MoveDone = createComponent("MoveDone", {});
 
 export const Spin = createComponent("Spin", {});
 
-export const SnapAnimation = createComponent("SnapAnimation", {
+export const DEFAULT_MOVE_DURATION_MS = 300;
+
+/** Instantly apply a world-space transform; removed on the same qualify frame. */
+export const TeleportTo = createComponent("TeleportTo", {
   targetX: { type: Types.Float32, default: 0 },
   targetY: { type: Types.Float32, default: 0 },
   targetZ: { type: Types.Float32, default: 0 },
@@ -39,7 +42,21 @@ export const SnapAnimation = createComponent("SnapAnimation", {
   targetQY: { type: Types.Float32, default: 0 },
   targetQZ: { type: Types.Float32, default: 0 },
   targetQW: { type: Types.Float32, default: 1 },
-  duration: { type: Types.Float32, default: 300 },
+  useTargetRotation: { type: Types.Boolean, default: false },
+});
+
+/** Request transform animation; AnimationSystem captures start pose and tweens to target. */
+export const MoveTo = createComponent("MoveTo", {
+  targetX: { type: Types.Float32, default: 0 },
+  targetY: { type: Types.Float32, default: 0 },
+  targetZ: { type: Types.Float32, default: 0 },
+  targetQX: { type: Types.Float32, default: 0 },
+  targetQY: { type: Types.Float32, default: 0 },
+  targetQZ: { type: Types.Float32, default: 0 },
+  targetQW: { type: Types.Float32, default: 1 },
+  useTargetRotation: { type: Types.Boolean, default: false },
+  duration: { type: Types.Float32, default: DEFAULT_MOVE_DURATION_MS },
+  linear: { type: Types.Boolean, default: false },
   elapsed: { type: Types.Float32, default: 0 },
   started: { type: Types.Boolean, default: false },
   fromX: { type: Types.Float32, default: 0 },
@@ -69,7 +86,7 @@ type DoneTag =
   | typeof PopInDone
   | typeof PopOutDone
   | typeof PopOut2DDone
-  | typeof SnapDone;
+  | typeof MoveDone;
 
 export class AnimationSystem extends createSystem({
   popIn: { required: [PopIn] },
@@ -79,9 +96,10 @@ export class AnimationSystem extends createSystem({
   popInDone: { required: [PopInDone] },
   popOutDone: { required: [PopOutDone] },
   popOut2DDone: { required: [PopOut2DDone] },
-  snapDone: { required: [SnapDone] },
+  moveDone: { required: [MoveDone] },
   spin: { required: [Spin] },
-  snapAnimation: { required: [SnapAnimation] },
+  moveTo: { required: [MoveTo] },
+  teleportTo: { required: [TeleportTo] },
 }) {
   private fromPos!: Vector3;
   private toPos!: Vector3;
@@ -108,10 +126,11 @@ export class AnimationSystem extends createSystem({
       this.queries.popOut.subscribe("qualify", (e) => resetPop(e, PopOut)),
       this.queries.popIn2D.subscribe("qualify", (e) => resetPop(e, PopIn2D)),
       this.queries.popOut2D.subscribe("qualify", (e) => resetPop(e, PopOut2D)),
-      this.queries.snapAnimation.subscribe("qualify", (e) => {
-        e.setValue(SnapAnimation, "started", false);
-        e.setValue(SnapAnimation, "elapsed", 0);
+      this.queries.moveTo.subscribe("qualify", (e) => {
+        e.setValue(MoveTo, "started", false);
+        e.setValue(MoveTo, "elapsed", 0);
       }),
+      this.queries.teleportTo.subscribe("qualify", (e) => this.applyTeleport(e)),
     );
   }
 
@@ -119,7 +138,7 @@ export class AnimationSystem extends createSystem({
     this.sweepDone(this.queries.popInDone.entities, PopInDone);
     this.sweepDone(this.queries.popOutDone.entities, PopOutDone);
     this.sweepDone(this.queries.popOut2DDone.entities, PopOut2DDone);
-    this.sweepDone(this.queries.snapDone.entities, SnapDone);
+    this.sweepDone(this.queries.moveDone.entities, MoveDone);
 
     const dtMs = delta * 1000;
 
@@ -128,7 +147,7 @@ export class AnimationSystem extends createSystem({
     this.advancePop2D(this.queries.popIn2D.entities, PopIn2D, 1, POP_IN_MS, easeOutCubic, dtMs);
     this.advancePop2D(this.queries.popOut2D.entities, PopOut2D, 0.001, POP_OUT_MS, easeInCubic, dtMs, PopOut2DDone);
     this.advanceSpin(dtMs);
-    this.advanceSnap(dtMs);
+    this.advanceMove(dtMs);
   }
 
   private sweepDone(entities: Iterable<Entity>, tag: DoneTag): void {
@@ -211,50 +230,58 @@ export class AnimationSystem extends createSystem({
     }
   }
 
-  private advanceSnap(dtMs: number): void {
+  private advanceMove(dtMs: number): void {
     this.finished.length = 0;
-    for (const entity of this.queries.snapAnimation.entities) {
+    for (const entity of this.queries.moveTo.entities) {
       const obj = entity.object3D;
       if (!obj) continue;
 
-      if (!entity.getValue(SnapAnimation, "started")) {
-        entity.setValue(SnapAnimation, "started", true);
-        entity.setValue(SnapAnimation, "elapsed", 0);
-        entity.setValue(SnapAnimation, "fromX", obj.position.x);
-        entity.setValue(SnapAnimation, "fromY", obj.position.y);
-        entity.setValue(SnapAnimation, "fromZ", obj.position.z);
-        entity.setValue(SnapAnimation, "fromQX", obj.quaternion.x);
-        entity.setValue(SnapAnimation, "fromQY", obj.quaternion.y);
-        entity.setValue(SnapAnimation, "fromQZ", obj.quaternion.z);
-        entity.setValue(SnapAnimation, "fromQW", obj.quaternion.w);
+      if (!entity.getValue(MoveTo, "started")) {
+        entity.setValue(MoveTo, "started", true);
+        entity.setValue(MoveTo, "elapsed", 0);
+        entity.setValue(MoveTo, "fromX", obj.position.x);
+        entity.setValue(MoveTo, "fromY", obj.position.y);
+        entity.setValue(MoveTo, "fromZ", obj.position.z);
+        entity.setValue(MoveTo, "fromQX", obj.quaternion.x);
+        entity.setValue(MoveTo, "fromQY", obj.quaternion.y);
+        entity.setValue(MoveTo, "fromQZ", obj.quaternion.z);
+        entity.setValue(MoveTo, "fromQW", obj.quaternion.w);
+
+        if (!entity.getValue(MoveTo, "useTargetRotation")) {
+          entity.setValue(MoveTo, "targetQX", obj.quaternion.x);
+          entity.setValue(MoveTo, "targetQY", obj.quaternion.y);
+          entity.setValue(MoveTo, "targetQZ", obj.quaternion.z);
+          entity.setValue(MoveTo, "targetQW", obj.quaternion.w);
+        }
       }
 
-      const duration = entity.getValue(SnapAnimation, "duration")!;
-      const elapsed = entity.getValue(SnapAnimation, "elapsed")! + dtMs;
+      const duration = entity.getValue(MoveTo, "duration")!;
+      const elapsed = entity.getValue(MoveTo, "elapsed")! + dtMs;
       const t = Math.min(elapsed / duration, 1);
-      const eased = easeOutBack(t);
+      const linear = entity.getValue(MoveTo, "linear") ?? false;
+      const eased = linear ? t : easeOutBack(t);
 
       this.fromPos.set(
-        entity.getValue(SnapAnimation, "fromX")!,
-        entity.getValue(SnapAnimation, "fromY")!,
-        entity.getValue(SnapAnimation, "fromZ")!,
+        entity.getValue(MoveTo, "fromX")!,
+        entity.getValue(MoveTo, "fromY")!,
+        entity.getValue(MoveTo, "fromZ")!,
       );
       this.toPos.set(
-        entity.getValue(SnapAnimation, "targetX")!,
-        entity.getValue(SnapAnimation, "targetY")!,
-        entity.getValue(SnapAnimation, "targetZ")!,
+        entity.getValue(MoveTo, "targetX")!,
+        entity.getValue(MoveTo, "targetY")!,
+        entity.getValue(MoveTo, "targetZ")!,
       );
       this.fromQuat.set(
-        entity.getValue(SnapAnimation, "fromQX")!,
-        entity.getValue(SnapAnimation, "fromQY")!,
-        entity.getValue(SnapAnimation, "fromQZ")!,
-        entity.getValue(SnapAnimation, "fromQW")!,
+        entity.getValue(MoveTo, "fromQX")!,
+        entity.getValue(MoveTo, "fromQY")!,
+        entity.getValue(MoveTo, "fromQZ")!,
+        entity.getValue(MoveTo, "fromQW")!,
       );
       this.toQuat.set(
-        entity.getValue(SnapAnimation, "targetQX")!,
-        entity.getValue(SnapAnimation, "targetQY")!,
-        entity.getValue(SnapAnimation, "targetQZ")!,
-        entity.getValue(SnapAnimation, "targetQW")!,
+        entity.getValue(MoveTo, "targetQX")!,
+        entity.getValue(MoveTo, "targetQY")!,
+        entity.getValue(MoveTo, "targetQZ")!,
+        entity.getValue(MoveTo, "targetQW")!,
       );
 
       obj.position.lerpVectors(this.fromPos, this.toPos, eased);
@@ -265,13 +292,38 @@ export class AnimationSystem extends createSystem({
         obj.quaternion.copy(this.toQuat);
         this.finished.push(entity);
       } else {
-        entity.setValue(SnapAnimation, "elapsed", elapsed);
+        entity.setValue(MoveTo, "elapsed", elapsed);
       }
     }
     for (const entity of this.finished) {
-      entity.removeComponent(SnapAnimation);
-      entity.addComponent(SnapDone);
+      entity.removeComponent(MoveTo);
+      entity.addComponent(MoveDone);
     }
+  }
+
+  private applyTeleport(entity: Entity): void {
+    const obj = entity.object3D;
+    if (!obj) {
+      entity.removeComponent(TeleportTo);
+      return;
+    }
+
+    obj.position.set(
+      entity.getValue(TeleportTo, "targetX")!,
+      entity.getValue(TeleportTo, "targetY")!,
+      entity.getValue(TeleportTo, "targetZ")!,
+    );
+
+    if (entity.getValue(TeleportTo, "useTargetRotation")) {
+      obj.quaternion.set(
+        entity.getValue(TeleportTo, "targetQX")!,
+        entity.getValue(TeleportTo, "targetQY")!,
+        entity.getValue(TeleportTo, "targetQZ")!,
+        entity.getValue(TeleportTo, "targetQW")!,
+      );
+    }
+
+    entity.removeComponent(TeleportTo);
   }
 
   private panelRoot(entity: Entity): UIKit.Component | undefined {

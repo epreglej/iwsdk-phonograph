@@ -115,8 +115,8 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       .registerSystem(PhonographSystem)
       .registerSystem(CylinderSystem)
       .registerSystem(CrankSystem)
-      .registerSystem(BrakeSystem)
       .registerSystem(RecordingSystem)
+      .registerSystem(BrakeSystem)
       .registerSystem(CarriageSystem);
 
     world

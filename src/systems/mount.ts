@@ -11,13 +11,10 @@ import { Phonograph } from "./phonograph.js";
 import { PhonographPart } from "./phonograph.js";
 import { Highlight } from "./highlight.js";
 import { Snappable, SnapGhost, Snapped } from "./snap.js";
-import { PopIn } from "./animation.js";
-import {
-  MOUNT_BY_TASK,
-  PART_LAYOUT,
-  isCarriagePart,
-  reparentObject3D,
-} from "../config.js";
+import { PopIn, TeleportTo } from "./animation.js";
+import { MOUNT_BY_TASK } from "./task-flow.js";
+import { isCarriagePart, reparentObject3D } from "./carriage.js";
+import { PART_LAYOUT } from "./spawn.js";
 
 export const MountTaskBinding = createComponent("MountTaskBinding", {
   taskId: { type: Types.String, default: "" },
@@ -114,8 +111,16 @@ export class MountSystem extends createSystem({
       reparentObject3D(obj, phonographRoot);
     }
 
-    obj.position.set(...layout.position);
-    obj.quaternion.set(...layout.quaternion);
+    part.addComponent(TeleportTo, {
+      targetX: layout.position[0],
+      targetY: layout.position[1],
+      targetZ: layout.position[2],
+      targetQX: layout.quaternion[0],
+      targetQY: layout.quaternion[1],
+      targetQZ: layout.quaternion[2],
+      targetQW: layout.quaternion[3],
+      useTargetRotation: true,
+    });
   }
 
   private partById(id: string): Entity | undefined {

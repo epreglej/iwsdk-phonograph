@@ -2,21 +2,25 @@ import { createSystem, Entity, eq, Grabbed, OneHandGrabbable } from "@iwsdk/core
 import { Task, ActiveTask, CompletedTask } from "./task-flow.js";
 import { PhonographPart } from "./phonograph.js";
 import { Phonograph } from "./phonograph.js";
-import { Carriage, CarriageMesh, CarriageReturning } from "./carriage.js";
+import {
+  Carriage,
+  CarriageMesh,
+  CarriageReturning,
+  CarriageTraveling,
+} from "./carriage.js";
 import { BrakeShifted, BrakeReturning } from "./brake.js";
 import { CrankHeld, CrankingComplete, CrankRotation } from "./crank.js";
 import { Highlight } from "./highlight.js";
 import { MountTaskBinding } from "./mount.js";
-import { PopIn, PopOut, SnapAnimation, Spin } from "./animation.js";
+import { MoveTo, PopIn, PopOut, Spin, TeleportTo } from "./animation.js";
 import { Snappable, Snapped, SnapGhost, SnapPoint } from "./snap.js";
+import { PlacardAutoDismiss } from "./placard.js";
+import { TaskPanelAutoComplete } from "./task-panel.js";
 import { Unmounting, UnmountPopping } from "./unmount.js";
-import { clearRecordedAudio } from "./recording.js";
-import {
-  CARRIAGE_LAYOUT,
-  PART_LAYOUT,
-  isCarriagePart,
-  reparentObject3D,
-} from "../config.js";
+import { ClearRecording } from "./recording.js";
+import { ReleaseGrab } from "./interaction-gate.js";
+import { CARRIAGE_LAYOUT, isCarriagePart, reparentObject3D } from "./carriage.js";
+import { PART_LAYOUT } from "./spawn.js";
 
 const GAMEPLAY_COMPONENTS = [
   MountTaskBinding,
@@ -25,7 +29,9 @@ const GAMEPLAY_COMPONENTS = [
   Snappable,
   Snapped,
   SnapGhost,
-  SnapAnimation,
+  MoveTo,
+  TeleportTo,
+  ReleaseGrab,
   Unmounting,
   UnmountPopping,
   Highlight,
@@ -38,6 +44,9 @@ const GAMEPLAY_COMPONENTS = [
   BrakeShifted,
   BrakeReturning,
   CarriageReturning,
+  CarriageTraveling,
+  PlacardAutoDismiss,
+  TaskPanelAutoComplete,
 ] as const;
 
 export class WorldResetSystem extends createSystem({
@@ -61,7 +70,7 @@ export class WorldResetSystem extends createSystem({
   }
 
   private resetWorld(): void {
-    clearRecordedAudio();
+    this.world.sceneEntity.addComponent(ClearRecording);
 
     for (const phonograph of this.queries.phonograph.entities) {
       if (phonograph.object3D) phonograph.object3D.visible = false;
@@ -76,8 +85,16 @@ export class WorldResetSystem extends createSystem({
       if (phonographRoot && isCarriagePart(layout.id)) {
         this.reparentPartToPhonographStaging(part, phonographRoot);
       } else {
-        part.object3D.position.set(...layout.position);
-        part.object3D.quaternion.set(...layout.quaternion);
+        part.addComponent(TeleportTo, {
+          targetX: layout.position[0],
+          targetY: layout.position[1],
+          targetZ: layout.position[2],
+          targetQX: layout.quaternion[0],
+          targetQY: layout.quaternion[1],
+          targetQZ: layout.quaternion[2],
+          targetQW: layout.quaternion[3],
+          useTargetRotation: true,
+        });
       }
       part.object3D.scale.setScalar(1);
       part.object3D.visible = layout.visible;
@@ -86,8 +103,16 @@ export class WorldResetSystem extends createSystem({
 
     for (const carriage of this.queries.carriage.entities) {
       if (!carriage.object3D) continue;
-      carriage.object3D.position.set(...CARRIAGE_LAYOUT.position);
-      carriage.object3D.quaternion.set(...CARRIAGE_LAYOUT.quaternion);
+      carriage.addComponent(TeleportTo, {
+        targetX: CARRIAGE_LAYOUT.position[0],
+        targetY: CARRIAGE_LAYOUT.position[1],
+        targetZ: CARRIAGE_LAYOUT.position[2],
+        targetQX: CARRIAGE_LAYOUT.quaternion[0],
+        targetQY: CARRIAGE_LAYOUT.quaternion[1],
+        targetQZ: CARRIAGE_LAYOUT.quaternion[2],
+        targetQW: CARRIAGE_LAYOUT.quaternion[3],
+        useTargetRotation: true,
+      });
       carriage.object3D.visible = true;
       this.stripGameplay(carriage);
     }
@@ -119,8 +144,16 @@ export class WorldResetSystem extends createSystem({
       reparentObject3D(obj, phonographRoot);
     }
 
-    obj.position.set(...layout.position);
-    obj.quaternion.set(...layout.quaternion);
+    part.addComponent(TeleportTo, {
+      targetX: layout.position[0],
+      targetY: layout.position[1],
+      targetZ: layout.position[2],
+      targetQX: layout.quaternion[0],
+      targetQY: layout.quaternion[1],
+      targetQZ: layout.quaternion[2],
+      targetQW: layout.quaternion[3],
+      useTargetRotation: true,
+    });
   }
 
   private stripGameplay(entity: Entity): void {

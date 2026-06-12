@@ -6,14 +6,16 @@ import {
   OneHandGrabbable,
   Types,
 } from "@iwsdk/core";
-import { Handle } from "@iwsdk/core/dist/grab/handles.js";
 import { Task, ActiveTask, CompletedTask } from "./task-flow.js";
 import { Phonograph } from "./phonograph.js";
 import { PhonographPart } from "./phonograph.js";
-import { PopOut, PopOutDone, SnapAnimation } from "./animation.js";
+import { MoveTo, PopOut, PopOutDone, TeleportTo } from "./animation.js";
+import { ReleaseGrab } from "./interaction-gate.js";
 import { Highlight, STOP_HIGHLIGHT_COLOR } from "./highlight.js";
 import { Snappable, SnapGhost, Snapped } from "./snap.js";
-import { UNMOUNT_BY_TASK, isCarriagePart, PART_LAYOUT, reparentObject3D } from "../config.js";
+import { UNMOUNT_BY_TASK } from "./task-flow.js";
+import { isCarriagePart, reparentObject3D } from "./carriage.js";
+import { PART_LAYOUT } from "./spawn.js";
 import { playPop } from "../audio/sfx.js";
 import { MountTaskBinding } from "./mount.js";
 
@@ -21,8 +23,6 @@ export const Unmounting = createComponent("Unmounting", {
   taskId: { type: Types.String, default: "" },
 });
 export const UnmountPopping = createComponent("UnmountPopping", {});
-
-type CancellableHandle = { cancel?: () => void };
 
 export class UnmountSystem extends createSystem({
   activeTask: {
@@ -81,14 +81,14 @@ export class UnmountSystem extends createSystem({
     }
 
     part.addComponent(UnmountPopping);
-    this.forceReleaseGrab(part);
+    part.addComponent(ReleaseGrab, { removeGrabbable: true });
 
     part
       .removeComponent(Highlight)
       .removeComponent(Snappable)
       .removeComponent(SnapGhost)
       .removeComponent(Snapped)
-      .removeComponent(SnapAnimation)
+      .removeComponent(MoveTo)
       .addComponent(PopOut);
 
     playPop();
@@ -96,7 +96,7 @@ export class UnmountSystem extends createSystem({
 
   private completeUnmount(part: Entity): void {
     const taskId = part.getValue(Unmounting, "taskId");
-    this.forceReleaseGrab(part);
+    part.addComponent(ReleaseGrab, { removeGrabbable: true });
     part.removeComponent(Unmounting).removeComponent(UnmountPopping);
 
     const partId = part.getValue(PhonographPart, "id");
@@ -135,33 +135,16 @@ export class UnmountSystem extends createSystem({
       reparentObject3D(obj, phonographRoot);
     }
 
-    obj.position.set(...layout.position);
-    obj.quaternion.set(...layout.quaternion);
-  }
-
-  private forceReleaseGrab(entity: Entity): void {
-    this.cancelActiveGrab(entity);
-    if (entity.hasComponent(OneHandGrabbable)) {
-      entity.removeComponent(OneHandGrabbable);
-    }
-  }
-
-  private cancelActiveGrab(entity: Entity): void {
-    const handle = entity.getValue(Handle, "instance") as
-      | CancellableHandle
-      | undefined;
-    if (handle?.cancel) {
-      try {
-        handle.cancel();
-      } catch {
-      }
-    }
-    if (entity.hasComponent(Handle)) {
-      entity.removeComponent(Handle);
-    }
-    if (entity.hasComponent(Grabbed)) {
-      entity.removeComponent(Grabbed);
-    }
+    part.addComponent(TeleportTo, {
+      targetX: layout.position[0],
+      targetY: layout.position[1],
+      targetZ: layout.position[2],
+      targetQX: layout.quaternion[0],
+      targetQY: layout.quaternion[1],
+      targetQZ: layout.quaternion[2],
+      targetQW: layout.quaternion[3],
+      useTargetRotation: true,
+    });
   }
 
   private partById(id: string): Entity | undefined {

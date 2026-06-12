@@ -6,19 +6,24 @@ import {
   Grabbed,
   OneHandGrabbable,
 } from "@iwsdk/core";
-import { Handle } from "@iwsdk/core/dist/grab/handles.js";
 import { Task, ActiveTask, CompletedTask } from "./task-flow.js";
-import { SnapAnimation, SnapDone } from "./animation.js";
+import { MoveDone, MoveTo, TeleportTo } from "./animation.js";
 import { Highlight, STOP_HIGHLIGHT_COLOR } from "./highlight.js";
-import { stopActiveRecording } from "./recording.js";
+import { Recording, StopRecording } from "./recording.js";
+import { ReleaseGrab } from "./interaction-gate.js";
 import { playSnap } from "../audio/sfx.js";
-import { BRAKE_PLAY, BRAKE_STOP } from "../config.js";
+
+const BRAKE_SHIFT_X = 0.035;
+export const BRAKE_PLAY = { x: -0.1, y: 0.16, z: 0.0725 };
+export const BRAKE_STOP = {
+  x: BRAKE_PLAY.x + BRAKE_SHIFT_X,
+  y: BRAKE_PLAY.y,
+  z: BRAKE_PLAY.z,
+};
 
 export const Brake = createComponent("Brake", {});
 export const BrakeShifted = createComponent("BrakeShifted", {});
 export const BrakeReturning = createComponent("BrakeReturning", {});
-
-type CancellableHandle = { cancel?: () => void };
 
 const BRAKE_SHIFT_DURATION_MS = 300;
 
@@ -46,14 +51,14 @@ export class BrakeSystem extends createSystem({
   brake: { required: [Brake] },
   brakeGrabbed: {
     required: [Brake, Grabbed],
-    excluded: [SnapAnimation, BrakeShifted, BrakeReturning],
+    excluded: [MoveTo, BrakeShifted, BrakeReturning],
   },
   brakeGrabbedToStopRecording: {
     required: [Brake, Grabbed],
-    excluded: [SnapAnimation, BrakeReturning],
+    excluded: [MoveTo, BrakeReturning],
   },
-  brakeShiftDone: { required: [Brake, SnapDone, BrakeShifted] },
-  brakeReturnDone: { required: [Brake, SnapDone, BrakeReturning] },
+  brakeShiftDone: { required: [Brake, MoveDone, BrakeShifted] },
+  brakeReturnDone: { required: [Brake, MoveDone, BrakeReturning] },
 }) {
   init() {
     this.cleanupFuncs.push(
@@ -86,10 +91,8 @@ export class BrakeSystem extends createSystem({
         const brake = this.first(this.queries.brake.entities);
         if (!brake) return;
         this.deactivateRecordingStop(brake);
-        brake.removeComponent(BrakeReturning).removeComponent(SnapAnimation);
-        if (brake.object3D) {
-          brake.object3D.position.set(BRAKE_STOP.x, BRAKE_STOP.y, BRAKE_STOP.z);
-        }
+        brake.removeComponent(BrakeReturning).removeComponent(MoveTo);
+        this.teleportBrake(brake, BRAKE_STOP);
       }),
 
       this.queries.activePlaybackTask.subscribe("disqualify", () => {
@@ -132,9 +135,9 @@ export class BrakeSystem extends createSystem({
     brake
       .removeComponent(BrakeReturning)
       .removeComponent(BrakeShifted)
-      .removeComponent(SnapAnimation)
+      .removeComponent(MoveTo)
       .removeComponent(Grabbed);
-    brake.object3D.position.set(BRAKE_STOP.x, BRAKE_STOP.y, BRAKE_STOP.z);
+    this.teleportBrake(brake, BRAKE_STOP);
     brake.object3D.visible = true;
 
     brake
@@ -150,7 +153,7 @@ export class BrakeSystem extends createSystem({
 
     brake
       .removeComponent(BrakeShifted)
-      .removeComponent(SnapAnimation)
+      .removeComponent(MoveTo)
       .removeComponent(Grabbed);
 
     if (this.queries.activeRecordingTask.entities.size > 0) {
@@ -167,13 +170,11 @@ export class BrakeSystem extends createSystem({
   }
 
   private activateRecordingStop(brake: Entity): void {
-    const obj = brake.object3D;
-    if (!obj) return;
+    if (!brake.object3D) return;
 
     brake.removeComponent(BrakeReturning);
-
-    obj.position.set(BRAKE_PLAY.x, BRAKE_PLAY.y, BRAKE_PLAY.z);
-    obj.visible = true;
+    this.teleportBrake(brake, BRAKE_PLAY);
+    brake.object3D.visible = true;
 
     brake
       .removeComponent(Grabbed)
@@ -184,31 +185,33 @@ export class BrakeSystem extends createSystem({
   }
 
   private setBrakeAtPlay(brake: Entity): void {
-    const obj = brake.object3D;
-    if (!obj) return;
+    if (!brake.object3D) return;
 
     brake.removeComponent(BrakeReturning).removeComponent(Grabbed);
     brake.removeComponent(OneHandGrabbable).removeComponent(Highlight);
 
-    obj.position.set(BRAKE_PLAY.x, BRAKE_PLAY.y, BRAKE_PLAY.z);
-    obj.visible = true;
+    this.teleportBrake(brake, BRAKE_PLAY);
+    brake.object3D.visible = true;
   }
 
   private returnBrakeAfterPlayback(brake: Entity): void {
-    if (brake.hasComponent(SnapAnimation)) {
-      brake.removeComponent(SnapAnimation);
+    if (brake.hasComponent(MoveTo)) {
+      brake.removeComponent(MoveTo);
     }
 
     this.animateBrakeTo(brake, BRAKE_STOP, BrakeReturning);
   }
 
   private shiftBrake(brake: Entity): void {
-    const obj = brake.object3D;
-    if (!obj || brake.hasComponent(SnapAnimation) || brake.hasComponent(BrakeShifted)) {
+    if (
+      !brake.object3D ||
+      brake.hasComponent(MoveTo) ||
+      brake.hasComponent(BrakeShifted)
+    ) {
       return;
     }
 
-    this.forceReleaseGrab(brake);
+    brake.addComponent(ReleaseGrab, { removeGrabbable: true });
     brake
       .removeComponent(Highlight)
       .removeComponent(OneHandGrabbable)
@@ -221,18 +224,17 @@ export class BrakeSystem extends createSystem({
   private stopRecordingWithBrake(brake: Entity): void {
     if (
       brake.hasComponent(BrakeReturning) ||
-      brake.hasComponent(SnapAnimation)
+      brake.hasComponent(MoveTo) ||
+      !this.world.sceneEntity.hasComponent(Recording)
     ) {
       return;
     }
-    if (!stopActiveRecording()) return;
 
-    const obj = brake.object3D;
-    if (!obj) return;
+    if (!brake.object3D) return;
 
-    this.forceReleaseGrab(brake);
+    this.world.sceneEntity.addComponent(StopRecording);
+    brake.addComponent(ReleaseGrab, { removeGrabbable: true });
     this.deactivateRecordingStop(brake);
-
     this.animateBrakeTo(brake, BRAKE_STOP, BrakeReturning);
   }
 
@@ -241,21 +243,16 @@ export class BrakeSystem extends createSystem({
     target: { x: number; y: number; z: number },
     marker: typeof BrakeShifted | typeof BrakeReturning,
   ): void {
-    const obj = brake.object3D;
-    if (!obj) return;
+    if (!brake.object3D) return;
 
     if (brake.hasComponent(marker)) {
       brake.removeComponent(marker);
     }
     brake.addComponent(marker);
-    brake.addComponent(SnapAnimation, {
+    brake.addComponent(MoveTo, {
       targetX: target.x,
       targetY: target.y,
       targetZ: target.z,
-      targetQX: obj.quaternion.x,
-      targetQY: obj.quaternion.y,
-      targetQZ: obj.quaternion.z,
-      targetQW: obj.quaternion.w,
       duration: BRAKE_SHIFT_DURATION_MS,
     });
 
@@ -263,21 +260,14 @@ export class BrakeSystem extends createSystem({
   }
 
   private finishReturnHome(brake: Entity): void {
-    const obj = brake.object3D;
-    if (obj) {
-      obj.position.set(BRAKE_STOP.x, BRAKE_STOP.y, BRAKE_STOP.z);
-    }
+    this.teleportBrake(brake, BRAKE_STOP);
     brake.removeComponent(BrakeReturning);
   }
 
   private completeBrakeShiftTask(brake: Entity): void {
     if (!brake.hasComponent(BrakeShifted)) return;
 
-    const obj = brake.object3D;
-    if (obj) {
-      obj.position.set(BRAKE_PLAY.x, BRAKE_PLAY.y, BRAKE_PLAY.z);
-    }
-
+    this.teleportBrake(brake, BRAKE_PLAY);
     brake.removeComponent(BrakeShifted);
 
     for (const task of this.queries.activeBrakeShiftTask.entities) {
@@ -299,25 +289,15 @@ export class BrakeSystem extends createSystem({
       .removeComponent(Grabbed);
   }
 
-  private forceReleaseGrab(entity: Entity): void {
-    const handle = entity.getValue(Handle, "instance") as
-      | CancellableHandle
-      | undefined;
-    if (handle?.cancel) {
-      try {
-        handle.cancel();
-      } catch {
-      }
-    }
-    if (entity.hasComponent(Handle)) {
-      entity.removeComponent(Handle);
-    }
-    if (entity.hasComponent(Grabbed)) {
-      entity.removeComponent(Grabbed);
-    }
-    if (entity.hasComponent(OneHandGrabbable)) {
-      entity.removeComponent(OneHandGrabbable);
-    }
+  private teleportBrake(
+    brake: Entity,
+    target: { x: number; y: number; z: number },
+  ): void {
+    brake.addComponent(TeleportTo, {
+      targetX: target.x,
+      targetY: target.y,
+      targetZ: target.z,
+    });
   }
 
   private first(entities: Iterable<Entity>): Entity | undefined {

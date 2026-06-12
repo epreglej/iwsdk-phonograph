@@ -7,14 +7,9 @@ import {
   Types,
   Vector3,
 } from "@iwsdk/core";
-import {
-  PopIn,
-  PopOut,
-  PopOutDone,
-  SnapAnimation,
-} from "./animation.js";
+import { MoveTo, PopIn, PopOut, PopOutDone } from "./animation.js";
 import { playSnap } from "../audio/sfx.js";
-import { isCarriageSnapPoint, reparentObject3D } from "../config.js";
+import { isCarriageSnapPoint, reparentObject3D } from "./carriage.js";
 
 export const Snappable = createComponent("Snappable", {
   snapRadius: { type: Types.Float32, default: 0.15 },
@@ -88,7 +83,7 @@ export class SnapSystem extends createSystem({
 
   private unsnap(entity: Entity) {
     entity.removeComponent(Snapped);
-    entity.removeComponent(SnapAnimation);
+    entity.removeComponent(MoveTo);
     entity.addComponent(OneHandGrabbable);
   }
 
@@ -127,7 +122,7 @@ export class SnapSystem extends createSystem({
     entity.addComponent(Snapped, {
       snapPointId: point.getValue(SnapPoint, "id")!,
     });
-    entity.addComponent(SnapAnimation, {
+    entity.addComponent(MoveTo, {
       targetX: targetPos.x,
       targetY: targetPos.y,
       targetZ: targetPos.z,
@@ -135,7 +130,7 @@ export class SnapSystem extends createSystem({
       targetQY: targetQuat.y,
       targetQZ: targetQuat.z,
       targetQW: targetQuat.w,
-      duration: 300,
+      useTargetRotation: true,
     });
 
     playSnap();

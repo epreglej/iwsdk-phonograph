@@ -1,11 +1,14 @@
-import { createSystem, Entity, eq } from "@iwsdk/core";
+import { createComponent, createSystem, Entity, eq } from "@iwsdk/core";
 import { Task, ActiveTask, CompletedTask } from "./task-flow.js";
 import { PhonographPart } from "./phonograph.js";
 import {
   Highlight,
   RECORDING_INPUT_HIGHLIGHT_COLOR,
 } from "./highlight.js";
-import { CARRIAGE_LAYOUT } from "../config.js";
+
+export const Recording = createComponent("Recording", {});
+export const StopRecording = createComponent("StopRecording", {});
+export const ClearRecording = createComponent("ClearRecording", {});
 
 let recordedBuffer: AudioBuffer | null = null;
 let audioContext: AudioContext | null = null;
@@ -25,7 +28,7 @@ function clearActiveRecording(): void {
   activeStream = null;
 }
 
-export function stopActiveRecording(): boolean {
+function stopRecording(): boolean {
   if (activeRecorder?.state === "recording") {
     activeRecorder.stop();
     return true;
@@ -57,7 +60,7 @@ function getRecordedAudio(): {
   return { ctx: audioContext, buffer: recordedBuffer };
 }
 
-export function clearRecordedAudio(): void {
+function clearRecordedAudio(): void {
   recordedBuffer = null;
   audioContext = null;
 }
@@ -73,10 +76,13 @@ export class RecordingSystem extends createSystem({
     excluded: [CompletedTask],
     where: [eq(Task, "id", "playback")],
   },
-  parts: { required: [PhonographPart] },
+  recordingHorn: {
+    required: [PhonographPart],
+    where: [eq(PhonographPart, "id", "recording_horn")],
+  },
+  stopRequested: { required: [StopRecording] },
+  clearRequested: { required: [ClearRecording] },
 }) {
-  private recordingLimitTimer: ReturnType<typeof setTimeout> | undefined;
-
   init() {
     this.triggerEarlyPermissionPrompt();
 
@@ -89,10 +95,24 @@ export class RecordingSystem extends createSystem({
       this.queries.activeRecordingTask.subscribe("disqualify", () => {
         this.onRecordingStop();
         abortActiveRecording();
+        this.world.sceneEntity.removeComponent(Recording);
       }),
 
       this.queries.activePlaybackTask.subscribe("qualify", (taskEntity) => {
         this.startPlayback(taskEntity);
+      }),
+
+      this.queries.stopRequested.subscribe("qualify", () => {
+        stopRecording();
+        this.world.sceneEntity.removeComponent(StopRecording);
+      }),
+
+      this.queries.clearRequested.subscribe("qualify", () => {
+        clearRecordedAudio();
+        this.world.sceneEntity
+          .removeComponent(ClearRecording)
+          .removeComponent(Recording)
+          .removeComponent(StopRecording);
       }),
     );
   }
@@ -116,14 +136,15 @@ export class RecordingSystem extends createSystem({
       const chunks: BlobPart[] = [];
       const recorder = new MediaRecorder(stream);
       registerActiveRecording(recorder, stream);
+      this.world.sceneEntity.addComponent(Recording);
 
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunks.push(e.data);
       };
 
       recorder.onstop = async () => {
-        this.clearRecordingLimitTimer();
         clearActiveRecording();
+        this.world.sceneEntity.removeComponent(Recording);
         stream.getTracks().forEach((t) => t.stop());
 
         const blob = new Blob(chunks, { type: recorder.mimeType });
@@ -137,35 +158,24 @@ export class RecordingSystem extends createSystem({
       };
 
       recorder.start();
-      this.clearRecordingLimitTimer();
-      this.recordingLimitTimer = setTimeout(() => {
-        stopActiveRecording();
-      }, CARRIAGE_LAYOUT.travelDurationS * 1000);
     } catch (err) {
       console.error("Recording failed:", err);
       clearActiveRecording();
+      this.world.sceneEntity.removeComponent(Recording);
       this.onRecordingStop();
     }
   }
 
   private onRecordingStart(): void {
-    const recordingHorn = this.partById("recording_horn");
+    const recordingHorn = this.first(this.queries.recordingHorn.entities);
     if (recordingHorn && !recordingHorn.hasComponent(Highlight)) {
       recordingHorn.addComponent(Highlight, { color: RECORDING_INPUT_HIGHLIGHT_COLOR });
     }
   }
 
   private onRecordingStop(): void {
-    this.clearRecordingLimitTimer();
-    const recordingHorn = this.partById("recording_horn");
+    const recordingHorn = this.first(this.queries.recordingHorn.entities);
     recordingHorn?.removeComponent(Highlight);
-  }
-
-  private clearRecordingLimitTimer(): void {
-    if (this.recordingLimitTimer != null) {
-      clearTimeout(this.recordingLimitTimer);
-      this.recordingLimitTimer = undefined;
-    }
   }
 
   private startPlayback(taskEntity: {
@@ -288,10 +298,8 @@ export class RecordingSystem extends createSystem({
     return curve;
   }
 
-  private partById(id: string): Entity | undefined {
-    for (const part of this.queries.parts.entities) {
-      if (part.getValue(PhonographPart, "id") === id) return part;
-    }
+  private first(entities: Iterable<Entity>): Entity | undefined {
+    for (const entity of entities) return entity;
     return undefined;
   }
 }

@@ -44,7 +44,10 @@ export class CrankSystem extends createSystem(
     crankHeld: {
       required: [Crank, CrankHeld, CrankRotation],
     },
-    parts: { required: [PhonographPart] },
+    crankPart: {
+      required: [PhonographPart],
+      where: [eq(PhonographPart, "id", "crank")],
+    },
   },
   {
     sensitivity: { type: Types.Float32, default: 1 },
@@ -56,7 +59,7 @@ export class CrankSystem extends createSystem(
   init() {
     this.cleanupFuncs.push(
       this.queries.activeCrankCrankingTask.subscribe("qualify", () => {
-        const crankEntity = this.partById("crank");
+        const crankEntity = this.first(this.queries.crankPart.entities);
         const crankRoot = crankEntity?.object3D;
         if (!crankEntity || !crankRoot) return;
 
@@ -87,7 +90,7 @@ export class CrankSystem extends createSystem(
       }),
 
       this.queries.activeCrankCrankingTask.subscribe("disqualify", () => {
-        const crankEntity = this.partById("crank");
+        const crankEntity = this.first(this.queries.crankPart.entities);
         crankEntity
           ?.removeComponent(CrankHeld)
           .removeComponent(CrankRotation)
@@ -174,10 +177,8 @@ export class CrankSystem extends createSystem(
     }
   }
 
-  private partById(id: string): import("@iwsdk/core").Entity | undefined {
-    for (const part of this.queries.parts.entities) {
-      if (part.getValue(PhonographPart, "id") === id) return part;
-    }
+  private first(entities: Iterable<import("@iwsdk/core").Entity>): import("@iwsdk/core").Entity | undefined {
+    for (const entity of entities) return entity;
     return undefined;
   }
 }

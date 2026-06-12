@@ -2,6 +2,7 @@ import {
   createComponent,
   createSystem,
   Entity,
+  eq,
   FollowBehavior,
   Follower,
   Grabbed,
@@ -21,7 +22,7 @@ import {
   PLACARD_BY_TASK,
   TASK_ORDER,
   type PlacardSpec,
-} from "../config.js";
+} from "./task-flow.js";
 
 export const Placard = createComponent("Placard", {
   panelConfig: { type: Types.String, default: "" },
@@ -36,6 +37,10 @@ export const Placard = createComponent("Placard", {
 
 export const PlacardDismissed = createComponent("PlacardDismissed", {});
 
+export const PlacardAutoDismiss = createComponent("PlacardAutoDismiss", {
+  remainingMs: { type: Types.Float32, default: 0 },
+});
+
 export const PlacardInstance = createComponent("PlacardInstance", {
   target: { type: Types.Entity, default: null },
 });
@@ -46,15 +51,21 @@ export class PlacardSystem extends createSystem({
     excluded: [CompletedTask],
   },
   parts: { required: [PhonographPart] },
+  crankPart: {
+    required: [PhonographPart],
+    where: [eq(PhonographPart, "id", "crank")],
+  },
   crankComplete: { required: [Crank, CrankingComplete] },
+  placardAutoDismiss: {
+    required: [PlacardAutoDismiss],
+    excluded: [PlacardDismissed],
+  },
   targets: { required: [Placard], excluded: [PlacardDismissed] },
   instances: { required: [PlacardInstance] },
   instanceDocs: { required: [PlacardInstance, PanelDocument] },
   targetGrabbed: { required: [Placard, Grabbed] },
   targetSnapped: { required: [Placard, Snapped] },
 }) {
-  private dismissTimers = new Map<number, ReturnType<typeof setTimeout>>();
-
   init() {
     this.cleanupFuncs.push(
       this.queries.activeTask.subscribe("qualify", (taskEntity) => {
@@ -89,7 +100,7 @@ export class PlacardSystem extends createSystem({
       }),
 
       this.queries.crankComplete.subscribe("qualify", () => {
-        const crank = this.partById("crank");
+        const crank = this.first(this.queries.crankPart.entities);
         if (crank) this.stripPlacard(crank);
       }),
 
@@ -98,7 +109,7 @@ export class PlacardSystem extends createSystem({
       }),
 
       this.queries.targets.subscribe("disqualify", (target) => {
-        this.clearDismissTimer(target.index);
+        target.removeComponent(PlacardAutoDismiss);
         this.destroyPlacardForTarget(target);
       }),
 
@@ -131,6 +142,22 @@ export class PlacardSystem extends createSystem({
         this.dismissPlacard(target);
       }),
     );
+  }
+
+  update(delta: number) {
+    const dtMs = delta * 1000;
+
+    for (const target of this.queries.placardAutoDismiss.entities) {
+      const remaining =
+        (target.getValue(PlacardAutoDismiss, "remainingMs") ?? 0) - dtMs;
+
+      if (remaining <= 0) {
+        target.removeComponent(PlacardAutoDismiss);
+        this.dismissPlacard(target);
+      } else {
+        target.setValue(PlacardAutoDismiss, "remainingMs", remaining);
+      }
+    }
   }
 
   private attachPlacard(entity: Entity, spec: PlacardSpec): void {
@@ -217,13 +244,8 @@ export class PlacardSystem extends createSystem({
 
     const autoDismissMs = target.getValue(Placard, "autoDismissMs") ?? 0;
     if (autoDismissMs > 0) {
-      const timer = setTimeout(() => {
-        this.dismissTimers.delete(target.index);
-        if (target.active && !target.hasComponent(PlacardDismissed)) {
-          this.dismissPlacard(target);
-        }
-      }, autoDismissMs);
-      this.dismissTimers.set(target.index, timer);
+      target.removeComponent(PlacardAutoDismiss);
+      target.addComponent(PlacardAutoDismiss, { remainingMs: autoDismissMs });
     }
   }
 
@@ -257,16 +279,13 @@ export class PlacardSystem extends createSystem({
   }
 
   private destroyPlacardForTarget(target: Entity): void {
-    this.clearDismissTimer(target.index);
+    target.removeComponent(PlacardAutoDismiss);
     const placard = this.findPlacardForTarget(target);
     placard?.dispose();
   }
 
-  private clearDismissTimer(targetIndex: number): void {
-    const timer = this.dismissTimers.get(targetIndex);
-    if (timer !== undefined) {
-      clearTimeout(timer);
-      this.dismissTimers.delete(targetIndex);
-    }
+  private first(entities: Iterable<Entity>): Entity | undefined {
+    for (const entity of entities) return entity;
+    return undefined;
   }
 }

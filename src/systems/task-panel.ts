@@ -15,7 +15,7 @@ import { Task, ActiveTask, CompletedTask } from "./task-flow.js";
 import { Phonograph } from "./phonograph.js";
 import { PopIn2D, PopOut2D, PopOut2DDone } from "./animation.js";
 import { Billboard } from "./billboard.js";
-import { TASK_PANEL_BY_TASK, type TaskPanelSpec } from "../config.js";
+import { TASK_PANEL_BY_TASK, type TaskPanelSpec } from "./task-flow.js";
 
 export const TaskPanel = createComponent("TaskPanel", {
   panelConfig: { type: Types.String, default: "" },
@@ -40,6 +40,10 @@ export const TaskPanelWired = createComponent("TaskPanelWired", {});
 export const TaskPanelPendingDismiss = createComponent("TaskPanelPendingDismiss", {});
 export const TaskPanelPendingDispose = createComponent("TaskPanelPendingDispose", {});
 
+export const TaskPanelAutoComplete = createComponent("TaskPanelAutoComplete", {
+  remainingMs: { type: Types.Float32, default: 0 },
+});
+
 export class TaskPanelSystem extends createSystem({
   activeTask: {
     required: [Task, ActiveTask],
@@ -59,9 +63,8 @@ export class TaskPanelSystem extends createSystem({
   },
   poppedOut: { required: [TaskPanelInstance, PopOut2DDone] },
   activeTasks: { required: [Task, ActiveTask], excluded: [CompletedTask] },
+  autoCompletePanels: { required: [TaskPanelInstance, TaskPanelAutoComplete] },
 }) {
-  private autoCompleteTimers = new Map<number, ReturnType<typeof setTimeout>>();
-
   init() {
     this.cleanupFuncs.push(
       this.queries.activeTask.subscribe("qualify", (taskEntity) => {
@@ -94,7 +97,7 @@ export class TaskPanelSystem extends createSystem({
           .removeComponent(TaskPanelWired)
           .removeComponent(TaskPanelPendingDismiss)
           .removeComponent(TaskPanelPendingDispose);
-        this.clearAutoCompleteTimer(panel.index);
+        panel.removeComponent(TaskPanelAutoComplete);
         panel.dispose();
       }),
 
@@ -117,6 +120,26 @@ export class TaskPanelSystem extends createSystem({
         }
       }),
     );
+  }
+
+  update(delta: number) {
+    const dtMs = delta * 1000;
+
+    for (const panel of this.queries.autoCompletePanels.entities) {
+      const remaining =
+        (panel.getValue(TaskPanelAutoComplete, "remainingMs") ?? 0) - dtMs;
+
+      if (remaining <= 0) {
+        panel.removeComponent(TaskPanelAutoComplete);
+        panel.addComponent(TaskPanelPendingDismiss);
+        if (panel.hasComponent(PokeInteractable)) {
+          panel.removeComponent(PokeInteractable);
+        }
+        this.hidePanel(panel);
+      } else {
+        panel.setValue(TaskPanelAutoComplete, "remainingMs", remaining);
+      }
+    }
   }
 
   private resolveAnchor(anchor: TaskPanelSpec["anchor"]): Entity | undefined {
@@ -249,7 +272,7 @@ export class TaskPanelSystem extends createSystem({
   }
 
   private scheduleAutoComplete(panel: Entity): void {
-    if (this.autoCompleteTimers.has(panel.index)) return;
+    if (panel.hasComponent(TaskPanelAutoComplete)) return;
 
     const anchor = panel.getValue(TaskPanelInstance, "anchor");
     if (!anchor?.active || !anchor.hasComponent(TaskPanel)) return;
@@ -257,18 +280,7 @@ export class TaskPanelSystem extends createSystem({
     const ms = anchor.getValue(TaskPanel, "autoCompleteMs") ?? 0;
     if (ms <= 0) return;
 
-    const timer = setTimeout(() => {
-      this.autoCompleteTimers.delete(panel.index);
-      if (!panel.active) return;
-
-      panel.addComponent(TaskPanelPendingDismiss);
-      if (panel.hasComponent(PokeInteractable)) {
-        panel.removeComponent(PokeInteractable);
-      }
-      this.hidePanel(panel);
-    }, ms);
-
-    this.autoCompleteTimers.set(panel.index, timer);
+    panel.addComponent(TaskPanelAutoComplete, { remainingMs: ms });
   }
 
   private hidePanel(entity: Entity): void {
@@ -276,13 +288,6 @@ export class TaskPanelSystem extends createSystem({
     if (!entity.hasComponent(PopOut2D)) {
       entity.addComponent(PopOut2D);
     }
-  }
-
-  private clearAutoCompleteTimer(panelIndex: number): void {
-    const timer = this.autoCompleteTimers.get(panelIndex);
-    if (timer === undefined) return;
-    clearTimeout(timer);
-    this.autoCompleteTimers.delete(panelIndex);
   }
 
   private completeTask(taskId: string): void {
@@ -319,7 +324,7 @@ export class TaskPanelSystem extends createSystem({
     const panel = this.findPanelForAnchor(anchor);
     if (!panel) return;
 
-    this.clearAutoCompleteTimer(panel.index);
+    panel.removeComponent(TaskPanelAutoComplete);
 
     if (
       panel.active &&

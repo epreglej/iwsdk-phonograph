@@ -25,7 +25,7 @@ export class PhonographSystem extends createSystem({
         const headY =
           this.world.player?.head?.position.y ?? this.world.camera.position.y;
         const cam = this.world.camera.position;
-        phonographEntity.object3D.position.set(cam.x, headY - 0.45, cam.z - 0.8);
+        phonographEntity.object3D.position.set(cam.x, headY - 0.6, cam.z - 0.8);
 
         phonographEntity.object3D.scale.setScalar(0.001);
         phonographEntity.addComponent(PopIn);

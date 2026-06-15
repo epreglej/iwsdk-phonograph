@@ -82,9 +82,9 @@
 </style>
 
 <div id="panel-root" class="placard">
-  <div class="placard-title"><span class="kw">Start Recording</span></div>
+  <div class="placard-title"><span class="kw">Disengage the brake</span></div>
   <div class="placard-body">
     <div class="description-accent"></div>
-    <p class="placard-description">Releasing the brake will let the motor start spinning the cylinder, getting it ready to record</p>
+    <p class="placard-description">Disengaging the brake will let the motor start spinning the cylinder, getting it ready to record</p>
   </div>
 </div>

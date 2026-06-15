@@ -12,7 +12,7 @@ import {
 } from "@iwsdk/core";
 import { Task, ActiveTask, CompletedTask } from "./task-flow.js";
 import { MoveDone, MoveTo, TeleportTo } from "./animation.js";
-import { Highlight, STOP_HIGHLIGHT_COLOR } from "./highlight.js";
+import { Highlight, GO_HIGHLIGHT_COLOR, STOP_HIGHLIGHT_COLOR } from "./highlight.js";
 import { StopRecording } from "./recording.js";
 import { ReleaseGrab } from "./interaction-gate.js";
 import { playSnap } from "../audio/sfx.js";
@@ -296,7 +296,7 @@ export class CarriageSystem extends createSystem({
       .removeComponent(Highlight)
       .removeComponent(OneHandGrabbable)
       .addComponent(OneHandGrabbable)
-      .addComponent(Highlight, { color: STOP_HIGHLIGHT_COLOR });
+      .addComponent(Highlight, { color: GO_HIGHLIGHT_COLOR });
   }
 
   private onCarriageLowerDisqualify(): void {

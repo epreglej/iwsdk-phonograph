@@ -8,10 +8,11 @@ import {
   Vector3,
   Object3D,
 } from "@iwsdk/core";
-import { Task, ActiveTask, CompletedTask } from "./task-flow.js";
+import { Task, ActiveTask, CompletedTask } from "./task.js";
+import { TaskId } from "./task-config.js";
 import { PhonographPart } from "./phonograph.js";
 import { Highlight } from "./highlight.js";
-import { PopIn } from "./animation.js";
+import { PopIn, PopInDone } from "./animation.js";
 import { playCrankTick } from "../audio/sfx.js";
 
 export const Crank = createComponent("Crank", {
@@ -32,7 +33,7 @@ export class CrankSystem extends createSystem(
     activeCrankCrankingTask: {
       required: [Task, ActiveTask],
       excluded: [CompletedTask],
-      where: [eq(Task, "id", "crank_cranking")],
+      where: [eq(Task, "id", TaskId.AssemblyCrankWind)],
     },
     crank: {
       required: [Crank],
@@ -68,8 +69,13 @@ export class CrankSystem extends createSystem(
           .removeComponent(CrankHeld)
           .removeComponent(CrankRotation);
 
-        crankRoot.scale.setScalar(0.001);
-        crankEntity.addComponent(PopIn);
+        const alreadyRevealed =
+          crankEntity.hasComponent(PopInDone) || crankRoot.scale.x >= 0.9;
+        if (!alreadyRevealed) {
+          crankRoot.scale.setScalar(0.001);
+          crankEntity.addComponent(PopIn);
+        }
+
         crankEntity
           .addComponent(OneHandGrabbable, {
             translate: false,
@@ -87,6 +93,7 @@ export class CrankSystem extends createSystem(
           }
           crankRoot.add(pivot);
         }
+        pivot.rotation.x = 0;
       }),
 
       this.queries.activeCrankCrankingTask.subscribe("disqualify", () => {
@@ -143,10 +150,22 @@ export class CrankSystem extends createSystem(
       if (delta < -Math.PI) delta += Math.PI * 2;
 
       delta *= this.config.sensitivity.peek();
-      pivot.rotation.x += delta;
+
+      const previousRotation = pivot.rotation.x;
+      let nextRotation = previousRotation + delta;
+      // Never rotate past the starting position (0); unwinding back is allowed.
+      if (nextRotation > 0) nextRotation = 0;
+
+      const appliedDelta = nextRotation - previousRotation;
+      if (appliedDelta === 0) {
+        entity.setValue(CrankRotation, "lastAngle", angle);
+        continue;
+      }
+
+      pivot.rotation.x = nextRotation;
       entity.setValue(CrankRotation, "lastAngle", angle);
 
-      let total = (entity.getValue(CrankRotation, "totalRotation") ?? 0) + delta;
+      let total = (entity.getValue(CrankRotation, "totalRotation") ?? 0) + appliedDelta;
       if (total > 0) total = 0;
       entity.setValue(CrankRotation, "totalRotation", total);
 
@@ -154,6 +173,9 @@ export class CrankSystem extends createSystem(
       const progress = -total;
       const tickStepRadians = Math.PI / 8;
       let last = entity.getValue(CrankRotation, "lastTickProgress") ?? 0;
+      if (progress < last) {
+        last = progress;
+      }
       while (progress - last >= tickStepRadians) {
         playCrankTick();
         last += tickStepRadians;

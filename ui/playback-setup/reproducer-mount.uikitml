@@ -1,0 +1,27 @@
+<style>
+  .placard {
+    width: 196px;
+    display: flex;
+    flex-direction: column;
+    padding-top: 14px;
+    padding-bottom: 14px;
+    padding-left: 16px;
+    padding-right: 16px;
+    border-radius: 22px;
+    background-color: rgb(24, 24, 26);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.4);
+  }
+
+  .placard-text {
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.95);
+    margin: 0;
+  }
+</style>
+
+<div id="panel-root" class="placard">
+  <p class="placard-text">Attach the reproducer to the carriage.</p>
+</div>

@@ -1,5 +1,6 @@
 import { createComponent, createSystem, eq, Types } from "@iwsdk/core";
-import { Task, ActiveTask, CompletedTask } from "./task-flow.js";
+import { Task, ActiveTask, CompletedTask } from "./task.js";
+import { TaskId } from "./task-config.js";
 import { PopIn } from "./animation.js";
 
 export const Phonograph = createComponent("Phonograph", {});
@@ -12,7 +13,7 @@ export class PhonographSystem extends createSystem({
   activeSetupTask: {
     required: [Task, ActiveTask],
     excluded: [CompletedTask],
-    where: [eq(Task, "id", "assembly_intro")],
+    where: [eq(Task, "id", TaskId.AssemblyIntro)],
   },
   phonograph: { required: [Phonograph] },
 }) {
@@ -25,7 +26,7 @@ export class PhonographSystem extends createSystem({
         const headY =
           this.world.player?.head?.position.y ?? this.world.camera.position.y;
         const cam = this.world.camera.position;
-        phonographEntity.object3D.position.set(cam.x, headY - 0.6, cam.z - 0.8);
+        phonographEntity.object3D.position.set(cam.x, headY - 0.5, cam.z - 0.8);
 
         phonographEntity.object3D.scale.setScalar(0.001);
         phonographEntity.addComponent(PopIn);

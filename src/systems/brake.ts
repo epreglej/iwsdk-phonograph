@@ -6,7 +6,8 @@ import {
   Grabbed,
   OneHandGrabbable,
 } from "@iwsdk/core";
-import { Task, ActiveTask, CompletedTask } from "./task-flow.js";
+import { Task, ActiveTask, CompletedTask } from "./task.js";
+import { TaskId } from "./task-config.js";
 import { MoveDone, MoveTo, TeleportTo } from "./animation.js";
 import { Highlight, STOP_HIGHLIGHT_COLOR } from "./highlight.js";
 import { Recording, StopRecording } from "./recording.js";
@@ -33,22 +34,22 @@ export class BrakeSystem extends createSystem({
   activeBrakeShiftTask: {
     required: [Task, ActiveTask],
     excluded: [CompletedTask],
-    where: [eq(Task, "id", "brake_shift")],
+    where: [eq(Task, "id", TaskId.RecordingBrakeRelease)],
   },
   activePlaybackBrakeShiftTask: {
     required: [Task, ActiveTask],
     excluded: [CompletedTask],
-    where: [eq(Task, "id", "playback_brake_shift")],
+    where: [eq(Task, "id", TaskId.PlaybackBrakeRelease)],
   },
-  activeRecordingTask: {
+  activeRecordingSpeakTask: {
     required: [Task, ActiveTask],
     excluded: [CompletedTask],
-    where: [eq(Task, "id", "recording")],
+    where: [eq(Task, "id", TaskId.RecordingSpeak)],
   },
   activePlaybackTask: {
     required: [Task, ActiveTask],
     excluded: [CompletedTask],
-    where: [eq(Task, "id", "playback")],
+    where: [eq(Task, "id", TaskId.PlaybackListen)],
   },
   brake: { required: [Brake] },
   brakeGrabbed: {
@@ -84,12 +85,12 @@ export class BrakeSystem extends createSystem({
         this.onManualBrakeShiftDisqualify();
       }),
 
-      this.queries.activeRecordingTask.subscribe("qualify", () => {
+      this.queries.activeRecordingSpeakTask.subscribe("qualify", () => {
         const brake = this.first(this.queries.brake.entities);
         if (brake) this.activateRecordingStop(brake);
       }),
 
-      this.queries.activeRecordingTask.subscribe("disqualify", () => {
+      this.queries.activeRecordingSpeakTask.subscribe("disqualify", () => {
         const brake = this.first(this.queries.brake.entities);
         if (!brake) return;
         this.deactivateRecordingStop(brake);
@@ -111,7 +112,7 @@ export class BrakeSystem extends createSystem({
       }),
 
       this.queries.brakeGrabbedToStopRecording.subscribe("qualify", (brake) => {
-        if (this.queries.activeRecordingTask.entities.size === 0) return;
+        if (this.queries.activeRecordingSpeakTask.entities.size === 0) return;
         this.stopRecordingWithBrake(brake);
       }),
 
@@ -162,7 +163,7 @@ export class BrakeSystem extends createSystem({
       .removeComponent(MoveTo)
       .removeComponent(Grabbed);
 
-    if (this.queries.activeRecordingTask.entities.size > 0) {
+    if (this.queries.activeRecordingSpeakTask.entities.size > 0) {
       this.activateRecordingStop(brake);
       return;
     }

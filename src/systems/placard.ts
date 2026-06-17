@@ -12,21 +12,24 @@ import {
   UIKit,
   UIKitDocument,
 } from "@iwsdk/core";
-import { Task, ActiveTask, CompletedTask } from "./task-flow.js";
+import { Task, ActiveTask, CompletedTask } from "./task.js";
 import { PhonographPart } from "./phonograph.js";
 import { Crank, CrankingComplete } from "./crank.js";
 import { PopIn2D, PopOut2D } from "./animation.js";
 import { Billboard } from "./billboard.js";
 import { Snapped } from "./snap.js";
 import {
-  PLACARD_BY_TASK,
+  PANEL_MAX_WIDTH,
+  PHONOGRAPH_ABOVE_OFFSET_Y,
+  PLACARDS_BY_TASK,
   TASK_ORDER,
+  type PlacardBinding,
   type PlacardSpec,
-} from "./task-flow.js";
+} from "./task-config.js";
 
 export const Placard = createComponent("Placard", {
   panelConfig: { type: Types.String, default: "" },
-  maxWidth: { type: Types.Float32, default: 0.221 },
+  maxWidth: { type: Types.Float32, default: PANEL_MAX_WIDTH },
   offsetX: { type: Types.Float32, default: 0 },
   offsetY: { type: Types.Float32, default: 0 },
   offsetZ: { type: Types.Float32, default: 0 },
@@ -69,34 +72,25 @@ export class PlacardSystem extends createSystem({
   init() {
     this.cleanupFuncs.push(
       this.queries.activeTask.subscribe("qualify", (taskEntity) => {
-        const binding = PLACARD_BY_TASK[taskEntity.getValue(Task, "id")!];
-        const target = binding && this.partById(binding.partId);
-        if (binding && target) this.attachPlacard(target, binding.placard);
+        const bindings = PLACARDS_BY_TASK[taskEntity.getValue(Task, "id")!];
+        if (!bindings) return;
+
+        for (const binding of bindings) {
+          const target = this.partById(binding.partId);
+          if (target) this.attachPlacard(target, binding.placard);
+        }
       }),
 
       this.queries.activeTask.subscribe("disqualify", (taskEntity) => {
         const taskId = taskEntity.getValue(Task, "id")!;
-        const binding = PLACARD_BY_TASK[taskId];
-        if (!binding) return;
+        const bindings = PLACARDS_BY_TASK[taskId];
+        if (!bindings) return;
 
-        for (const other of this.queries.activeTask.entities) {
-          if (other.index === taskEntity.index) continue;
-          const otherBinding = PLACARD_BY_TASK[other.getValue(Task, "id")!];
-          if (otherBinding?.partId === binding.partId) return;
+        for (const binding of bindings) {
+          if (!this.shouldStripPlacard(taskId, binding)) continue;
+          const target = this.partById(binding.partId);
+          if (target) this.stripPlacard(target);
         }
-
-        const nextId = this.nextTaskId(taskId);
-        const nextBinding = nextId ? PLACARD_BY_TASK[nextId] : undefined;
-        if (
-          nextBinding &&
-          nextBinding.partId === binding.partId &&
-          nextBinding.placard.panelConfig === binding.placard.panelConfig
-        ) {
-          return;
-        }
-
-        const target = this.partById(binding.partId);
-        if (target) this.stripPlacard(target);
       }),
 
       this.queries.crankComplete.subscribe("qualify", () => {
@@ -114,7 +108,8 @@ export class PlacardSystem extends createSystem({
       }),
 
       this.queries.instances.subscribe("disqualify", (placard) => {
-        placard.dispose();
+        placard.removeComponent(PopIn2D).removeComponent(PopOut2D);
+        if (placard.object3D) placard.object3D.visible = false;
       }),
 
       this.queries.instanceDocs.subscribe("qualify", (placard) => {
@@ -160,6 +155,35 @@ export class PlacardSystem extends createSystem({
     }
   }
 
+  private shouldStripPlacard(taskId: string, binding: PlacardBinding): boolean {
+    for (const other of this.queries.activeTask.entities) {
+      const otherBindings = PLACARDS_BY_TASK[other.getValue(Task, "id")!];
+      if (
+        otherBindings?.some(
+          (b) =>
+            b.partId === binding.partId &&
+            b.placard.panelConfig === binding.placard.panelConfig,
+        )
+      ) {
+        return false;
+      }
+    }
+
+    const nextId = this.nextTaskId(taskId);
+    const nextBindings = nextId ? PLACARDS_BY_TASK[nextId] : undefined;
+    if (
+      nextBindings?.some(
+        (b) =>
+          b.partId === binding.partId &&
+          b.placard.panelConfig === binding.placard.panelConfig,
+      )
+    ) {
+      return false;
+    }
+
+    return true;
+  }
+
   private attachPlacard(entity: Entity, spec: PlacardSpec): void {
     if (
       entity.hasComponent(Placard) &&
@@ -169,12 +193,17 @@ export class PlacardSystem extends createSystem({
       return;
     }
 
+    const partId = entity.getValue(PhonographPart, "id");
+    const offsetY =
+      spec.offsetY ??
+      (partId === "phonograph" ? PHONOGRAPH_ABOVE_OFFSET_Y : 0.2);
+
     entity.removeComponent(PlacardDismissed).removeComponent(Placard);
     entity.addComponent(Placard, {
       panelConfig: spec.panelConfig,
-      maxWidth: spec.maxWidth ?? 0.221,
+      maxWidth: spec.maxWidth ?? PANEL_MAX_WIDTH,
       offsetX: spec.offsetX ?? 0,
-      offsetY: spec.offsetY ?? 0,
+      offsetY,
       offsetZ: spec.offsetZ ?? 0,
       dismissOnGrab: spec.dismissOnGrab ?? false,
       dismissOnSnap: spec.dismissOnSnap ?? true,
@@ -219,10 +248,14 @@ export class PlacardSystem extends createSystem({
     if (!targetObj) return;
 
     const existing = this.findPlacardForTarget(target);
-    if (existing) existing.dispose();
+    if (existing) {
+      existing.removeComponent(PopIn2D).removeComponent(PopOut2D);
+      existing.removeComponent(PlacardInstance);
+      if (existing.object3D) existing.object3D.visible = false;
+    }
 
     const config = target.getValue(Placard, "panelConfig")!;
-    const maxWidth = target.getValue(Placard, "maxWidth") ?? 0.221;
+    const maxWidth = target.getValue(Placard, "maxWidth") ?? PANEL_MAX_WIDTH;
 
     const placard = this.world
       .createTransformEntity(undefined, { parent: this.world.sceneEntity })
@@ -281,7 +314,10 @@ export class PlacardSystem extends createSystem({
   private destroyPlacardForTarget(target: Entity): void {
     target.removeComponent(PlacardAutoDismiss);
     const placard = this.findPlacardForTarget(target);
-    placard?.dispose();
+    if (!placard) return;
+    placard.removeComponent(PopIn2D).removeComponent(PopOut2D);
+    placard.removeComponent(PlacardInstance);
+    if (placard.object3D) placard.object3D.visible = false;
   }
 
   private first(entities: Iterable<Entity>): Entity | undefined {

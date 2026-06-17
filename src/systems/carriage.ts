@@ -10,10 +10,11 @@ import {
   Quaternion,
   Vector3,
 } from "@iwsdk/core";
-import { Task, ActiveTask, CompletedTask } from "./task-flow.js";
+import { Task, ActiveTask, CompletedTask } from "./task.js";
+import { TaskId } from "./task-config.js";
 import { MoveDone, MoveTo, TeleportTo } from "./animation.js";
 import { Highlight, GO_HIGHLIGHT_COLOR, STOP_HIGHLIGHT_COLOR } from "./highlight.js";
-import { StopRecording } from "./recording.js";
+import { StartCarriageRecording, StartCarvingAmbience, StopRecording } from "./recording.js";
 import { ReleaseGrab } from "./interaction-gate.js";
 import { playSnap } from "../audio/sfx.js";
 
@@ -106,35 +107,35 @@ const CARRIAGE_MOVE_DURATION_MS = 300;
 const CARRIAGE_TRAVEL_DURATION_MS = CARRIAGE_LAYOUT.travelDurationS * 1000;
 
 export class CarriageSystem extends createSystem({
-  activeRecordingTask: {
+  activeRecordingSpeakTask: {
     required: [Task, ActiveTask],
     excluded: [CompletedTask],
-    where: [eq(Task, "id", "recording")],
+    where: [eq(Task, "id", TaskId.RecordingSpeak)],
   },
   activePlaybackTask: {
     required: [Task, ActiveTask],
     excluded: [CompletedTask],
-    where: [eq(Task, "id", "playback")],
+    where: [eq(Task, "id", TaskId.PlaybackListen)],
   },
   activeRecordingCarriageLowerTask: {
     required: [Task, ActiveTask],
     excluded: [CompletedTask],
-    where: [eq(Task, "id", "recording_carriage_lower")],
+    where: [eq(Task, "id", TaskId.RecordingCarriageLower)],
   },
   activePlaybackCarriageLowerTask: {
     required: [Task, ActiveTask],
     excluded: [CompletedTask],
-    where: [eq(Task, "id", "playback_carriage_lower")],
+    where: [eq(Task, "id", TaskId.PlaybackCarriageLower)],
   },
   activeCarriageReturnTask: {
     required: [Task, ActiveTask],
     excluded: [CompletedTask],
-    where: [eq(Task, "id", "carriage_return")],
+    where: [eq(Task, "id", TaskId.PlaybackSetupCarriageReturn)],
   },
   activeMainMenuTask: {
     required: [Task, ActiveTask],
     excluded: [CompletedTask],
-    where: [eq(Task, "id", "main_menu")],
+    where: [eq(Task, "id", TaskId.Welcome)],
   },
   carriage: { required: [Carriage] },
   carriageMesh: { required: [CarriageMesh] },
@@ -151,17 +152,19 @@ export class CarriageSystem extends createSystem({
   carriageTravelDone: {
     required: [Carriage, MoveDone, CarriageTraveling],
   },
+  startCarriageRecording: { required: [StartCarriageRecording] },
 }) {
   init() {
     this.resetCarriageToRest();
 
     this.cleanupFuncs.push(
-      this.queries.activeRecordingTask.subscribe("qualify", () => {
+      this.queries.startCarriageRecording.subscribe("qualify", () => {
+        this.world.sceneEntity.removeComponent(StartCarriageRecording);
         this.resetCarriageToEngagedStart();
         this.startCarriageTravel();
       }),
 
-      this.queries.activeRecordingTask.subscribe("disqualify", () => {
+      this.queries.activeRecordingSpeakTask.subscribe("disqualify", () => {
         this.stopCarriageTravel();
       }),
 
@@ -183,7 +186,7 @@ export class CarriageSystem extends createSystem({
 
       this.queries.carriageTravelDone.subscribe("qualify", (rig) => {
         rig.removeComponent(CarriageTraveling);
-        if (this.queries.activeRecordingTask.entities.size > 0) {
+        if (this.queries.activeRecordingSpeakTask.entities.size > 0) {
           this.world.sceneEntity.addComponent(StopRecording);
         }
       }),
@@ -431,6 +434,10 @@ export class CarriageSystem extends createSystem({
 
   private finishCarriageLower(rig: Entity): void {
     rig.removeComponent(CarriageLowering);
+
+    if (this.queries.activeRecordingCarriageLowerTask.entities.size > 0) {
+      this.world.sceneEntity.addComponent(StartCarvingAmbience);
+    }
 
     for (const task of this.queries.activeRecordingCarriageLowerTask.entities) {
       if (!task.hasComponent(CompletedTask)) {

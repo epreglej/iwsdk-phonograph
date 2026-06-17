@@ -1,5 +1,6 @@
 import { createSystem, Entity, eq, Grabbed, OneHandGrabbable } from "@iwsdk/core";
-import { Task, ActiveTask, CompletedTask } from "./task-flow.js";
+import { Task, ActiveTask, CompletedTask } from "./task.js";
+import { TaskId } from "./task-config.js";
 import { PhonographPart } from "./phonograph.js";
 import { Phonograph } from "./phonograph.js";
 import {
@@ -13,7 +14,7 @@ import { BrakeShifted, BrakeReturning, BrakeReleased } from "./brake.js";
 import { CrankHeld, CrankingComplete, CrankRotation } from "./crank.js";
 import { Highlight } from "./highlight.js";
 import { MountTaskBinding } from "./mount.js";
-import { MoveTo, PopIn, PopOut, Spin, TeleportTo } from "./animation.js";
+import { MoveTo, PopIn, PopInDone, PopOut, Spin, TeleportTo } from "./animation.js";
 import { Snappable, Snapped, SnapGhost, SnapPoint } from "./snap.js";
 import { PlacardAutoDismiss } from "./placard.js";
 import { TaskPanelAutoComplete } from "./task-panel.js";
@@ -37,6 +38,7 @@ const GAMEPLAY_COMPONENTS = [
   UnmountPopping,
   Highlight,
   PopIn,
+  PopInDone,
   PopOut,
   Spin,
   CrankHeld,
@@ -56,7 +58,7 @@ export class WorldResetSystem extends createSystem({
   activeMainMenuTask: {
     required: [Task, ActiveTask],
     excluded: [CompletedTask],
-    where: [eq(Task, "id", "main_menu")],
+    where: [eq(Task, "id", TaskId.Welcome)],
   },
   phonograph: { required: [Phonograph] },
   parts: { required: [PhonographPart] },

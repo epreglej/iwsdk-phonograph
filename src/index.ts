@@ -1,6 +1,9 @@
 import { AssetManifest, AssetType, SessionMode, World } from "@iwsdk/core";
 
-import { Task, ActiveTask } from "./systems/task-flow.js";
+import { publicUrl } from "./assets/public-url.js";
+
+import { Task, ActiveTask } from "./systems/task.js";
+import { TaskId } from "./systems/task-config.js";
 import { TaskFlowSystem } from "./systems/task-flow.js";
 import { SpawnSystem } from "./systems/spawn.js";
 import { AnimationSystem } from "./systems/animation.js";
@@ -19,10 +22,11 @@ import { BrakeSystem } from "./systems/brake.js";
 import { InteractionGateSystem } from "./systems/interaction-gate.js";
 import { RecordingSystem } from "./systems/recording.js";
 import { CarriageSystem } from "./systems/carriage.js";
+import { TypewriterSystem } from "./systems/typewriter.js";
 
 const assets: AssetManifest = {
   chimeSound: {
-    url: "/audio/chime.mp3",
+    url: publicUrl("audio/chime.mp3"),
     type: AssetType.Audio,
     priority: "background",
   },
@@ -102,6 +106,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
     world
       .registerSystem(HighlightSystem)
       .registerSystem(AnimationSystem)
+      .registerSystem(TypewriterSystem)
       .registerSystem(SpawnSystem)
       .registerSystem(TaskFlowSystem)
       .registerSystem(BillboardSystem)
@@ -121,7 +126,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
 
     world
       .createEntity()
-      .addComponent(Task, { id: "main_menu" })
+      .addComponent(Task, { id: TaskId.Welcome })
       .addComponent(ActiveTask);
   } catch (error) {
     console.error("Failed to initialize phonograph experience:", error);

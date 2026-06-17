@@ -11,16 +11,22 @@ import {
   UIKit,
   UIKitDocument,
 } from "@iwsdk/core";
-import { Task, ActiveTask, CompletedTask } from "./task-flow.js";
+import { Task, ActiveTask, CompletedTask } from "./task.js";
 import { Phonograph } from "./phonograph.js";
 import { PopIn2D, PopOut2D, PopOut2DDone } from "./animation.js";
 import { Billboard } from "./billboard.js";
-import { TASK_PANEL_BY_TASK, type TaskPanelSpec } from "./task-flow.js";
+import {
+  PHONOGRAPH_ABOVE_OFFSET_Y,
+  PHONOGRAPH_PANEL_MAX_WIDTH,
+  TASK_PANEL_BY_TASK,
+  type TaskPanelSpec,
+} from "./task-config.js";
+import { resumeAudioContext } from "../audio/context.js";
 
 export const TaskPanel = createComponent("TaskPanel", {
   panelConfig: { type: Types.String, default: "" },
   taskId: { type: Types.String, default: "" },
-  maxWidth: { type: Types.Float32, default: 0.35 },
+  maxWidth: { type: Types.Float32, default: PHONOGRAPH_PANEL_MAX_WIDTH },
   offsetX: { type: Types.Float32, default: 0 },
   offsetY: { type: Types.Float32, default: 0 },
   offsetZ: { type: Types.Float32, default: 0 },
@@ -98,7 +104,7 @@ export class TaskPanelSystem extends createSystem({
           .removeComponent(TaskPanelPendingDismiss)
           .removeComponent(TaskPanelPendingDispose);
         panel.removeComponent(TaskPanelAutoComplete);
-        panel.dispose();
+        this.teardownPanel(panel);
       }),
 
       this.queries.instanceDocs.subscribe("qualify", (panel) => {
@@ -116,7 +122,7 @@ export class TaskPanelSystem extends createSystem({
         }
         if (this.hasPendingDispose(panel)) {
           panel.removeComponent(TaskPanelPendingDispose);
-          panel.dispose();
+          this.teardownPanel(panel);
         }
       }),
     );
@@ -131,6 +137,7 @@ export class TaskPanelSystem extends createSystem({
 
       if (remaining <= 0) {
         panel.removeComponent(TaskPanelAutoComplete);
+        void resumeAudioContext();
         panel.addComponent(TaskPanelPendingDismiss);
         if (panel.hasComponent(PokeInteractable)) {
           panel.removeComponent(PokeInteractable);
@@ -164,9 +171,11 @@ export class TaskPanelSystem extends createSystem({
     anchor.addComponent(TaskPanel, {
       panelConfig: spec.panelConfig,
       taskId,
-      maxWidth: spec.maxWidth ?? 0.35,
+      maxWidth: spec.maxWidth ?? PHONOGRAPH_PANEL_MAX_WIDTH,
       offsetX: spec.offsetX ?? 0,
-      offsetY: spec.offsetY ?? 0,
+      offsetY:
+        spec.offsetY ??
+        (spec.anchor === "phonograph" ? PHONOGRAPH_ABOVE_OFFSET_Y : 0),
       offsetZ: spec.offsetZ ?? 0,
       faceTarget: spec.faceTarget ?? false,
       billboard: spec.billboard ?? false,
@@ -189,11 +198,14 @@ export class TaskPanelSystem extends createSystem({
     if (!anchorObj) return;
 
     const existing = this.findPanelForAnchor(anchor);
-    if (existing) existing.dispose();
+    if (existing) {
+      this.teardownPanel(existing);
+      existing.removeComponent(TaskPanelInstance);
+    }
 
     const config = anchor.getValue(TaskPanel, "panelConfig")!;
     const taskId = anchor.getValue(TaskPanel, "taskId")!;
-    const maxWidth = anchor.getValue(TaskPanel, "maxWidth") ?? 0.35;
+    const maxWidth = anchor.getValue(TaskPanel, "maxWidth") ?? PHONOGRAPH_PANEL_MAX_WIDTH;
     const faceTarget = anchor.getValue(TaskPanel, "faceTarget") ?? false;
 
     const panel = this.world
@@ -255,6 +267,7 @@ export class TaskPanelSystem extends createSystem({
     const doc = panel.getValue(PanelDocument, "document") as UIKitDocument | null;
     const button = doc?.getElementById(buttonId);
     button?.addEventListener("click", () => {
+      void resumeAudioContext();
       const taskId = panel.getValue(TaskPanelInstance, "taskId")!;
       const defer = anchor.getValue(TaskPanel, "deferCompleteOnDismiss") ?? false;
 
@@ -338,7 +351,7 @@ export class TaskPanelSystem extends createSystem({
       return;
     }
 
-    panel.dispose();
+    this.teardownPanel(panel);
   }
 
   private isWired(panel: Entity): boolean {

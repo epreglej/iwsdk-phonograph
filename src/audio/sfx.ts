@@ -1,10 +1,8 @@
-let audioContext: AudioContext | null = null;
+import { getAudioContext, resumeAudioContext } from "./context.js";
 
 function ensureAudioContext(): AudioContext {
-  if (!audioContext) {
-    audioContext = new AudioContext();
-  }
-  return audioContext;
+  void resumeAudioContext();
+  return getAudioContext();
 }
 
 function envelopeGain(

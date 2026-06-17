@@ -1,5 +1,7 @@
 import { createComponent, createSystem, Entity, eq } from "@iwsdk/core";
-import { Task, ActiveTask, CompletedTask } from "./task-flow.js";
+import { resumeAudioContext } from "../audio/context.js";
+import { Task, ActiveTask, CompletedTask } from "./task.js";
+import { TaskId } from "./task-config.js";
 import { PhonographPart } from "./phonograph.js";
 import {
   Highlight,
@@ -7,6 +9,9 @@ import {
 } from "./highlight.js";
 
 export const Recording = createComponent("Recording", {});
+export const StartRecordingSession = createComponent("StartRecordingSession", {});
+export const StartCarriageRecording = createComponent("StartCarriageRecording", {});
+export const StartCarvingAmbience = createComponent("StartCarvingAmbience", {});
 export const StopRecording = createComponent("StopRecording", {});
 export const ClearRecording = createComponent("ClearRecording", {});
 
@@ -65,16 +70,28 @@ function clearRecordedAudio(): void {
   audioContext = null;
 }
 
+const CYLINDER_RPM = 130;
+const CARVING_LOOP_SECONDS = 2.5;
+const PLAYBACK_SURFACE_NOISE_GAIN = 0.1;
+const RECORDING_CARVING_GAIN = 0.075;
+const PLAYBACK_VOICE_GAIN = 1.85;
+const PLAYBACK_DISTORTION_AMOUNT = 45;
+const PLAYBACK_WOW_DEPTH = 0.012;
+const PLAYBACK_HIGHPASS_HZ = 550;
+const PLAYBACK_LOWPASS_HZ = 1900;
+const PLAYBACK_HORN_RESONANCE_HZ = 1100;
+const PLAYBACK_HORN_RESONANCE_GAIN_DB = 12;
+
 export class RecordingSystem extends createSystem({
-  activeRecordingTask: {
+  activeRecordingSpeakTask: {
     required: [Task, ActiveTask],
     excluded: [CompletedTask],
-    where: [eq(Task, "id", "recording")],
+    where: [eq(Task, "id", TaskId.RecordingSpeak)],
   },
   activePlaybackTask: {
     required: [Task, ActiveTask],
     excluded: [CompletedTask],
-    where: [eq(Task, "id", "playback")],
+    where: [eq(Task, "id", TaskId.PlaybackListen)],
   },
   recordingHorn: {
     required: [PhonographPart],
@@ -82,17 +99,39 @@ export class RecordingSystem extends createSystem({
   },
   stopRequested: { required: [StopRecording] },
   clearRequested: { required: [ClearRecording] },
+  startRecordingSession: { required: [StartRecordingSession] },
+  startCarvingAmbience: { required: [StartCarvingAmbience] },
 }) {
+  private recordingTaskEntity: Entity | null = null;
+  private carvingSource: AudioBufferSourceNode | null = null;
+
   init() {
     this.triggerEarlyPermissionPrompt();
 
     this.cleanupFuncs.push(
-      this.queries.activeRecordingTask.subscribe("qualify", (taskEntity) => {
+      this.queries.startRecordingSession.subscribe("qualify", () => {
+        this.world.sceneEntity.removeComponent(StartRecordingSession);
+        if (activeRecorder?.state === "recording") return;
         this.onRecordingStart();
-        this.startRecording(taskEntity);
+        void this.startRecording();
       }),
 
-      this.queries.activeRecordingTask.subscribe("disqualify", () => {
+      this.queries.startCarvingAmbience.subscribe("qualify", () => {
+        this.world.sceneEntity.removeComponent(StartCarvingAmbience);
+        void this.ensureCarvingAmbience();
+      }),
+
+      this.queries.activeRecordingSpeakTask.subscribe("qualify", (taskEntity) => {
+        this.recordingTaskEntity = taskEntity;
+        if (activeRecorder?.state !== "recording") {
+          this.onRecordingStart();
+          void this.startRecording();
+        }
+      }),
+
+      this.queries.activeRecordingSpeakTask.subscribe("disqualify", () => {
+        this.recordingTaskEntity = null;
+        this.stopCarvingAmbience();
         this.onRecordingStop();
         abortActiveRecording();
         this.world.sceneEntity.removeComponent(Recording);
@@ -103,11 +142,13 @@ export class RecordingSystem extends createSystem({
       }),
 
       this.queries.stopRequested.subscribe("qualify", () => {
+        this.stopCarvingAmbience();
         stopRecording();
         this.world.sceneEntity.removeComponent(StopRecording);
       }),
 
       this.queries.clearRequested.subscribe("qualify", () => {
+        this.stopCarvingAmbience();
         clearRecordedAudio();
         this.world.sceneEntity
           .removeComponent(ClearRecording)
@@ -128,8 +169,9 @@ export class RecordingSystem extends createSystem({
     }
   }
 
-  private async startRecording(taskEntity: Entity) {
+  private async startRecording() {
     try {
+      await resumeAudioContext();
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const ctx = new AudioContext();
 
@@ -145,6 +187,7 @@ export class RecordingSystem extends createSystem({
       recorder.onstop = async () => {
         clearActiveRecording();
         this.world.sceneEntity.removeComponent(Recording);
+        this.onRecordingStop();
         stream.getTracks().forEach((t) => t.stop());
 
         const blob = new Blob(chunks, { type: recorder.mimeType });
@@ -152,7 +195,11 @@ export class RecordingSystem extends createSystem({
         const buffer = await ctx.decodeAudioData(arrayBuffer);
         setRecordedAudio(ctx, buffer);
 
-        if (taskEntity.active && !taskEntity.hasComponent(CompletedTask)) {
+        const taskEntity = this.recordingTaskEntity;
+        if (
+          taskEntity?.active &&
+          !taskEntity.hasComponent(CompletedTask)
+        ) {
           taskEntity.addComponent(CompletedTask);
         }
       };
@@ -178,6 +225,68 @@ export class RecordingSystem extends createSystem({
     recordingHorn?.removeComponent(Highlight);
   }
 
+  private async ensureCarvingAmbience(): Promise<void> {
+    const ctx = await resumeAudioContext();
+    this.startCarvingAmbience(ctx);
+  }
+
+  private startCarvingAmbience(ctx: AudioContext): void {
+    this.stopCarvingAmbience();
+
+    const bufferSize = Math.floor(ctx.sampleRate * CARVING_LOOP_SECONDS);
+    const carvingBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const output = carvingBuffer.getChannelData(0);
+    const samplesPerRevolution = Math.floor((60 / CYLINDER_RPM) * ctx.sampleRate);
+
+    for (let i = 0; i < bufferSize; i++) {
+      let sample = (Math.random() * 2 - 1) * 0.28;
+      sample += (Math.random() * 2 - 1) * 0.12;
+
+      const cyclePosition = i % samplesPerRevolution;
+      if (cyclePosition < Math.floor(ctx.sampleRate * 0.018)) {
+        if (Math.random() > 0.7) {
+          sample += (Math.random() * 2 - 1) * 0.55;
+        }
+      }
+
+      if (Math.random() > 0.996) {
+        sample += (Math.random() * 2 - 1) * 0.9;
+      }
+
+      output[i] = sample;
+    }
+
+    const source = ctx.createBufferSource();
+    source.buffer = carvingBuffer;
+    source.loop = true;
+
+    const highpass = ctx.createBiquadFilter();
+    highpass.type = "highpass";
+    highpass.frequency.value = 900;
+
+    const bandpass = ctx.createBiquadFilter();
+    bandpass.type = "bandpass";
+    bandpass.frequency.value = 2400;
+    bandpass.Q.value = 1.4;
+
+    const gain = ctx.createGain();
+    gain.gain.value = RECORDING_CARVING_GAIN;
+
+    source.connect(highpass).connect(bandpass).connect(gain).connect(ctx.destination);
+    source.start();
+    this.carvingSource = source;
+  }
+
+  private stopCarvingAmbience(): void {
+    if (!this.carvingSource) return;
+    try {
+      this.carvingSource.stop();
+    } catch {
+      // Already stopped.
+    }
+    this.carvingSource = null;
+  }
+
   private startPlayback(taskEntity: {
     addComponent: (c: typeof CompletedTask) => void;
   }) {
@@ -201,31 +310,31 @@ export class RecordingSystem extends createSystem({
     const wowLFO = ctx.createOscillator();
     const wowGain = ctx.createGain();
     wowLFO.frequency.value = 4.5;
-    wowGain.gain.value = 0.012;
+    wowGain.gain.value = PLAYBACK_WOW_DEPTH;
     wowLFO.connect(wowGain);
     wowGain.connect(source.playbackRate);
     wowLFO.start();
 
     const highpass = ctx.createBiquadFilter();
     highpass.type = "highpass";
-    highpass.frequency.value = 550;
+    highpass.frequency.value = PLAYBACK_HIGHPASS_HZ;
 
     const lowpass = ctx.createBiquadFilter();
     lowpass.type = "lowpass";
-    lowpass.frequency.value = 1900;
+    lowpass.frequency.value = PLAYBACK_LOWPASS_HZ;
 
     const hornResonance = ctx.createBiquadFilter();
     hornResonance.type = "peaking";
-    hornResonance.frequency.value = 1100;
+    hornResonance.frequency.value = PLAYBACK_HORN_RESONANCE_HZ;
     hornResonance.Q.value = 4.5;
-    hornResonance.gain.value = 12;
+    hornResonance.gain.value = PLAYBACK_HORN_RESONANCE_GAIN_DB;
 
     const distortion = ctx.createWaveShaper();
-    distortion.curve = this.makeDistortionCurve(45);
+    distortion.curve = this.makeDistortionCurve(PLAYBACK_DISTORTION_AMOUNT);
     distortion.oversample = "4x";
 
     const voiceGain = ctx.createGain();
-    voiceGain.gain.value = 0.65;
+    voiceGain.gain.value = PLAYBACK_VOICE_GAIN;
 
     source
       .connect(distortion)
@@ -246,7 +355,7 @@ export class RecordingSystem extends createSystem({
     const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const output = noiseBuffer.getChannelData(0);
 
-    const rpm = 130;
+    const rpm = CYLINDER_RPM;
     const samplesPerSec = ctx.sampleRate;
     const samplesPerRevolution = Math.floor((60 / rpm) * samplesPerSec);
 
@@ -277,7 +386,7 @@ export class RecordingSystem extends createSystem({
     noiseFilter.Q.value = 2.0;
 
     const noiseGain = ctx.createGain();
-    noiseGain.gain.value = 0.05;
+    noiseGain.gain.value = PLAYBACK_SURFACE_NOISE_GAIN;
 
     noiseSource
       .connect(noiseFilter)

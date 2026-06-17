@@ -97,7 +97,6 @@ export class HighlightSystem extends createSystem({
 
     const highlightMaterial = this.highlightMaterials.get(entity);
     if (highlightMaterial) {
-      highlightMaterial.dispose();
       this.highlightMaterials.delete(entity);
     }
   }

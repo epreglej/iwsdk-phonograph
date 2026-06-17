@@ -6,14 +6,14 @@ import {
   OneHandGrabbable,
   Types,
 } from "@iwsdk/core";
-import { Task, ActiveTask, CompletedTask } from "./task-flow.js";
+import { Task, ActiveTask, CompletedTask } from "./task.js";
 import { Phonograph } from "./phonograph.js";
 import { PhonographPart } from "./phonograph.js";
 import { MoveTo, PopOut, PopOutDone, TeleportTo } from "./animation.js";
 import { ReleaseGrab } from "./interaction-gate.js";
 import { Highlight, STOP_HIGHLIGHT_COLOR } from "./highlight.js";
 import { Snappable, SnapGhost, Snapped } from "./snap.js";
-import { UNMOUNT_BY_TASK } from "./task-flow.js";
+import { UNMOUNT_BY_TASK } from "./task-config.js";
 import { isCarriagePart, reparentObject3D } from "./carriage.js";
 import { PART_LAYOUT } from "./spawn.js";
 import { playPop } from "../audio/sfx.js";

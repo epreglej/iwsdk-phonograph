@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "The recorder is what does the writing. It holds a sharp needle that will rest directly against that wax surface, ready to carve whatever sound reaches it."
+          "Now that you have a surface to record onto, you need something that can actually do the recording."
         ],
         "properties": {
           "class": "placard-text"
@@ -17,7 +17,7 @@
     ],
     "properties": {
       "id": "panel-root",
-      "class": "narration-card"
+      "class": "narration-card narration-typewriter"
     },
     "dataUid": "uid-1"
   },
@@ -85,7 +85,7 @@
       },
       "end": {
         "line": 25,
-        "column": 184
+        "column": 128
       }
     }
   }

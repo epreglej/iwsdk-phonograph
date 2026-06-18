@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "Winding the crank loads a spring that keeps the cylinder spinning."
+          "By spinning the cylinder, the phonograph ensures that every sound it records is carved into a new spot on the wax."
         ],
         "properties": {
           "class": "placard-text"
@@ -85,7 +85,7 @@
       },
       "end": {
         "line": 25,
-        "column": 96
+        "column": 144
       }
     }
   }

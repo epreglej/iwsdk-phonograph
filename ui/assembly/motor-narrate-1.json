@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "The phonograph runs on no electricity."
+          "Sound unfolds over time, so the recording surface must do the same."
         ],
         "properties": {
           "class": "placard-text"
@@ -85,7 +85,7 @@
       },
       "end": {
         "line": 25,
-        "column": 68
+        "column": 97
       }
     }
   }

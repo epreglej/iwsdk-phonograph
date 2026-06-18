@@ -1,0 +1,92 @@
+{
+  "element": {
+    "type": "container",
+    "sourceTag": "div",
+    "children": [
+      {
+        "sourceTag": "p",
+        "type": "custom",
+        "children": [
+          "A smooth sapphire ball reads the groove instead of a needle."
+        ],
+        "properties": {
+          "class": "placard-text"
+        },
+        "dataUid": "uid-2"
+      }
+    ],
+    "properties": {
+      "id": "panel-root",
+      "class": "narration-card narration-typewriter"
+    },
+    "dataUid": "uid-1"
+  },
+  "classes": {
+    "narration-card": {
+      "content": {
+        "width": "196px",
+        "display": "flex",
+        "flexDirection": "column",
+        "paddingTop": "14px",
+        "paddingBottom": "14px",
+        "paddingLeft": "16px",
+        "paddingRight": "16px",
+        "borderRadius": 22,
+        "backgroundColor": "rgb(24, 24, 26)",
+        "borderWidth": "1px",
+        "borderColor": "rgba(255, 255, 255, 0.4)"
+      }
+    },
+    "placard-text": {
+      "content": {
+        "fontSize": "11px",
+        "fontWeight": "500",
+        "lineHeight": "1.5",
+        "color": "rgba(255, 255, 255, 0.95)",
+        "margin": "0"
+      }
+    }
+  },
+  "ranges": {
+    "narration-card": {
+      "start": {
+        "line": 1,
+        "column": 2
+      },
+      "end": {
+        "line": 1,
+        "column": 17
+      }
+    },
+    "placard-text": {
+      "start": {
+        "line": 15,
+        "column": 2
+      },
+      "end": {
+        "line": 15,
+        "column": 15
+      }
+    },
+    "uid-1": {
+      "start": {
+        "line": 24,
+        "column": 0
+      },
+      "end": {
+        "line": 26,
+        "column": 6
+      }
+    },
+    "uid-2": {
+      "start": {
+        "line": 25,
+        "column": 2
+      },
+      "end": {
+        "line": 25,
+        "column": 90
+      }
+    }
+  }
+}

@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "At the same time, the carriage needs to slowly move the recorder sideways along the cylinder."
+          "The recording horn and recorder were built for capturing sound, not for playback, so they aren't needed anymore."
         ],
         "properties": {
           "class": "placard-text"
@@ -85,7 +85,7 @@
       },
       "end": {
         "line": 25,
-        "column": 123
+        "column": 142
       }
     }
   }

@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "For playback to start from the beginning, the carriage also needs to be returned to its starting position."
+          "For playback to start from the beginning, the carriage needs to return to its starting position."
         ],
         "properties": {
           "class": "placard-text"
@@ -85,7 +85,7 @@
       },
       "end": {
         "line": 25,
-        "column": 136
+        "column": 126
       }
     }
   }

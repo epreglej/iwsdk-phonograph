@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "As the phonograph records, the cylinder spins beneath the needle."
+          "As the phonograph records, the cylinder needs to spin."
         ],
         "properties": {
           "class": "placard-text"
@@ -85,7 +85,7 @@
       },
       "end": {
         "line": 25,
-        "column": 95
+        "column": 84
       }
     }
   }

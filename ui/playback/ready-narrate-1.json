@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "Same cylinder, same groove. The sapphire ball reads what the needle wrote."
+          "The phonograph is now configured for playback."
         ],
         "properties": {
           "class": "placard-text"
@@ -85,7 +85,7 @@
       },
       "end": {
         "line": 25,
-        "column": 104
+        "column": 76
       }
     }
   }

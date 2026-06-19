@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "As the phonograph records, the cylinder spins beneath the needle."
+          "But to do all of this, the phonograph doesn't use electricity."
         ],
         "properties": {
           "class": "placard-text"
@@ -85,7 +85,7 @@
       },
       "end": {
         "line": 25,
-        "column": 95
+        "column": 92
       }
     }
   }

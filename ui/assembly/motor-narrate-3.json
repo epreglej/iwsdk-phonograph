@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "But to do this, the phonograph doesn't use electricity."
+          "At the same time, the carriage slowly moves sideways along the cylinder."
         ],
         "properties": {
           "class": "placard-text"
@@ -85,7 +85,7 @@
       },
       "end": {
         "line": 25,
-        "column": 85
+        "column": 102
       }
     }
   }

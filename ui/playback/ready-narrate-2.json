@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "The same spring, the same spinning cylinder, the same groove, but this time a sapphire ball will read what the needle wrote."
+          "Just like before, the brake is holding the cylinder in place."
         ],
         "properties": {
           "class": "placard-text"
@@ -85,7 +85,7 @@
       },
       "end": {
         "line": 25,
-        "column": 154
+        "column": 91
       }
     }
   }

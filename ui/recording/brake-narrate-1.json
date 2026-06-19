@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "Disengage the brake."
+          "The motor is now wound up, but the cylinder is not spinning."
         ],
         "properties": {
           "class": "placard-text"
@@ -17,12 +17,12 @@
     ],
     "properties": {
       "id": "panel-root",
-      "class": "placard"
+      "class": "narration-card narration-typewriter"
     },
     "dataUid": "uid-1"
   },
   "classes": {
-    "placard": {
+    "narration-card": {
       "content": {
         "width": "196px",
         "display": "flex",
@@ -48,14 +48,14 @@
     }
   },
   "ranges": {
-    "placard": {
+    "narration-card": {
       "start": {
         "line": 1,
         "column": 2
       },
       "end": {
         "line": 1,
-        "column": 10
+        "column": 17
       }
     },
     "placard-text": {
@@ -85,7 +85,7 @@
       },
       "end": {
         "line": 25,
-        "column": 50
+        "column": 90
       }
     }
   }

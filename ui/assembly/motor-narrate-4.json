@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "Instead, it uses the energy stored in its internal spring motor."
+          "This combination allows the recorder to trace a continuous spiral along the cylinder, resulting in up to two minutes of uninterrupted recording."
         ],
         "properties": {
           "class": "placard-text"
@@ -85,7 +85,7 @@
       },
       "end": {
         "line": 25,
-        "column": 94
+        "column": 174
       }
     }
   }

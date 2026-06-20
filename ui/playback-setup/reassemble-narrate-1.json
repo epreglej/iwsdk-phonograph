@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "Your voice is now carved into the wax, but to hear it back, the phonograph needs different parts."
+          "Your voice is now carved into the wax, but to play it back, the phonograph needs different parts."
         ],
         "properties": {
           "class": "placard-text"

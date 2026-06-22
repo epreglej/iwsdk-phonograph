@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "It was invented in 1877, and it was the first machine in history capable of both recording and playing back the sound."
+          "It was invented in 1877, and it was the first machine in history capable of both recording and playing back sound."
         ],
         "properties": {
           "class": "placard-text"
@@ -85,7 +85,7 @@
       },
       "end": {
         "line": 25,
-        "column": 148
+        "column": 144
       }
     }
   }

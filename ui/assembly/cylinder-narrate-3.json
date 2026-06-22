@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "It's a hollow tube, coated in a thin layer of soft wax, into which you voice will be physically carved in."
+          "It's a hollow tube, coated in soft wax, into which your voice will be physically carved in."
         ],
         "properties": {
           "class": "placard-text"
@@ -85,7 +85,7 @@
       },
       "end": {
         "line": 25,
-        "column": 136
+        "column": 121
       }
     }
   }

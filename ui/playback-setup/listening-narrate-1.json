@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "The listening horn takes the faint vibrations from the reproducer and amplifies them into sound that is loud enough to hear."
+          "Sound leaving the reproducer is too faint to hear, so we need something to amplify it and distribute it across the room…"
         ],
         "properties": {
           "class": "placard-text"
@@ -85,7 +85,7 @@
       },
       "end": {
         "line": 25,
-        "column": 154
+        "column": 150
       }
     }
   }

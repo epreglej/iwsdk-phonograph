@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "Unfortunately, the recorder, by itself, is not sensitive enough to pick up your voice."
+          "While you speak, your voice scatters through the air, so we need something to funnel your voice onto the recorder…"
         ],
         "properties": {
           "class": "placard-text"
@@ -85,7 +85,7 @@
       },
       "end": {
         "line": 25,
-        "column": 116
+        "column": 144
       }
     }
   }

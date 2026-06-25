@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "Your voice is now carved into the wax, but to play it back, the phonograph needs a different set of parts."
+          "Good job, your voice has been carved into the wax..."
         ],
         "properties": {
           "class": "placard-text"
@@ -85,7 +85,7 @@
       },
       "end": {
         "line": 25,
-        "column": 136
+        "column": 82
       }
     }
   }

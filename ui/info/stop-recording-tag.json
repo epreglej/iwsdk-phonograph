@@ -4,67 +4,67 @@
     "sourceTag": "div",
     "children": [
       {
-        "sourceTag": "p",
+        "sourceTag": "span",
         "type": "custom",
         "children": [
-          "The cylinder is now spinning, but to start recording, the recorder needs to be lowered onto it."
+          "Stop Recording"
         ],
         "properties": {
-          "class": "placard-text"
+          "class": "action-label"
         },
         "dataUid": "uid-2"
       }
     ],
     "properties": {
       "id": "panel-root",
-      "class": "narration-card narration-typewriter"
+      "class": "action-tag"
     },
     "dataUid": "uid-1"
   },
   "classes": {
-    "narration-card": {
+    "action-tag": {
       "content": {
-        "width": "196px",
+        "width": "130px",
         "display": "flex",
-        "flexDirection": "column",
-        "paddingTop": "14px",
-        "paddingBottom": "14px",
-        "paddingLeft": "16px",
-        "paddingRight": "16px",
-        "borderRadius": 22,
+        "flexDirection": "row",
+        "alignItems": "center",
+        "justifyContent": "center",
+        "borderRadius": 14,
         "backgroundColor": "rgb(24, 24, 26)",
         "borderWidth": "1px",
-        "borderColor": "rgba(255, 255, 255, 0.4)"
+        "borderColor": "rgba(255, 255, 255, 0.35)",
+        "paddingTop": "6px",
+        "paddingBottom": "6px",
+        "paddingLeft": "10px",
+        "paddingRight": "10px"
       }
     },
-    "placard-text": {
+    "action-label": {
       "content": {
         "fontSize": "11px",
-        "fontWeight": "500",
-        "lineHeight": "1.5",
-        "color": "rgba(255, 255, 255, 0.95)",
-        "margin": "0"
+        "fontWeight": "600",
+        "color": "rgb(248, 113, 113)"
       }
     }
   },
   "ranges": {
-    "narration-card": {
+    "action-tag": {
       "start": {
         "line": 1,
         "column": 2
       },
       "end": {
         "line": 1,
-        "column": 17
+        "column": 13
       }
     },
-    "placard-text": {
+    "action-label": {
       "start": {
-        "line": 15,
+        "line": 17,
         "column": 2
       },
       "end": {
-        "line": 15,
+        "line": 17,
         "column": 15
       }
     },
@@ -85,7 +85,7 @@
       },
       "end": {
         "line": 25,
-        "column": 125
+        "column": 50
       }
     }
   }

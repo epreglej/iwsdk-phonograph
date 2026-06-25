@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "And now, you will learn how to use it..."
+          "Assemble it, so you could record your voice"
         ],
         "properties": {
           "class": "placard-text"
@@ -85,7 +85,7 @@
       },
       "end": {
         "line": 25,
-        "column": 70
+        "column": 73
       }
     }
   }

@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "Slide the carriage back to its starting position."
+          "Return the carriage back to its starting position."
         ],
         "properties": {
           "class": "placard-text"
@@ -85,7 +85,7 @@
       },
       "end": {
         "line": 25,
-        "column": 79
+        "column": 80
       }
     }
   }

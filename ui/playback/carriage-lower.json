@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "Finally, lower the carriage to start playing the sound carved into the cylinder."
+          "Lower the reproducer onto the cylinder."
         ],
         "properties": {
           "class": "placard-text"
@@ -85,7 +85,7 @@
       },
       "end": {
         "line": 25,
-        "column": 110
+        "column": 69
       }
     }
   }

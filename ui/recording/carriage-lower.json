@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "Lower the carriage so the recorder touches the cylinder."
+          "Lower the recorder onto the cylinder to start recording."
         ],
         "properties": {
           "class": "placard-text"

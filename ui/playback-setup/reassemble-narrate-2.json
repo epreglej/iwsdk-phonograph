@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "The recording horn and recorder were built for capturing sound, not for playback, so they aren't needed anymore."
+          "But to play the recording you need to reassemble the phonograph for playback"
         ],
         "properties": {
           "class": "placard-text"
@@ -85,7 +85,7 @@
       },
       "end": {
         "line": 25,
-        "column": 142
+        "column": 106
       }
     }
   }

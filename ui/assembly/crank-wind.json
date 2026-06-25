@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "Wind the crank to power up the internal motor."
+          "Use the crank to wind up the motor."
         ],
         "properties": {
           "class": "placard-text"
@@ -85,7 +85,7 @@
       },
       "end": {
         "line": 25,
-        "column": 76
+        "column": 65
       }
     }
   }

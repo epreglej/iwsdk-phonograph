@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "This allows the recorder to carve the sound as a continuous spiral along the whole length of the cylinder."
+          "Speak into the horn"
         ],
         "properties": {
           "class": "placard-text"
@@ -85,7 +85,7 @@
       },
       "end": {
         "line": 25,
-        "column": 136
+        "column": 49
       }
     }
   }

@@ -18,7 +18,7 @@
         "sourceTag": "span",
         "type": "custom",
         "children": [
-          "You just recorded and played back your voice on a phonograph"
+          "You just recorded and played back your own voice."
         ],
         "properties": {
           "class": "subtitle"
@@ -191,7 +191,7 @@
       },
       "end": {
         "line": 57,
-        "column": 92
+        "column": 81
       }
     },
     "uid-4": {

@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "It contains a thin diaphragm that vibrates with incoming sound, and a sharp needle that carves those vibrations into the cylinder."
+          "The next step is to actually create a recording of your voice"
         ],
         "properties": {
           "class": "placard-text"
@@ -85,7 +85,7 @@
       },
       "end": {
         "line": 25,
-        "column": 160
+        "column": 91
       }
     }
   }

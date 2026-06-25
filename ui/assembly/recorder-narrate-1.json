@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "Now that you have a surface to record onto, you need something that can actually do the recording."
+          "A recording medium alone isn't enough, something needs to do the actual recording..."
         ],
         "properties": {
           "class": "placard-text"
@@ -85,7 +85,7 @@
       },
       "end": {
         "line": 25,
-        "column": 128
+        "column": 114
       }
     }
   }

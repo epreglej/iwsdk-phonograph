@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "The reproducer traces the carvings left by the recorder and converts them into faint vibrations."
+          "To play the sound from the wax cylinder we need something that will trace the grooves carved by the recorder and turns them back into sound."
         ],
         "properties": {
           "class": "placard-text"
@@ -85,7 +85,7 @@
       },
       "end": {
         "line": 25,
-        "column": 126
+        "column": 170
       }
     }
   }

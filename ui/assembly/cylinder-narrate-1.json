@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "But before you can record anything, you first need something you can record the sound onto."
+          "To be able to record anything, you first need a medium to record onto..."
         ],
         "properties": {
           "class": "placard-text"
@@ -85,7 +85,7 @@
       },
       "end": {
         "line": 25,
-        "column": 121
+        "column": 102
       }
     }
   }

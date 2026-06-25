@@ -69,14 +69,14 @@ export const PART_LAYOUT: PartLayout[] = [
     id: "recording_horn",
     assetKey: "recording_horn",
     position: [-0.4, 0.1225, 0.1],
-    quaternion: [-0.766, 0, 0, 0.6428],
+    quaternion: [-0.0897, 0, 0, 0.996],
     visible: false,
   },
   {
     id: "listening_horn",
     assetKey: "listening_horn",
     position: [-0.4, 0.1225, 0.1],
-    quaternion: [-0.766, 0, 0, 0.6428],
+    quaternion: [-0.0897, 0, 0, 0.996],
     visible: false,
   },
   {
@@ -114,7 +114,7 @@ const SNAP_POINT_LAYOUT: SnapPointLayout[] = [
     id: "horn_snap_point",
     ghostAssetKey: "recording_horn",
     position: [0.09025, 0.3975, 0.455],
-    quaternion: [-0.78, 0, 0, 0.625],
+    quaternion: [-0.1078, 0, 0, 0.9942],
   },
 ];
 

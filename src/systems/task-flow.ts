@@ -19,7 +19,7 @@ import {
 
 export { Task, ActiveTask, CompletedTask } from "./task.js";
 export {
-  NARRATION_POST_DELAY_MS,
+  INTRO_NARRATION_POST_DELAY_MS,
   TaskId,
   TASK_BY_ID,
   TASK_ORDER,
@@ -28,6 +28,7 @@ export {
   PLACARDS_BY_TASK,
   TASK_PANEL_BY_TASK,
   UNMOUNT_BY_TASK,
+  NAME_TAGS_BY_TASK,
   type PlacardBinding,
   type PlacardSpec,
   type TaskDef,
@@ -45,9 +46,10 @@ export class TaskFlowSystem extends createSystem({
 }) {
   private completeTimer: ReturnType<typeof setTimeout> | null = null;
   private activeTaskEntity: Entity | null = null;
-  private pendingTypewriterAdvance: {
+  private pendingPlacardAdvance: {
     task: TaskDef;
     taskEntity: Entity;
+    narrationDone: boolean;
   } | null = null;
 
   init() {
@@ -75,18 +77,26 @@ export class TaskFlowSystem extends createSystem({
 
         this.queueTaskAudio(task, entity);
 
-        if (task.afterNarrationMs != null && !task.narration) {
-          if (task.placard || task.placards?.length) {
-            this.pendingTypewriterAdvance = { task, taskEntity: entity };
-            this.tryAdvanceAfterPlacardTypewriter();
-          } else {
-            this.scheduleAutoAdvance(task.afterNarrationMs, entity);
-          }
+        if (
+          task.afterNarrationMs != null &&
+          (task.placard || task.placards?.length)
+        ) {
+          this.pendingPlacardAdvance = {
+            task,
+            taskEntity: entity,
+            narrationDone: !(task.narration ?? task.hintAudio),
+          };
+          this.tryAdvanceAfterPlacard();
+        } else if (
+          task.afterNarrationMs != null &&
+          !(task.narration ?? task.hintAudio)
+        ) {
+          this.scheduleAutoAdvance(task.afterNarrationMs, entity);
         }
       }),
 
       this.queries.placardTypewriterDone.subscribe("qualify", () => {
-        this.tryAdvanceAfterPlacardTypewriter();
+        this.tryAdvanceAfterPlacard();
       }),
 
       this.queries.activeTask.subscribe("disqualify", (entity) => {
@@ -96,7 +106,7 @@ export class TaskFlowSystem extends createSystem({
 
         if (this.activeTaskEntity?.index === entity.index) {
           this.clearAutoAdvance();
-          this.pendingTypewriterAdvance = null;
+          this.pendingPlacardAdvance = null;
           this.activeTaskEntity = null;
         }
       }),
@@ -124,31 +134,44 @@ export class TaskFlowSystem extends createSystem({
     const url = task.narration ?? task.hintAudio;
     if (!url) return;
 
-    const onEnded =
-      task.narration && task.afterNarrationMs != null
-        ? () => this.scheduleAutoAdvance(task.afterNarrationMs!, taskEntity)
-        : undefined;
+    const hasPlacard = !!(task.placard || task.placards?.length);
+    const onEnded = () => {
+      if (
+        hasPlacard &&
+        this.pendingPlacardAdvance?.taskEntity.index === taskEntity.index
+      ) {
+        this.pendingPlacardAdvance.narrationDone = true;
+        this.tryAdvanceAfterPlacard();
+        return;
+      }
+
+      if (task.narration && task.afterNarrationMs != null) {
+        this.scheduleAutoAdvance(task.afterNarrationMs, taskEntity);
+      }
+    };
 
     void resumeAudioContext().then(() => playTaskNarration(url, 1, onEnded));
   }
 
-  private tryAdvanceAfterPlacardTypewriter(): void {
-    const pending = this.pendingTypewriterAdvance;
+  private tryAdvanceAfterPlacard(): void {
+    const pending = this.pendingPlacardAdvance;
     if (!pending) return;
 
-    const { task, taskEntity } = pending;
+    const { task, taskEntity, narrationDone } = pending;
     if (
       !taskEntity.active ||
       taskEntity.hasComponent(CompletedTask) ||
       task.afterNarrationMs == null
     ) {
-      this.pendingTypewriterAdvance = null;
+      this.pendingPlacardAdvance = null;
       return;
     }
 
+    if (!narrationDone) return;
+
     const bindings = PLACARDS_BY_TASK[task.id];
     if (!bindings?.length) {
-      this.pendingTypewriterAdvance = null;
+      this.pendingPlacardAdvance = null;
       this.scheduleAutoAdvance(task.afterNarrationMs, taskEntity);
       return;
     }
@@ -160,7 +183,7 @@ export class TaskFlowSystem extends createSystem({
     for (const placard of this.queries.placardTypewriterDone.entities) {
       const config = placard.getValue(PanelUI, "config");
       if (config && panelConfigs.has(config)) {
-        this.pendingTypewriterAdvance = null;
+        this.pendingPlacardAdvance = null;
         this.scheduleAutoAdvance(task.afterNarrationMs, taskEntity);
         return;
       }

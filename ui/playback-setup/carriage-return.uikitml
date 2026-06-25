@@ -23,5 +23,5 @@
 </style>
 
 <div id="panel-root" class="placard">
-  <p class="placard-text">Slide the carriage back to its starting position.</p>
+  <p class="placard-text">Return the carriage back to its starting position.</p>
 </div>

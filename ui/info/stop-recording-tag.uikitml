@@ -1,0 +1,27 @@
+<style>
+  .action-tag {
+    width: 130px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    background-color: rgb(24, 24, 26);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.35);
+    padding-top: 6px;
+    padding-bottom: 6px;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .action-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgb(248, 113, 113);
+  }
+</style>
+
+<div id="panel-root" class="action-tag">
+  <span class="action-label">Stop Recording</span>
+</div>

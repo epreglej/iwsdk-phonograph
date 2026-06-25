@@ -16,11 +16,12 @@ import { Highlight } from "./highlight.js";
 import { MountTaskBinding } from "./mount.js";
 import { MoveTo, PopIn, PopInDone, PopOut, Spin, TeleportTo } from "./animation.js";
 import { Snappable, Snapped, SnapGhost, SnapPoint } from "./snap.js";
-import { PlacardAutoDismiss } from "./placard.js";
+import { PlacardAutoDismiss, PlacardPendingSpawn } from "./placard.js";
 import { TaskPanelAutoComplete } from "./task-panel.js";
 import { Unmounting, UnmountPopping } from "./unmount.js";
 import { ClearRecording } from "./recording.js";
 import { ReleaseGrab } from "./interaction-gate.js";
+import { PartNameTag, PartNameTagPendingSpawn } from "./part-info.js";
 import { CARRIAGE_LAYOUT, isCarriagePart, reparentObject3D } from "./carriage.js";
 import { PART_LAYOUT } from "./spawn.js";
 
@@ -51,7 +52,10 @@ const GAMEPLAY_COMPONENTS = [
   CarriageReturning,
   CarriageTraveling,
   PlacardAutoDismiss,
+  PlacardPendingSpawn,
   TaskPanelAutoComplete,
+  PartNameTag,
+  PartNameTagPendingSpawn,
 ] as const;
 
 export class WorldResetSystem extends createSystem({

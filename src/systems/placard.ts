@@ -15,7 +15,7 @@ import {
 import { Task, ActiveTask, CompletedTask } from "./task.js";
 import { PhonographPart } from "./phonograph.js";
 import { Crank, CrankingComplete } from "./crank.js";
-import { PopIn2D, PopOut2D } from "./animation.js";
+import { PopIn, PopIn2D, PopOut2D } from "./animation.js";
 import { Billboard } from "./billboard.js";
 import { Snapped } from "./snap.js";
 import {
@@ -48,6 +48,9 @@ export const PlacardInstance = createComponent("PlacardInstance", {
   target: { type: Types.Entity, default: null },
 });
 
+/** Wait until the follow target finishes its 3D pop-in before spawning the panel. */
+export const PlacardPendingSpawn = createComponent("PlacardPendingSpawn", {});
+
 export class PlacardSystem extends createSystem({
   activeTask: {
     required: [Task, ActiveTask],
@@ -61,6 +64,10 @@ export class PlacardSystem extends createSystem({
   crankComplete: { required: [Crank, CrankingComplete] },
   placardAutoDismiss: {
     required: [PlacardAutoDismiss],
+    excluded: [PlacardDismissed],
+  },
+  placardPendingSpawn: {
+    required: [Placard, PlacardPendingSpawn],
     excluded: [PlacardDismissed],
   },
   targets: { required: [Placard], excluded: [PlacardDismissed] },
@@ -142,6 +149,13 @@ export class PlacardSystem extends createSystem({
   update(delta: number) {
     const dtMs = delta * 1000;
 
+    for (const target of this.queries.placardPendingSpawn.entities) {
+      if (!this.shouldDeferPlacardSpawn(target)) {
+        target.removeComponent(PlacardPendingSpawn);
+        this.spawnPlacard(target);
+      }
+    }
+
     for (const target of this.queries.placardAutoDismiss.entities) {
       const remaining =
         (target.getValue(PlacardAutoDismiss, "remainingMs") ?? 0) - dtMs;
@@ -212,7 +226,17 @@ export class PlacardSystem extends createSystem({
   }
 
   private stripPlacard(entity: Entity): void {
-    entity.removeComponent(Placard).removeComponent(PlacardDismissed);
+    entity
+      .removeComponent(Placard)
+      .removeComponent(PlacardDismissed)
+      .removeComponent(PlacardPendingSpawn);
+  }
+
+  private shouldDeferPlacardSpawn(target: Entity): boolean {
+    const obj = target.object3D;
+    if (!obj) return true;
+    if (obj.scale.x >= 0.9) return false;
+    return target.hasComponent(PopIn);
   }
 
   private nextTaskId(currentId: string): string | undefined {
@@ -247,9 +271,19 @@ export class PlacardSystem extends createSystem({
     const targetObj = target.object3D;
     if (!targetObj) return;
 
+    if (this.shouldDeferPlacardSpawn(target)) {
+      if (!target.hasComponent(PlacardPendingSpawn)) {
+        target.addComponent(PlacardPendingSpawn);
+      }
+      return;
+    }
+
+    target.removeComponent(PlacardPendingSpawn);
+
     const existing = this.findPlacardForTarget(target);
     if (existing) {
       existing.removeComponent(PopIn2D).removeComponent(PopOut2D);
+      existing.removeComponent(Follower);
       existing.removeComponent(PlacardInstance);
       if (existing.object3D) existing.object3D.visible = false;
     }
@@ -265,14 +299,14 @@ export class PlacardSystem extends createSystem({
         behavior: FollowBehavior.NoRotation,
         target: targetObj,
         offsetPosition: [
-          target.getValue(Placard, "offsetX") ?? 0.1,
-          target.getValue(Placard, "offsetY") ?? 0.12,
+          target.getValue(Placard, "offsetX") ?? 0,
+          target.getValue(Placard, "offsetY") ?? 0.2,
           target.getValue(Placard, "offsetZ") ?? 0,
         ],
       })
       .addComponent(Billboard);
 
-    placard.object3D!.scale.set(0.001, 0.001, 0.001);
+    placard.object3D!.scale.setScalar(1);
     placard.object3D!.visible = true;
 
     const autoDismissMs = target.getValue(Placard, "autoDismissMs") ?? 0;
@@ -312,10 +346,11 @@ export class PlacardSystem extends createSystem({
   }
 
   private destroyPlacardForTarget(target: Entity): void {
-    target.removeComponent(PlacardAutoDismiss);
+    target.removeComponent(PlacardAutoDismiss).removeComponent(PlacardPendingSpawn);
     const placard = this.findPlacardForTarget(target);
     if (!placard) return;
     placard.removeComponent(PopIn2D).removeComponent(PopOut2D);
+    placard.removeComponent(Follower);
     placard.removeComponent(PlacardInstance);
     if (placard.object3D) placard.object3D.visible = false;
   }

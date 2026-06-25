@@ -23,5 +23,5 @@
 </style>
 
 <div id="panel-root" class="placard">
-  <p class="placard-text">Disengage the brake so the cylinder starts spinning.</p>
+  <p class="placard-text">Disengage the brake.</p>
 </div>

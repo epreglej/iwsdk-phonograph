@@ -55,7 +55,7 @@
 
 <div id="panel-root" class="menu-card">
   <span class="title">You Did It</span>
-  <span class="subtitle">You just recorded and played back your voice on a phonograph</span>
+  <span class="subtitle">You just recorded and played back your own voice.</span>
 
   <button id="complete-restart-button" class="menu-button">
     <span class="menu-button-label">Try Again</span>

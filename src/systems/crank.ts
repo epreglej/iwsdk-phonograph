@@ -1,18 +1,19 @@
 import {
   createComponent,
   createSystem,
+  Entity,
   eq,
   Grabbed,
+  Object3D,
   OneHandGrabbable,
   Types,
   Vector3,
-  Object3D,
 } from "@iwsdk/core";
 import { Task, ActiveTask, CompletedTask } from "./task.js";
 import { TaskId } from "./task-config.js";
 import { PhonographPart } from "./phonograph.js";
 import { Highlight } from "./highlight.js";
-import { PopIn, PopInDone } from "./animation.js";
+import { PopIn } from "./animation.js";
 import { playCrankTick } from "../audio/sfx.js";
 
 export const Crank = createComponent("Crank", {
@@ -69,9 +70,7 @@ export class CrankSystem extends createSystem(
           .removeComponent(CrankHeld)
           .removeComponent(CrankRotation);
 
-        const alreadyRevealed =
-          crankEntity.hasComponent(PopInDone) || crankRoot.scale.x >= 0.9;
-        if (!alreadyRevealed) {
+        if (!crankEntity.hasComponent(PopIn) && crankRoot.scale.x < 0.9) {
           crankRoot.scale.setScalar(0.001);
           crankEntity.addComponent(PopIn);
         }
@@ -119,7 +118,7 @@ export class CrankSystem extends createSystem(
     );
   }
 
-  update() {
+  update(delta: number) {
     const rightGrip = this.player.gripSpaces.right;
     if (!rightGrip) return;
 
@@ -145,15 +144,23 @@ export class CrankSystem extends createSystem(
 
       const lastAngle = entity.getValue(CrankRotation, "lastAngle") ?? angle;
 
-      let delta = angle - lastAngle;
-      if (delta > Math.PI) delta -= Math.PI * 2;
-      if (delta < -Math.PI) delta += Math.PI * 2;
+      let angleDelta = angle - lastAngle;
+      if (angleDelta > Math.PI) angleDelta -= Math.PI * 2;
+      if (angleDelta < -Math.PI) angleDelta += Math.PI * 2;
 
-      delta *= this.config.sensitivity.peek();
+      angleDelta *= this.config.sensitivity.peek();
 
       const previousRotation = pivot.rotation.x;
-      let nextRotation = previousRotation + delta;
-      // Never rotate past the starting position (0); unwinding back is allowed.
+      const atRest = previousRotation >= -1e-5;
+
+      // At the rest detent, ignore wrong-direction input entirely (no rotation, no drift).
+      if (atRest && angleDelta > 0) {
+        entity.setValue(CrankRotation, "lastAngle", angle);
+        continue;
+      }
+
+      let nextRotation = previousRotation + angleDelta;
+      // Cannot pass through rest (0°) into the wrong direction.
       if (nextRotation > 0) nextRotation = 0;
 
       const appliedDelta = nextRotation - previousRotation;
@@ -199,7 +206,7 @@ export class CrankSystem extends createSystem(
     }
   }
 
-  private first(entities: Iterable<import("@iwsdk/core").Entity>): import("@iwsdk/core").Entity | undefined {
+  private first(entities: Iterable<Entity>): Entity | undefined {
     for (const entity of entities) return entity;
     return undefined;
   }

@@ -23,5 +23,5 @@
 </style>
 
 <div id="panel-root" class="placard">
-  <p class="placard-text">When done, engage the brake to stop recording.</p>
+  <p class="placard-text">Engage the brake to stop recording.</p>
 </div>

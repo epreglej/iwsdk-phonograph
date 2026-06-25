@@ -131,6 +131,10 @@ export class TypewriterSystem extends createSystem({
       entity.addComponent(TypewriterDone);
       return;
     }
+    if (root?.classList.contains("placard")) {
+      entity.addComponent(TypewriterDone);
+      return;
+    }
 
     const segments: TextSegment[] = [];
     this.collectTextNodes(doc.rootElement, segments);

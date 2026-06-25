@@ -1,0 +1,51 @@
+<style>
+  .name-tag {
+    width: 118px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: 14px;
+    background-color: rgb(24, 24, 26);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.35);
+    padding-top: 6px;
+    padding-bottom: 6px;
+    padding-left: 10px;
+    padding-right: 6px;
+  }
+
+  .name-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.95);
+  }
+
+  .info-button {
+    width: 26px;
+    height: 26px;
+    border-radius: 13px;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(255, 255, 255, 0.12);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  .info-button:hover {
+    background-color: rgba(255, 255, 255, 0.22);
+  }
+
+  .info-icon {
+    font-size: 13px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.95);
+  }
+</style>
+
+<div id="panel-root" class="name-tag">
+  <span class="name-label">Cylinder</span>
+  <button id="cylinder-info-button" class="info-button">
+    <span class="info-icon">i</span>
+  </button>
+</div>

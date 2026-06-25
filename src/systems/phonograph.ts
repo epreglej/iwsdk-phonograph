@@ -13,7 +13,7 @@ export class PhonographSystem extends createSystem({
   activeSetupTask: {
     required: [Task, ActiveTask],
     excluded: [CompletedTask],
-    where: [eq(Task, "id", TaskId.AssemblyIntro)],
+    where: [eq(Task, "id", TaskId.AssemblyIntroNarrate1)],
   },
   phonograph: { required: [Phonograph] },
 }) {

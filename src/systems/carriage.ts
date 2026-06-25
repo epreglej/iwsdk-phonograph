@@ -52,7 +52,7 @@ export const CARRIAGE_LAYOUT = {
   ] as Quat4,
   startX: 0.08,
   endX: -0.08,
-  travelDurationS: 120,
+  travelDurationS: 60,
 };
 
 const _worldPos = new Vector3();

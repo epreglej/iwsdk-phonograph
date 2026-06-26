@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "Everything is now ready to play the recording"
+          "The phonograph is now ready to play the recording"
         ],
         "properties": {
           "class": "placard-text"
@@ -85,7 +85,7 @@
       },
       "end": {
         "line": 25,
-        "column": 75
+        "column": 79
       }
     }
   }

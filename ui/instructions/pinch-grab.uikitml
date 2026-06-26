@@ -1,0 +1,29 @@
+<style>
+  .micro-instruction {
+    width: 210px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    background-color: rgb(58, 58, 62);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.35);
+    padding-top: 8px;
+    padding-bottom: 8px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .instruction-text {
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.45;
+    color: rgba(255, 255, 255, 0.88);
+    text-align: center;
+  }
+</style>
+
+<div id="panel-root" class="micro-instruction">
+  <p class="instruction-text">Pinch an object with your thumb and index finger to pick it up.</p>
+</div>

@@ -34,7 +34,7 @@ export class CrankSystem extends createSystem(
     activeCrankCrankingTask: {
       required: [Task, ActiveTask],
       excluded: [CompletedTask],
-      where: [eq(Task, "id", TaskId.AssemblyCrankWind)],
+      where: [eq(Task, "id", TaskId.RecordingCrankWind)],
     },
     crank: {
       required: [Crank],

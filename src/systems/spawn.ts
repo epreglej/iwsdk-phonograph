@@ -116,6 +116,12 @@ const SNAP_POINT_LAYOUT: SnapPointLayout[] = [
     position: [0.09025, 0.3975, 0.455],
     quaternion: [-0.1078, 0, 0, 0.9942],
   },
+  {
+    id: "listening_horn_snap_point",
+    ghostAssetKey: "listening_horn",
+    position: [0.09025, 0.3975, 0.455],
+    quaternion: [-0.1078, 0, 0, 0.9942],
+  },
 ];
 
 const BEHAVIOR_TAGS = { cylinder: Cylinder, crank: Crank, brake: Brake } as const;
@@ -205,6 +211,9 @@ export class SpawnSystem extends createSystem({}) {
       obj.position.set(...layout.position);
       obj.quaternion.set(...layout.quaternion);
       obj.visible = layout.visible;
+      if (!layout.visible) {
+        obj.scale.setScalar(0.001);
+      }
     }
   }
 }

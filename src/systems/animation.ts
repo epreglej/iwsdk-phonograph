@@ -14,6 +14,21 @@ export const POP_IN_MS = 700;
 export const POP_OUT_MS = 550;
 export const SPIN_PERIOD_MS = 1000;
 
+/** Wait after a 3D part finishes popping in before its name tag or placard appears. */
+export const PANEL_SPAWN_AFTER_PART_POP_IN_MS = 250;
+/** Wait after a name tag finishes popping in before micro-instructions appear. */
+export const MICRO_INSTRUCTION_SPAWN_AFTER_NAME_TAG_MS = 400;
+/** Spawn delay not started yet (waiting for a prerequisite animation). */
+export const PANEL_SPAWN_DELAY_PENDING = -1;
+
+export function isPartPopInComplete(part: Entity): boolean {
+  if (part.hasComponent(PopInDone)) return true;
+  const obj = part.object3D;
+  if (!obj?.visible) return false;
+  if (!part.hasComponent(PopIn)) return obj.scale.x >= 0.9;
+  return obj.scale.x >= 0.9;
+}
+
 const POP_FIELDS = {
   elapsed: { type: Types.Float32, default: 0 },
   from: { type: Types.Float32, default: -1 },
@@ -26,6 +41,7 @@ export const PopOut2D = createComponent("PopOut2D", { ...POP_FIELDS });
 
 export const PopInDone = createComponent("PopInDone", {});
 export const PopOutDone = createComponent("PopOutDone", {});
+export const PopIn2DDone = createComponent("PopIn2DDone", {});
 export const PopOut2DDone = createComponent("PopOut2DDone", {});
 export const MoveDone = createComponent("MoveDone", {});
 
@@ -85,6 +101,7 @@ type PopComponent =
 type DoneTag =
   | typeof PopInDone
   | typeof PopOutDone
+  | typeof PopIn2DDone
   | typeof PopOut2DDone
   | typeof MoveDone;
 
@@ -95,6 +112,7 @@ export class AnimationSystem extends createSystem({
   popOut2D: { required: [PopOut2D] },
   popInDone: { required: [PopInDone] },
   popOutDone: { required: [PopOutDone] },
+  popIn2DDone: { required: [PopIn2DDone] },
   popOut2DDone: { required: [PopOut2DDone] },
   moveDone: { required: [MoveDone] },
   spin: { required: [Spin] },
@@ -137,6 +155,7 @@ export class AnimationSystem extends createSystem({
   update(delta: number) {
     this.sweepDone(this.queries.popInDone.entities, PopInDone);
     this.sweepDone(this.queries.popOutDone.entities, PopOutDone);
+    this.sweepDone(this.queries.popIn2DDone.entities, PopIn2DDone);
     this.sweepDone(this.queries.popOut2DDone.entities, PopOut2DDone);
     this.sweepDone(this.queries.moveDone.entities, MoveDone);
 
@@ -144,7 +163,7 @@ export class AnimationSystem extends createSystem({
 
     this.advancePop3D(this.queries.popIn.entities, PopIn, 1, POP_IN_MS, easeOutCubic, dtMs, PopInDone);
     this.advancePop3D(this.queries.popOut.entities, PopOut, 0.001, POP_OUT_MS, easeInCubic, dtMs, PopOutDone);
-    this.advancePop2D(this.queries.popIn2D.entities, PopIn2D, 1, POP_IN_MS, easeOutCubic, dtMs);
+    this.advancePop2D(this.queries.popIn2D.entities, PopIn2D, 1, POP_IN_MS, easeOutCubic, dtMs, PopIn2DDone);
     this.advancePop2D(this.queries.popOut2D.entities, PopOut2D, 0.001, POP_OUT_MS, easeInCubic, dtMs, PopOut2DDone);
     this.advanceSpin(dtMs);
     this.advanceMove(dtMs);

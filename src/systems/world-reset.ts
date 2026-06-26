@@ -21,7 +21,12 @@ import { TaskPanelAutoComplete } from "./task-panel.js";
 import { Unmounting, UnmountPopping } from "./unmount.js";
 import { ClearRecording } from "./recording.js";
 import { ReleaseGrab } from "./interaction-gate.js";
-import { PartNameTag, PartNameTagPendingSpawn } from "./part-info.js";
+import {
+  PartActionNameTag,
+  PartActionNameTagPendingSpawn,
+  PartNameTag,
+  PartNameTagPendingSpawn,
+} from "./part-info.js";
 import { CARRIAGE_LAYOUT, isCarriagePart, reparentObject3D } from "./carriage.js";
 import { PART_LAYOUT } from "./spawn.js";
 
@@ -56,6 +61,8 @@ const GAMEPLAY_COMPONENTS = [
   TaskPanelAutoComplete,
   PartNameTag,
   PartNameTagPendingSpawn,
+  PartActionNameTag,
+  PartActionNameTagPendingSpawn,
 ] as const;
 
 export class WorldResetSystem extends createSystem({
@@ -105,7 +112,7 @@ export class WorldResetSystem extends createSystem({
           useTargetRotation: true,
         });
       }
-      part.object3D.scale.setScalar(1);
+      part.object3D.scale.setScalar(layout.visible ? 1 : 0.001);
       part.object3D.visible = layout.visible;
       this.stripGameplay(part);
     }

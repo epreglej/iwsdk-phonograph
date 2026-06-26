@@ -1,27 +1,28 @@
 <style>
-  .narration-card {
-    width: 196px;
+  .info-tag {
+    width: 200px;
     display: flex;
     flex-direction: column;
-    padding-top: 14px;
-    padding-bottom: 14px;
-    padding-left: 16px;
-    padding-right: 16px;
-    border-radius: 22px;
+    border-radius: 14px;
     background-color: rgb(24, 24, 26);
     border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.4);
+    border-color: rgba(255, 255, 255, 0.35);
+    padding-top: 8px;
+    padding-bottom: 8px;
+    padding-left: 10px;
+    padding-right: 10px;
   }
 
-  .placard-text {
+  .body-text {
     font-size: 11px;
     font-weight: 500;
-    line-height: 1.5;
-    color: rgba(255, 255, 255, 0.95);
+    line-height: 1.45;
+    color: rgba(255, 255, 255, 0.9);
     margin: 0;
   }
+
 </style>
 
-<div id="panel-root" class="narration-card narration-typewriter">
-  <p class="placard-text">To play the sound from the wax cylinder we need something that will trace the grooves carved by the recorder and turns them back into sound.</p>
+<div id="panel-root" class="info-tag">
+  <p class="body-text">To play the sound from the wax cylinder we need something that will trace the grooves carved by the recorder and turns them back into sound.</p>
 </div>

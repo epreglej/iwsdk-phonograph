@@ -13,10 +13,17 @@ import {
   UIKitDocument,
 } from "@iwsdk/core";
 import { Task, ActiveTask, CompletedTask } from "./task.js";
-import { PhonographPart } from "./phonograph.js";
+import { PhonographPart, PhonographSpawnAnchor } from "./phonograph.js";
 import { Crank, CrankingComplete } from "./crank.js";
-import { PopIn, PopIn2D, PopOut2D } from "./animation.js";
+import {
+  isPartPopInComplete,
+  PANEL_SPAWN_AFTER_PART_POP_IN_MS,
+  PANEL_SPAWN_DELAY_PENDING,
+  PopIn2D,
+  PopOut2D,
+} from "./animation.js";
 import { Billboard } from "./billboard.js";
+import { hidePanelEntity, stripPanelSurface } from "./panel-lifecycle.js";
 import { Snapped } from "./snap.js";
 import {
   PANEL_MAX_WIDTH,
@@ -36,6 +43,8 @@ export const Placard = createComponent("Placard", {
   dismissOnGrab: { type: Types.Boolean, default: false },
   dismissOnSnap: { type: Types.Boolean, default: true },
   autoDismissMs: { type: Types.Float32, default: 0 },
+  skipPartPopInWait: { type: Types.Boolean, default: false },
+  spawnDelayRemainingMs: { type: Types.Float32, default: -1 },
 });
 
 export const PlacardDismissed = createComponent("PlacardDismissed", {});
@@ -75,6 +84,7 @@ export class PlacardSystem extends createSystem({
   instanceDocs: { required: [PlacardInstance, PanelDocument] },
   targetGrabbed: { required: [Placard, Grabbed] },
   targetSnapped: { required: [Placard, Snapped] },
+  spawnAnchor: { required: [PhonographSpawnAnchor] },
 }) {
   init() {
     this.cleanupFuncs.push(
@@ -83,7 +93,7 @@ export class PlacardSystem extends createSystem({
         if (!bindings) return;
 
         for (const binding of bindings) {
-          const target = this.partById(binding.partId);
+          const target = this.resolvePlacardTarget(binding);
           if (target) this.attachPlacard(target, binding.placard);
         }
       }),
@@ -95,7 +105,7 @@ export class PlacardSystem extends createSystem({
 
         for (const binding of bindings) {
           if (!this.shouldStripPlacard(taskId, binding)) continue;
-          const target = this.partById(binding.partId);
+          const target = this.resolvePlacardTarget(binding);
           if (target) this.stripPlacard(target);
         }
       }),
@@ -105,18 +115,14 @@ export class PlacardSystem extends createSystem({
         if (crank) this.stripPlacard(crank);
       }),
 
-      this.queries.targets.subscribe("qualify", (target) => {
-        this.spawnPlacard(target);
-      }),
-
       this.queries.targets.subscribe("disqualify", (target) => {
         target.removeComponent(PlacardAutoDismiss);
         this.destroyPlacardForTarget(target);
       }),
 
       this.queries.instances.subscribe("disqualify", (placard) => {
-        placard.removeComponent(PopIn2D).removeComponent(PopOut2D);
-        if (placard.object3D) placard.object3D.visible = false;
+        placard.removeComponent(PlacardInstance);
+        hidePanelEntity(placard);
       }),
 
       this.queries.instanceDocs.subscribe("qualify", (placard) => {
@@ -143,17 +149,61 @@ export class PlacardSystem extends createSystem({
         if (!target.getValue(Placard, "dismissOnSnap")) return;
         this.dismissPlacard(target);
       }),
+
+      this.queries.spawnAnchor.subscribe("qualify", () => {
+        for (const taskEntity of this.queries.activeTask.entities) {
+          const bindings = PLACARDS_BY_TASK[taskEntity.getValue(Task, "id")!];
+          if (!bindings) continue;
+          for (const binding of bindings) {
+            if (binding.anchor !== "phonograph_spawn") continue;
+            const target = this.resolvePlacardTarget(binding);
+            if (target) this.attachPlacard(target, binding.placard);
+          }
+        }
+      }),
     );
   }
 
   update(delta: number) {
     const dtMs = delta * 1000;
 
-    for (const target of this.queries.placardPendingSpawn.entities) {
-      if (!this.shouldDeferPlacardSpawn(target)) {
-        target.removeComponent(PlacardPendingSpawn);
-        this.spawnPlacard(target);
+    for (const target of this.queries.targets.entities) {
+      if (this.findPlacardForTarget(target)) continue;
+
+      if (!isPartPopInComplete(target)) {
+        if (!target.getValue(Placard, "skipPartPopInWait")) {
+          if (!target.hasComponent(PlacardPendingSpawn)) {
+            target.addComponent(PlacardPendingSpawn);
+          }
+          continue;
+        }
       }
+
+      target.removeComponent(PlacardPendingSpawn);
+
+      const remaining =
+        target.getValue(Placard, "spawnDelayRemainingMs") ??
+        PANEL_SPAWN_DELAY_PENDING;
+
+      if (remaining === PANEL_SPAWN_DELAY_PENDING) {
+        target.setValue(
+          Placard,
+          "spawnDelayRemainingMs",
+          PANEL_SPAWN_AFTER_PART_POP_IN_MS,
+        );
+        continue;
+      }
+
+      if (remaining > 0) {
+        target.setValue(
+          Placard,
+          "spawnDelayRemainingMs",
+          Math.max(0, remaining - dtMs),
+        );
+        continue;
+      }
+
+      this.spawnPlacard(target);
     }
 
     for (const target of this.queries.placardAutoDismiss.entities) {
@@ -175,6 +225,7 @@ export class PlacardSystem extends createSystem({
       if (
         otherBindings?.some(
           (b) =>
+            b.anchor === binding.anchor &&
             b.partId === binding.partId &&
             b.placard.panelConfig === binding.placard.panelConfig,
         )
@@ -188,6 +239,7 @@ export class PlacardSystem extends createSystem({
     if (
       nextBindings?.some(
         (b) =>
+          b.anchor === binding.anchor &&
           b.partId === binding.partId &&
           b.placard.panelConfig === binding.placard.panelConfig,
       )
@@ -196,6 +248,15 @@ export class PlacardSystem extends createSystem({
     }
 
     return true;
+  }
+
+  private resolvePlacardTarget(binding: PlacardBinding): Entity | undefined {
+    if (binding.anchor === "head") return this.playerHeadEntity;
+    if (binding.anchor === "phonograph_spawn") {
+      return this.first(this.queries.spawnAnchor.entities);
+    }
+    if (!binding.partId) return undefined;
+    return this.partById(binding.partId);
   }
 
   private attachPlacard(entity: Entity, spec: PlacardSpec): void {
@@ -222,6 +283,10 @@ export class PlacardSystem extends createSystem({
       dismissOnGrab: spec.dismissOnGrab ?? false,
       dismissOnSnap: spec.dismissOnSnap ?? true,
       autoDismissMs: spec.autoDismissMs ?? 0,
+      skipPartPopInWait: spec.skipPartPopInWait ?? false,
+      spawnDelayRemainingMs: spec.skipPartPopInWait
+        ? 0
+        : PANEL_SPAWN_DELAY_PENDING,
     });
   }
 
@@ -230,13 +295,6 @@ export class PlacardSystem extends createSystem({
       .removeComponent(Placard)
       .removeComponent(PlacardDismissed)
       .removeComponent(PlacardPendingSpawn);
-  }
-
-  private shouldDeferPlacardSpawn(target: Entity): boolean {
-    const obj = target.object3D;
-    if (!obj) return true;
-    if (obj.scale.x >= 0.9) return false;
-    return target.hasComponent(PopIn);
   }
 
   private nextTaskId(currentId: string): string | undefined {
@@ -261,7 +319,7 @@ export class PlacardSystem extends createSystem({
     const root = doc?.getElementById("panel-root") as UIKit.Component | undefined;
     if (root) root.scale.setScalar(0.001);
 
-    placard.removeComponent(PopOut2D);
+    stripPanelSurface(placard);
     if (!placard.hasComponent(PopIn2D)) {
       placard.addComponent(PopIn2D);
     }
@@ -271,21 +329,12 @@ export class PlacardSystem extends createSystem({
     const targetObj = target.object3D;
     if (!targetObj) return;
 
-    if (this.shouldDeferPlacardSpawn(target)) {
-      if (!target.hasComponent(PlacardPendingSpawn)) {
-        target.addComponent(PlacardPendingSpawn);
-      }
-      return;
-    }
-
     target.removeComponent(PlacardPendingSpawn);
 
     const existing = this.findPlacardForTarget(target);
     if (existing) {
-      existing.removeComponent(PopIn2D).removeComponent(PopOut2D);
-      existing.removeComponent(Follower);
       existing.removeComponent(PlacardInstance);
-      if (existing.object3D) existing.object3D.visible = false;
+      hidePanelEntity(existing);
     }
 
     const config = target.getValue(Placard, "panelConfig")!;
@@ -327,17 +376,16 @@ export class PlacardSystem extends createSystem({
 
   private hidePlacard(target: Entity): void {
     const placard = this.findPlacardForTarget(target);
-    if (!placard) return;
-    placard.removeComponent(PopIn2D);
-    placard.addComponent(PopOut2D);
+    if (placard?.object3D?.visible) {
+      placard.object3D.visible = false;
+    }
   }
 
   private showPlacard(target: Entity): void {
     const placard = this.findPlacardForTarget(target);
-    if (!placard?.object3D) return;
-    placard.removeComponent(PopOut2D);
-    placard.object3D.visible = true;
-    placard.addComponent(PopIn2D);
+    if (placard?.object3D) {
+      placard.object3D.visible = true;
+    }
   }
 
   private dismissPlacard(target: Entity): void {
@@ -349,10 +397,8 @@ export class PlacardSystem extends createSystem({
     target.removeComponent(PlacardAutoDismiss).removeComponent(PlacardPendingSpawn);
     const placard = this.findPlacardForTarget(target);
     if (!placard) return;
-    placard.removeComponent(PopIn2D).removeComponent(PopOut2D);
-    placard.removeComponent(Follower);
     placard.removeComponent(PlacardInstance);
-    if (placard.object3D) placard.object3D.visible = false;
+    hidePanelEntity(placard);
   }
 
   private first(entities: Iterable<Entity>): Entity | undefined {

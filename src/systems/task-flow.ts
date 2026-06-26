@@ -1,4 +1,4 @@
-import { createSystem, Entity, PanelUI } from "@iwsdk/core";
+import { createSystem, Entity, PanelDocument, PanelUI } from "@iwsdk/core";
 import { playTaskNarration } from "../audio/narration.js";
 import { resumeAudioContext } from "../audio/context.js";
 import { playTaskChime } from "../audio/sfx.js";
@@ -8,7 +8,6 @@ import { revealPart } from "./part-reveal.js";
 import { PlacardInstance } from "./placard.js";
 import { StartCarriageRecording, StartRecordingSession } from "./recording.js";
 import { Task, ActiveTask, CompletedTask } from "./task.js";
-import { TypewriterDone } from "./typewriter.js";
 import {
   PLACARDS_BY_TASK,
   TaskId,
@@ -19,7 +18,7 @@ import {
 
 export { Task, ActiveTask, CompletedTask } from "./task.js";
 export {
-  INTRO_NARRATION_POST_DELAY_MS,
+  NARRATION_POST_DELAY_MS,
   TaskId,
   TASK_BY_ID,
   TASK_ORDER,
@@ -40,8 +39,8 @@ export class TaskFlowSystem extends createSystem({
   completedActiveTask: { required: [Task, ActiveTask, CompletedTask] },
   activeTask: { required: [Task, ActiveTask], excluded: [CompletedTask] },
   parts: { required: [PhonographPart] },
-  placardTypewriterDone: {
-    required: [PlacardInstance, PanelUI, TypewriterDone],
+  placardReady: {
+    required: [PlacardInstance, PanelUI, PanelDocument],
   },
 }) {
   private completeTimer: ReturnType<typeof setTimeout> | null = null;
@@ -75,6 +74,12 @@ export class TaskFlowSystem extends createSystem({
           }
         }
 
+        if (task.startRecordingOnStart) {
+          this.world.sceneEntity
+            .addComponent(StartRecordingSession)
+            .addComponent(StartCarriageRecording);
+        }
+
         this.queueTaskAudio(task, entity);
 
         if (
@@ -95,7 +100,7 @@ export class TaskFlowSystem extends createSystem({
         }
       }),
 
-      this.queries.placardTypewriterDone.subscribe("qualify", () => {
+      this.queries.placardReady.subscribe("qualify", () => {
         this.tryAdvanceAfterPlacard();
       }),
 
@@ -117,11 +122,6 @@ export class TaskFlowSystem extends createSystem({
         if (completedTask?.revealOnComplete) {
           const part = this.partById(completedTask.revealOnComplete);
           if (part) revealPart(part);
-        }
-        if (completedTask?.startRecordingOnComplete) {
-          this.world.sceneEntity
-            .addComponent(StartRecordingSession)
-            .addComponent(StartCarriageRecording);
         }
         playTaskChime();
         entity.removeComponent(ActiveTask);
@@ -180,7 +180,7 @@ export class TaskFlowSystem extends createSystem({
       bindings.map((binding) => binding.placard.panelConfig),
     );
 
-    for (const placard of this.queries.placardTypewriterDone.entities) {
+    for (const placard of this.queries.placardReady.entities) {
       const config = placard.getValue(PanelUI, "config");
       if (config && panelConfigs.has(config)) {
         this.pendingPlacardAdvance = null;

@@ -11,7 +11,7 @@ import { Phonograph } from "./phonograph.js";
 import { PhonographPart } from "./phonograph.js";
 import { Highlight } from "./highlight.js";
 import { Snappable, SnapGhost, Snapped } from "./snap.js";
-import { PopIn, TeleportTo } from "./animation.js";
+import { PopIn, PopInDone, TeleportTo } from "./animation.js";
 import { MOUNT_BY_TASK } from "./task-config.js";
 import { isCarriagePart, reparentObject3D } from "./carriage.js";
 import { PART_LAYOUT } from "./spawn.js";
@@ -78,9 +78,7 @@ export class MountSystem extends createSystem({
     const obj = part.object3D;
     if (obj) {
       obj.visible = true;
-      if (obj.scale.x >= 0.9) {
-        obj.scale.setScalar(1);
-      } else if (!part.hasComponent(PopIn)) {
+      if (!part.hasComponent(PopIn) && !part.hasComponent(PopInDone)) {
         obj.scale.setScalar(0.001);
         part.addComponent(PopIn);
       }

@@ -72,9 +72,9 @@ function clearRecordedAudio(): void {
 
 const CYLINDER_RPM = 130;
 const CARVING_LOOP_SECONDS = 2.5;
-const PLAYBACK_SURFACE_NOISE_GAIN = 0.1;
-const RECORDING_CARVING_GAIN = 0.075;
-const PLAYBACK_VOICE_GAIN = 1.85;
+const PLAYBACK_SURFACE_NOISE_GAIN = 0.28;
+const RECORDING_CARVING_GAIN = 0.11;
+const PLAYBACK_VOICE_GAIN = 1.85 * 1.2;
 const PLAYBACK_DISTORTION_AMOUNT = 45;
 const PLAYBACK_WOW_DEPTH = 0.012;
 const PLAYBACK_HIGHPASS_HZ = 550;
@@ -113,6 +113,7 @@ export class RecordingSystem extends createSystem({
         this.world.sceneEntity.removeComponent(StartRecordingSession);
         if (activeRecorder?.state === "recording") return;
         this.onRecordingStart();
+        void this.ensureCarvingAmbience();
         void this.startRecording();
       }),
 
@@ -125,7 +126,10 @@ export class RecordingSystem extends createSystem({
         this.recordingTaskEntity = taskEntity;
         if (activeRecorder?.state !== "recording") {
           this.onRecordingStart();
+          void this.ensureCarvingAmbience();
           void this.startRecording();
+        } else {
+          void this.ensureCarvingAmbience();
         }
       }),
 
@@ -138,7 +142,7 @@ export class RecordingSystem extends createSystem({
       }),
 
       this.queries.activePlaybackTask.subscribe("qualify", (taskEntity) => {
-        this.startPlayback(taskEntity);
+        void this.startPlayback(taskEntity);
       }),
 
       this.queries.stopRequested.subscribe("qualify", () => {
@@ -171,9 +175,8 @@ export class RecordingSystem extends createSystem({
 
   private async startRecording() {
     try {
-      await resumeAudioContext();
+      const ctx = await resumeAudioContext();
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const ctx = new AudioContext();
 
       const chunks: BlobPart[] = [];
       const recorder = new MediaRecorder(stream);
@@ -287,7 +290,7 @@ export class RecordingSystem extends createSystem({
     this.carvingSource = null;
   }
 
-  private startPlayback(taskEntity: {
+  private async startPlayback(taskEntity: {
     addComponent: (c: typeof CompletedTask) => void;
   }) {
     const recorded = getRecordedAudio();
@@ -297,7 +300,8 @@ export class RecordingSystem extends createSystem({
       return;
     }
 
-    const source = this.playProcessedAudio(recorded.ctx, recorded.buffer);
+    const ctx = await resumeAudioContext();
+    const source = this.playProcessedAudio(ctx, recorded.buffer);
     source.onended = () => {
       taskEntity.addComponent(CompletedTask);
     };

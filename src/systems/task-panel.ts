@@ -13,8 +13,14 @@ import {
 } from "@iwsdk/core";
 import { Task, ActiveTask, CompletedTask } from "./task.js";
 import { Phonograph } from "./phonograph.js";
-import { PopIn2D, PopOut2D, PopOut2DDone } from "./animation.js";
+import { PopIn2D, PopIn2DDone, PopOut2D, PopOut2DDone } from "./animation.js";
 import { Billboard } from "./billboard.js";
+import {
+  beginPanelPopOut,
+  DeferredTaskCompletion,
+  hidePanelEntity,
+  stripPanelSurface,
+} from "./panel-lifecycle.js";
 import {
   PHONOGRAPH_ABOVE_OFFSET_Y,
   PHONOGRAPH_PANEL_MAX_WIDTH,
@@ -68,9 +74,12 @@ export class TaskPanelSystem extends createSystem({
     required: [TaskPanelInstance, TaskPanelPendingDispose],
   },
   poppedOut: { required: [TaskPanelInstance, PopOut2DDone] },
+  popInDone: { required: [TaskPanelInstance, PopIn2DDone] },
   activeTasks: { required: [Task, ActiveTask], excluded: [CompletedTask] },
   autoCompletePanels: { required: [TaskPanelInstance, TaskPanelAutoComplete] },
 }) {
+  private readonly deferredTaskComplete = new DeferredTaskCompletion();
+
   init() {
     this.cleanupFuncs.push(
       this.queries.activeTask.subscribe("qualify", (taskEntity) => {
@@ -87,6 +96,7 @@ export class TaskPanelSystem extends createSystem({
       this.queries.activeTask.subscribe("disqualify", (taskEntity) => {
         const taskId = taskEntity.getValue(Task, "id")!;
         if (!TASK_PANEL_BY_TASK[taskId]) return;
+        this.deferredTaskComplete.clear();
         this.stripPanel(taskId);
       }),
 
@@ -115,20 +125,33 @@ export class TaskPanelSystem extends createSystem({
 
       this.queries.poppedOut.subscribe("qualify", (panel) => {
         const shouldComplete = this.hasPendingDismiss(panel);
-        this.teardownPanel(panel);
+        const shouldDispose = this.hasPendingDispose(panel);
+
         if (shouldComplete) {
           panel.removeComponent(TaskPanelPendingDismiss);
-          this.completeTask(panel.getValue(TaskPanelInstance, "taskId")!);
+          const taskId = panel.getValue(TaskPanelInstance, "taskId");
+          if (taskId) this.deferredTaskComplete.schedule(taskId);
         }
-        if (this.hasPendingDispose(panel)) {
+        if (shouldDispose) {
           panel.removeComponent(TaskPanelPendingDispose);
-          this.teardownPanel(panel);
+        }
+
+        this.teardownPanel(panel);
+      }),
+
+      this.queries.popInDone.subscribe("qualify", (panel) => {
+        const anchor = panel.getValue(TaskPanelInstance, "anchor");
+        const autoCompleteMs = anchor?.getValue(TaskPanel, "autoCompleteMs") ?? 0;
+        if (autoCompleteMs <= 0 && !panel.hasComponent(PokeInteractable)) {
+          panel.addComponent(PokeInteractable);
         }
       }),
     );
   }
 
   update(delta: number) {
+    this.deferredTaskComplete.flush((taskId) => this.completeTaskNow(taskId));
+
     const dtMs = delta * 1000;
 
     for (const panel of this.queries.autoCompletePanels.entities) {
@@ -139,9 +162,6 @@ export class TaskPanelSystem extends createSystem({
         panel.removeComponent(TaskPanelAutoComplete);
         void resumeAudioContext();
         panel.addComponent(TaskPanelPendingDismiss);
-        if (panel.hasComponent(PokeInteractable)) {
-          panel.removeComponent(PokeInteractable);
-        }
         this.hidePanel(panel);
       } else {
         panel.setValue(TaskPanelAutoComplete, "remainingMs", remaining);
@@ -200,7 +220,6 @@ export class TaskPanelSystem extends createSystem({
     const existing = this.findPanelForAnchor(anchor);
     if (existing) {
       this.teardownPanel(existing);
-      existing.removeComponent(TaskPanelInstance);
     }
 
     const config = anchor.getValue(TaskPanel, "panelConfig")!;
@@ -229,9 +248,6 @@ export class TaskPanelSystem extends createSystem({
     }
 
     const autoCompleteMs = anchor.getValue(TaskPanel, "autoCompleteMs") ?? 0;
-    if (autoCompleteMs <= 0) {
-      panel.addComponent(PokeInteractable);
-    }
 
     panel.object3D!.scale.set(0.001, 0.001, 0.001);
     panel.object3D!.visible = true;
@@ -246,7 +262,7 @@ export class TaskPanelSystem extends createSystem({
     const root = doc?.getElementById("panel-root") as UIKit.Component | undefined;
     if (root) root.scale.setScalar(0.001);
 
-    panel.removeComponent(PopOut2D);
+    stripPanelSurface(panel);
     if (!panel.hasComponent(PopIn2D)) {
       panel.addComponent(PopIn2D);
     }
@@ -278,7 +294,7 @@ export class TaskPanelSystem extends createSystem({
         return;
       }
 
-      this.completeTask(taskId);
+      this.deferredTaskComplete.schedule(taskId);
     });
 
     panel.addComponent(TaskPanelWired);
@@ -297,13 +313,10 @@ export class TaskPanelSystem extends createSystem({
   }
 
   private hidePanel(entity: Entity): void {
-    entity.removeComponent(PopIn2D);
-    if (!entity.hasComponent(PopOut2D)) {
-      entity.addComponent(PopOut2D);
-    }
+    beginPanelPopOut(entity);
   }
 
-  private completeTask(taskId: string): void {
+  private completeTaskNow(taskId: string): void {
     for (const task of this.queries.activeTasks.entities) {
       if (
         task.getValue(Task, "id") === taskId &&
@@ -317,11 +330,9 @@ export class TaskPanelSystem extends createSystem({
 
   private teardownPanel(panel: Entity): void {
     if (!panel.active) return;
-    if (panel.object3D) panel.object3D.visible = false;
-    panel.removeComponent(PokeInteractable).removeComponent(Follower);
-    if (panel.hasComponent(Billboard)) {
-      panel.removeComponent(Billboard);
-    }
+    panel.removeComponent(TaskPanelWired);
+    panel.removeComponent(TaskPanelInstance);
+    hidePanelEntity(panel);
   }
 
   private findPanelForAnchor(anchor: Entity): Entity | undefined {

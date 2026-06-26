@@ -1,7 +1,5 @@
 import { AssetManifest, AssetType, SessionMode, World } from "@iwsdk/core";
 
-import { publicUrl } from "./assets/public-url.js";
-
 import { Task, ActiveTask } from "./systems/task.js";
 import { TaskId } from "./systems/task-config.js";
 import { TaskFlowSystem } from "./systems/task-flow.js";
@@ -23,14 +21,9 @@ import { BrakeSystem } from "./systems/brake.js";
 import { InteractionGateSystem } from "./systems/interaction-gate.js";
 import { RecordingSystem } from "./systems/recording.js";
 import { CarriageSystem } from "./systems/carriage.js";
-import { TypewriterSystem } from "./systems/typewriter.js";
+import { HidePokeCursorSystem } from "./systems/poke-cursor.js";
 
 const assets: AssetManifest = {
-  chimeSound: {
-    url: publicUrl("audio/chime.mp3"),
-    type: AssetType.Audio,
-    priority: "background",
-  },
   phonograph: {
     url: "./gltf/phonograph.glb",
     type: AssetType.GLTF,
@@ -108,8 +101,8 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       .registerSystem(HighlightSystem)
       .registerSystem(PartInfoSystem)
       .registerSystem(AnimationSystem)
-      .registerSystem(TypewriterSystem)
       .registerSystem(SpawnSystem)
+      .registerSystem(PhonographSystem)
       .registerSystem(TaskFlowSystem)
       .registerSystem(BillboardSystem)
       .registerSystem(PlacardSystem)
@@ -119,12 +112,12 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       .registerSystem(SnapSystem)
       .registerSystem(MountSystem)
       .registerSystem(UnmountSystem)
-      .registerSystem(PhonographSystem)
       .registerSystem(CylinderSystem)
       .registerSystem(CrankSystem)
+      .registerSystem(CarriageSystem)
       .registerSystem(RecordingSystem)
       .registerSystem(BrakeSystem)
-      .registerSystem(CarriageSystem);
+      .registerSystem(HidePokeCursorSystem);
 
     world
       .createEntity()

@@ -31,6 +31,7 @@ const _engagedQuat = new Quaternion().setFromEuler(
 export const CARRIAGE_SNAP_POINT_IDS = [
   "recorder_snap_point",
   "horn_snap_point",
+  "listening_horn_snap_point",
 ] as const;
 
 export const CARRIAGE_PART_IDS = [

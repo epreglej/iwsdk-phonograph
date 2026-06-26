@@ -1,5 +1,6 @@
 import { publicUrl } from "../assets/public-url.js";
 import { getAudioContext, resumeAudioContext } from "./context.js";
+import { NARRATION_POST_DELAY_MS } from "../systems/task-config.js";
 
 let activeSource: AudioBufferSourceNode | null = null;
 let activeGain: GainNode | null = null;
@@ -7,6 +8,20 @@ let playbackId = 0;
 let onEndedListener: (() => void) | null = null;
 
 const bufferCache = new Map<string, AudioBuffer>();
+
+/** Playback rate for all narrated voice lines. */
+export const NARRATION_PLAYBACK_RATE = 0.9;
+/**
+ * Offset pitch drop from sub-1.0 playbackRate via detune (cents).
+ * 1.0 ≈ full compensation; lower keeps more slowdown but leaves some pitch drop.
+ */
+const NARRATION_PITCH_COMPENSATION = 0.85;
+
+/** Detune cents to partially restore pitch when slowing narration. */
+function narrationDetuneCents(rate: number): number {
+  if (rate >= 1) return 0;
+  return 1200 * Math.log2(1 / rate) * NARRATION_PITCH_COMPENSATION;
+}
 
 async function loadBuffer(url: string): Promise<AudioBuffer> {
   const resolved = publicUrl(url);
@@ -23,6 +38,38 @@ async function loadBuffer(url: string): Promise<AudioBuffer> {
   const buffer = await ctx.decodeAudioData(arrayBuffer);
   bufferCache.set(resolved, buffer);
   return buffer;
+}
+
+export function playInfoDetailNarration(
+  url: string | undefined,
+  onEnded: () => void,
+): () => void {
+  let cancelled = false;
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+
+  const finish = () => {
+    if (cancelled) return;
+    cancelled = true;
+    onEnded();
+  };
+
+  const scheduleClose = () => {
+    timeout = setTimeout(finish, NARRATION_POST_DELAY_MS);
+  };
+
+  if (!url) {
+    scheduleClose();
+  } else {
+    // playTaskNarration fetches + caches internally and calls scheduleClose when done
+    // (or on error), so no separate pre-fetch is needed.
+    playTaskNarration(url, 1, scheduleClose);
+  }
+
+  return () => {
+    cancelled = true;
+    if (timeout) clearTimeout(timeout);
+    stopTaskNarration();
+  };
 }
 
 export function playTaskNarration(
@@ -42,6 +89,8 @@ export function playTaskNarration(
 
       const source = ctx.createBufferSource();
       source.buffer = buffer;
+      source.playbackRate.value = NARRATION_PLAYBACK_RATE;
+      source.detune.value = narrationDetuneCents(NARRATION_PLAYBACK_RATE);
 
       const gain = ctx.createGain();
       gain.gain.value = volume;

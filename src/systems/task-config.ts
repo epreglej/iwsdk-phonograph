@@ -1,15 +1,20 @@
 /** Pause after narration before advancing/closing any narrated panel. */
 export const NARRATION_POST_DELAY_MS = 400;
 
-/** Placard panel width; keep in sync with UI card width in uikitml. */
-export const PANEL_MAX_WIDTH = 0.294;
+/** World-space max width for menu panels (meters). */
+export const MENU_PANEL_MAX_WIDTH = 0.25;
 
-/** Narration placard width; match info detail panels in part-info-config. */
-export const NARRATION_PANEL_MAX_WIDTH = 0.21;
+/** World-space max width for placards and legacy panel defaults (meters). */
+export const PANEL_MAX_WIDTH = 10;
 
-/** World-space panel width; keep in sync with menu UI card width in uikitml. */
-export const HEAD_PANEL_MAX_WIDTH = 0.318;
-export const PHONOGRAPH_PANEL_MAX_WIDTH = 0.245;
+/** @deprecated Use {@link PANEL_MAX_WIDTH}. */
+export const NARRATION_PANEL_MAX_WIDTH = PANEL_MAX_WIDTH;
+
+/** @deprecated Use {@link MENU_PANEL_MAX_WIDTH} for menus. */
+export const HEAD_PANEL_MAX_WIDTH = MENU_PANEL_MAX_WIDTH;
+
+/** @deprecated Use {@link PANEL_MAX_WIDTH}. */
+export const PHONOGRAPH_PANEL_MAX_WIDTH = PANEL_MAX_WIDTH;
 /** Vertical offset for panels above the phonograph root. */
 export const PHONOGRAPH_ABOVE_OFFSET_Y = 0.55;
 /** Forward distance from the user when the phonograph appears (meters). */
@@ -20,30 +25,19 @@ export const PHONOGRAPH_SPAWN_BELOW_HEAD_M = 0.35;
 /** Story task identifiers — phase prefix + step name. */
 export const TaskId = {
   Welcome: "welcome",
-  Complete: "complete",
-  AssemblyIntroNarrate1: "assembly_intro_narrate_1",
-  AssemblyIntroNarrate2: "assembly_intro_narrate_2",
-  AssemblyNarrate1: "assembly_narrate_1",
-  AssemblyPhonographInfo: "assembly_phonograph_info",
   AssemblyCylinderMount: "assembly_cylinder_mount",
   AssemblyRecorderMount: "assembly_recorder_mount",
   AssemblyRecordingHornMount: "assembly_recording_horn_mount",
-  AssemblyCompleteNarrate1: "assembly_complete_narrate_1",
-  AssemblyCompleteNarrate2: "assembly_complete_narrate_2",
   RecordingCrankWind: "recording_crank_wind",
   RecordingBrakeRelease: "recording_brake_release",
   RecordingCarriageLower: "recording_carriage_lower",
   RecordingSpeakNarrate: "recording_speak_narrate",
   RecordingSpeak: "recording_speak",
-  RecordingCompleteNarrate1: "recording_complete_narrate_1",
-  RecordingCompleteNarrate2: "recording_complete_narrate_2",
-  PlaybackSetupRemovePartsNarrate: "playback_setup_remove_parts_narrate",
   PlaybackSetupRecordingHornUnmount: "playback_setup_recording_horn_unmount",
   PlaybackSetupRecorderUnmount: "playback_setup_recorder_unmount",
   PlaybackSetupCarriageReturn: "playback_setup_carriage_return",
   PlaybackSetupReproducerMount: "playback_setup_reproducer_mount",
   PlaybackSetupListeningHornMount: "playback_setup_listening_horn_mount",
-  PlaybackReadyNarrate1: "playback_ready_narrate_1",
   PlaybackBrakeRelease: "playback_brake_release",
   PlaybackCarriageLower: "playback_carriage_lower",
   PlaybackListen: "playback_listen",
@@ -114,44 +108,6 @@ const HEAD_MENU_PANEL = {
   faceTarget: true,
 };
 
-const PHONOGRAPH_MENU_PANEL = {
-  maxWidth: PHONOGRAPH_PANEL_MAX_WIDTH,
-  anchor: "phonograph" as const,
-  offsetY: PHONOGRAPH_ABOVE_OFFSET_Y,
-  billboard: true,
-};
-
-function phonographNarrationPlacard(panelConfig: string): PlacardBinding[] {
-  return [
-    {
-      anchor: "part",
-      partId: "phonograph",
-      placard: {
-        panelConfig,
-        maxWidth: NARRATION_PANEL_MAX_WIDTH,
-        dismissOnSnap: false,
-        dismissOnGrab: false,
-      },
-    },
-  ];
-}
-
-function spawnPreviewNarrationPlacard(panelConfig: string): PlacardBinding[] {
-  return [
-    {
-      anchor: "phonograph_spawn",
-      placard: {
-        panelConfig,
-        maxWidth: NARRATION_PANEL_MAX_WIDTH,
-        offsetY: PHONOGRAPH_ABOVE_OFFSET_Y,
-        dismissOnSnap: false,
-        dismissOnGrab: false,
-        skipPartPopInWait: true,
-      },
-    },
-  ];
-}
-
 const TASKS: TaskDef[] = [
   {
     id: TaskId.Welcome,
@@ -160,28 +116,6 @@ const TASKS: TaskDef[] = [
       panelConfig: "./ui/menus/welcome.json",
       buttonId: "welcome-begin-button",
     },
-  },
-  {
-    id: TaskId.AssemblyIntroNarrate1,
-    placards: spawnPreviewNarrationPlacard("./ui/assembly/intro-narrate-1.json"),
-    narration: "./audio/intro-1.wav",
-    afterNarrationMs: NARRATION_POST_DELAY_MS,
-  },
-  {
-    id: TaskId.AssemblyIntroNarrate2,
-    placards: spawnPreviewNarrationPlacard("./ui/assembly/intro-narrate-2.json"),
-    narration: "./audio/intro-2.wav",
-    afterNarrationMs: NARRATION_POST_DELAY_MS,
-  },
-  {
-    id: TaskId.AssemblyPhonographInfo,
-    nameTagPartId: "phonograph",
-  },
-  {
-    id: TaskId.AssemblyNarrate1,
-    placards: phonographNarrationPlacard("./ui/assembly/assembly-narrate-1.json"),
-    narration: "./audio/assembly-1.wav",
-    afterNarrationMs: NARRATION_POST_DELAY_MS,
   },
   {
     id: TaskId.AssemblyCylinderMount,
@@ -207,22 +141,6 @@ const TASKS: TaskDef[] = [
     interactive: true,
   },
   {
-    id: TaskId.AssemblyCompleteNarrate1,
-    placards: phonographNarrationPlacard(
-      "./ui/assembly/assembly-complete-narrate-1.json",
-    ),
-    narration: "./audio/assembly-2.wav",
-    afterNarrationMs: NARRATION_POST_DELAY_MS,
-  },
-  {
-    id: TaskId.AssemblyCompleteNarrate2,
-    placards: phonographNarrationPlacard(
-      "./ui/assembly/assembly-complete-narrate-2.json",
-    ),
-    narration: "./audio/recording-1.wav",
-    afterNarrationMs: NARRATION_POST_DELAY_MS,
-  },
-  {
     id: TaskId.RecordingCrankWind,
     partId: "crank",
     nameTagPartId: "crank",
@@ -239,16 +157,12 @@ const TASKS: TaskDef[] = [
     id: TaskId.RecordingCarriageLower,
     partId: "carriage",
     nameTagPartId: "carriage",
-    actionNameTagPartId: "carriage",
     interactive: true,
   },
   {
     id: TaskId.RecordingSpeakNarrate,
-    placards: phonographNarrationPlacard(
-      "./ui/recording/speak-into-horn-narrate.json",
-    ),
-    narration: "./audio/recording-2.wav",
-    afterNarrationMs: NARRATION_POST_DELAY_MS,
+    nameTagPartId: "recording_horn",
+    afterNarrationMs: 1500,
     startRecordingOnStart: true,
   },
   {
@@ -256,29 +170,6 @@ const TASKS: TaskDef[] = [
     partId: "brake",
     nameTagPartId: "brake",
     interactive: true,
-  },
-  {
-    id: TaskId.RecordingCompleteNarrate1,
-    placards: phonographNarrationPlacard(
-      "./ui/playback-setup/reassemble-narrate-1.json",
-    ),
-    narration: "./audio/reassembly-1.wav",
-    afterNarrationMs: NARRATION_POST_DELAY_MS,
-  },
-  {
-    id: TaskId.RecordingCompleteNarrate2,
-    placards: phonographNarrationPlacard(
-      "./ui/playback-setup/reassemble-narrate-2.json",
-    ),
-    narration: "./audio/reassembly-2.wav",
-    afterNarrationMs: NARRATION_POST_DELAY_MS,
-  },
-  {
-    id: TaskId.PlaybackSetupRemovePartsNarrate,
-    placards: phonographNarrationPlacard(
-      "./ui/playback-setup/remove-recording-parts-narrate.json",
-    ),
-    afterNarrationMs: 5500,
   },
   {
     id: TaskId.PlaybackSetupRecordingHornUnmount,
@@ -315,12 +206,6 @@ const TASKS: TaskDef[] = [
     interactive: true,
   },
   {
-    id: TaskId.PlaybackReadyNarrate1,
-    placards: phonographNarrationPlacard("./ui/playback/ready-narrate-1.json"),
-    narration: "./audio/playback-1.wav",
-    afterNarrationMs: NARRATION_POST_DELAY_MS,
-  },
-  {
     id: TaskId.PlaybackBrakeRelease,
     partId: "brake",
     nameTagPartId: "brake",
@@ -333,15 +218,6 @@ const TASKS: TaskDef[] = [
     interactive: true,
   },
   { id: TaskId.PlaybackListen },
-  {
-    id: TaskId.Complete,
-    panel: {
-      ...PHONOGRAPH_MENU_PANEL,
-      panelConfig: "./ui/menus/complete.json",
-      buttonId: "complete-restart-button",
-      deferCompleteOnDismiss: false,
-    },
-  },
 ];
 
 export const TASK_ORDER: string[] = TASKS.map((task) => task.id);

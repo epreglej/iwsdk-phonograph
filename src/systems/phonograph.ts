@@ -36,7 +36,7 @@ export class PhonographSystem extends createSystem({
   activeSetupTask: {
     required: [Task, ActiveTask],
     excluded: [CompletedTask],
-    where: [eq(Task, "id", TaskId.AssemblyPhonographInfo)],
+    where: [eq(Task, "id", TaskId.AssemblyCylinderMount)],
   },
   completedWelcomeTask: {
     required: [Task, ActiveTask, CompletedTask],

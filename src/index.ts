@@ -6,7 +6,6 @@ import { TaskFlowSystem } from "./systems/task-flow.js";
 import { SpawnSystem } from "./systems/spawn.js";
 import { AnimationSystem } from "./systems/animation.js";
 import { BillboardSystem } from "./systems/billboard.js";
-import { PlacardSystem } from "./systems/placard.js";
 import { PartInfoSystem } from "./systems/part-info.js";
 import { TaskPanelSystem } from "./systems/task-panel.js";
 import { WorldResetSystem } from "./systems/world-reset.js";
@@ -105,7 +104,6 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       .registerSystem(PhonographSystem)
       .registerSystem(TaskFlowSystem)
       .registerSystem(BillboardSystem)
-      .registerSystem(PlacardSystem)
       .registerSystem(TaskPanelSystem)
       .registerSystem(InteractionGateSystem)
       .registerSystem(WorldResetSystem)

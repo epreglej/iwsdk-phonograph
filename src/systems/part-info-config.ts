@@ -1,7 +1,7 @@
-import { ACTION_NAME_TAGS_BY_TASK, TaskId } from "./task-config.js";
+import { PANEL_MAX_WIDTH } from "./task-config.js";
 
-const NAME_TAG_MAX_WIDTH = 0.14;
-const DETAIL_PANEL_MAX_WIDTH = 0.21;
+const NAME_TAG_MAX_WIDTH = 0.15;
+const DETAIL_PANEL_MAX_WIDTH = PANEL_MAX_WIDTH;
 const PANEL_OFFSET_Y = 0.11;
 const HORN_PANEL_OFFSET_Y = PANEL_OFFSET_Y * 1.2;
 
@@ -31,9 +31,9 @@ function spec(
 ): PartNameTagSpec {
   return {
     nameTagConfig: `./ui/info/${slug}-name-tag.json`,
-    detailConfig: `./ui/info/${slug}-detail.json`,
-    detailNarration: `./audio/${slug}-1.wav`,
-    infoButtonId: `${slug}-info-button`,
+    detailConfig: "",
+    detailNarration: "",
+    infoButtonId: "",
     ...defaults,
     ...overrides,
   };
@@ -55,21 +55,7 @@ export const PART_NAME_TAG_SPECS: Record<string, PartNameTagSpec> = {
 export const TASK_NAME_TAG_SPECS: Record<
   string,
   Record<string, PartNameTagSpec>
-> = {
-  [TaskId.AssemblyPhonographInfo]: {
-    phonograph: {
-      nameTagConfig: "./ui/info/phonograph-intro-name-tag.json",
-      detailConfig: "./ui/info/phonograph-intro-detail.json",
-      detailNarration: "./audio/phonograph-1.wav",
-      infoButtonId: "phonograph-intro-info-button",
-      maxWidth: NAME_TAG_MAX_WIDTH,
-      detailMaxWidth: DETAIL_PANEL_MAX_WIDTH,
-      offsetX: 0,
-      offsetY: 0.385,
-      offsetZ: 0,
-    },
-  },
-};
+> = {};
 
 export function partNameTagSpecFor(partId: string): PartNameTagSpec | undefined {
   return PART_NAME_TAG_SPECS[partId];
@@ -87,26 +73,7 @@ export interface PartActionNameTagSpec {
 export const TASK_ACTION_NAME_TAG_SPECS: Record<
   string,
   Record<string, PartActionNameTagSpec>
-> = {
-  [TaskId.RecordingCarriageLower]: {
-    carriage: {
-      nameTagConfig: "./ui/info/start-recording-tag.json",
-      maxWidth: 0.15,
-      offsetX: 0,
-      offsetY: PANEL_OFFSET_Y,
-      offsetZ: 0,
-    },
-  },
-  [TaskId.RecordingSpeak]: {
-    brake: {
-      nameTagConfig: "./ui/info/stop-recording-tag.json",
-      maxWidth: 0.15,
-      offsetX: 0,
-      offsetY: PANEL_OFFSET_Y,
-      offsetZ: 0,
-    },
-  },
-};
+> = {};
 
 export function nameTagSpecForTaskPart(
   taskId: string,
@@ -114,18 +81,6 @@ export function nameTagSpecForTaskPart(
 ): PartNameTagSpec | undefined {
   const taskSpec = TASK_NAME_TAG_SPECS[taskId]?.[partId];
   if (taskSpec) return taskSpec;
-
-  const action = TASK_ACTION_NAME_TAG_SPECS[taskId]?.[partId];
-  const usesDualActionTag = ACTION_NAME_TAGS_BY_TASK[taskId]?.includes(partId);
-  if (action && !usesDualActionTag) {
-    return {
-      ...action,
-      detailConfig: "",
-      detailNarration: "",
-      detailMaxWidth: DETAIL_PANEL_MAX_WIDTH,
-      infoButtonId: "",
-    };
-  }
   return partNameTagSpecFor(partId);
 }
 
@@ -133,11 +88,10 @@ export function actionNameTagSpecForTaskPart(
   taskId: string,
   partId: string,
 ): PartActionNameTagSpec | undefined {
-  if (!ACTION_NAME_TAGS_BY_TASK[taskId]?.includes(partId)) return undefined;
   return TASK_ACTION_NAME_TAG_SPECS[taskId]?.[partId];
 }
 
-export const MICRO_INSTRUCTION_MAX_WIDTH = 0.22;
+export const MICRO_INSTRUCTION_MAX_WIDTH = PANEL_MAX_WIDTH;
 /** World-space offset above the part; keep clear of name tags at PANEL_OFFSET_Y. */
 export const MICRO_INSTRUCTION_OFFSET_Y = 0.28;
 /** World-space offset below the part (negative Y). */
@@ -160,44 +114,11 @@ export interface MicroInstructionBinding {
   completeTaskOnInfoClose?: boolean;
 }
 
-const microStep = (
-  panelConfig: string,
-  overrides: Partial<MicroInstructionStep> = {},
-): MicroInstructionStep => ({
-  panelConfig,
-  maxWidth: MICRO_INSTRUCTION_MAX_WIDTH,
-  offsetX: 0,
-  offsetY: MICRO_INSTRUCTION_OFFSET_Y,
-  offsetZ: 0,
-  ...overrides,
-});
-
 /** Task-specific micro instructions shown above a part during interactive steps. */
 export const TASK_MICRO_INSTRUCTION_SPECS: Record<
   string,
   Record<string, MicroInstructionBinding>
-> = {
-  [TaskId.AssemblyPhonographInfo]: {
-    phonograph: {
-      flow: "info-tutorial",
-      completeTaskOnInfoClose: true,
-      steps: [
-        microStep("./ui/instructions/press-info-button.json", {
-          offsetY: 0.49,
-        }),
-      ],
-    },
-  },
-  [TaskId.AssemblyCylinderMount]: {
-    cylinder: {
-      steps: [
-        microStep("./ui/instructions/pinch-grab.json", {
-          offsetY: MICRO_INSTRUCTION_OFFSET_Y,
-        }),
-      ],
-    },
-  },
-};
+> = {};
 
 export function microInstructionBindingForTaskPart(
   taskId: string,

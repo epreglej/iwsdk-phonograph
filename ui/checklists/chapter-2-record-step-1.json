@@ -7,7 +7,7 @@
         "sourceTag": "span",
         "type": "custom",
         "children": [
-          "Chapter 1: Assemble"
+          "Chapter 2: Record"
         ],
         "properties": {
           "class": "title-label"
@@ -18,7 +18,7 @@
         "sourceTag": "span",
         "type": "custom",
         "children": [
-          "• Mount the cylinder"
+          "• Wind the crank"
         ],
         "properties": {
           "class": "row current"
@@ -29,7 +29,7 @@
         "sourceTag": "span",
         "type": "custom",
         "children": [
-          "• Attach the recorder"
+          "• Release the brake"
         ],
         "properties": {
           "class": "row"
@@ -40,12 +40,34 @@
         "sourceTag": "span",
         "type": "custom",
         "children": [
-          "• Fit the recording horn"
+          "• Lower the carriage"
         ],
         "properties": {
           "class": "row"
         },
         "dataUid": "uid-5"
+      },
+      {
+        "sourceTag": "span",
+        "type": "custom",
+        "children": [
+          "• Speak into the horn"
+        ],
+        "properties": {
+          "class": "row"
+        },
+        "dataUid": "uid-6"
+      },
+      {
+        "sourceTag": "span",
+        "type": "custom",
+        "children": [
+          "• Engage the brake"
+        ],
+        "properties": {
+          "class": "row"
+        },
+        "dataUid": "uid-7"
       }
     ],
     "properties": {
@@ -98,6 +120,16 @@
       "content": {
         "color": "rgba(255, 255, 255, 0.92)"
       }
+    },
+    "recording": {
+      "content": {
+        "color": "rgba(0, 230, 38, 0.95)"
+      }
+    },
+    "stopping": {
+      "content": {
+        "color": "rgba(255, 35, 23, 0.95)"
+      }
     }
   },
   "ranges": {
@@ -141,54 +173,94 @@
         "column": 14
       }
     },
+    "recording": {
+      "start": {
+        "line": 41,
+        "column": 6
+      },
+      "end": {
+        "line": 41,
+        "column": 16
+      }
+    },
+    "stopping": {
+      "start": {
+        "line": 45,
+        "column": 6
+      },
+      "end": {
+        "line": 45,
+        "column": 15
+      }
+    },
     "uid-1": {
       "start": {
-        "line": 43,
+        "line": 51,
         "column": 0
       },
       "end": {
-        "line": 48,
+        "line": 58,
         "column": 6
       }
     },
     "uid-2": {
       "start": {
-        "line": 44,
+        "line": 52,
         "column": 2
       },
       "end": {
-        "line": 44,
-        "column": 54
+        "line": 52,
+        "column": 52
       }
     },
     "uid-3": {
       "start": {
-        "line": 45,
+        "line": 53,
         "column": 2
       },
       "end": {
-        "line": 45,
-        "column": 55
+        "line": 53,
+        "column": 51
       }
     },
     "uid-4": {
       "start": {
-        "line": 46,
+        "line": 54,
         "column": 2
       },
       "end": {
-        "line": 46,
-        "column": 48
+        "line": 54,
+        "column": 46
       }
     },
     "uid-5": {
       "start": {
-        "line": 47,
+        "line": 55,
         "column": 2
       },
       "end": {
-        "line": 47,
-        "column": 51
+        "line": 55,
+        "column": 47
+      }
+    },
+    "uid-6": {
+      "start": {
+        "line": 56,
+        "column": 2
+      },
+      "end": {
+        "line": 56,
+        "column": 48
+      }
+    },
+    "uid-7": {
+      "start": {
+        "line": 57,
+        "column": 2
+      },
+      "end": {
+        "line": 57,
+        "column": 45
       }
     }
   }

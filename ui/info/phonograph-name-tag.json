@@ -7,17 +7,7 @@
         "sourceTag": "button",
         "type": "custom",
         "children": [
-          {
-            "sourceTag": "span",
-            "type": "custom",
-            "children": [
-              "?"
-            ],
-            "properties": {
-              "class": "help-icon"
-            },
-            "dataUid": "uid-3"
-          }
+          "?"
         ],
         "properties": {
           "id": "phonograph-info-button",
@@ -38,13 +28,13 @@
             "properties": {
               "class": "name-label"
             },
-            "dataUid": "uid-5"
+            "dataUid": "uid-4"
           }
         ],
         "properties": {
           "class": "name-tag"
         },
-        "dataUid": "uid-4"
+        "dataUid": "uid-3"
       }
     ],
     "properties": {
@@ -72,8 +62,17 @@
         "minWidth": "36px",
         "minHeight": "36px",
         "borderRadius": 18,
+        "display": "flex",
+        "flexDirection": "row",
         "alignItems": "center",
         "justifyContent": "center",
+        "paddingLeft": "0px",
+        "paddingRight": "0px",
+        "fontSize": "18px",
+        "fontWeight": "700",
+        "color": "rgba(255, 255, 255, 0.95)",
+        "textAlign": "center",
+        "lineHeight": "1",
         "backgroundColor": "rgb(24, 24, 26)",
         "borderWidth": "1px",
         "borderColor": "rgba(255, 255, 255, 0.35)",
@@ -83,13 +82,6 @@
           "backgroundColor": "rgba(24, 24, 26, 0.96)",
           "borderColor": "rgba(255, 255, 255, 0.44)"
         }
-      }
-    },
-    "help-icon": {
-      "content": {
-        "fontSize": "16px",
-        "fontWeight": "700",
-        "color": "rgba(255, 255, 255, 0.95)"
       }
     },
     "name-tag": {
@@ -142,83 +134,63 @@
         "column": 14
       }
     },
-    "help-icon": {
-      "start": {
-        "line": 31,
-        "column": 2
-      },
-      "end": {
-        "line": 31,
-        "column": 12
-      }
-    },
     "name-tag": {
       "start": {
-        "line": 37,
+        "line": 40,
         "column": 2
       },
       "end": {
-        "line": 37,
+        "line": 40,
         "column": 11
       }
     },
     "name-label": {
       "start": {
-        "line": 55,
+        "line": 58,
         "column": 2
       },
       "end": {
-        "line": 55,
+        "line": 58,
         "column": 13
       }
     },
     "uid-1": {
       "start": {
-        "line": 64,
+        "line": 67,
         "column": 0
       },
       "end": {
-        "line": 71,
+        "line": 72,
         "column": 6
       }
     },
     "uid-2": {
       "start": {
-        "line": 65,
-        "column": 2
-      },
-      "end": {
-        "line": 67,
-        "column": 11
-      }
-    },
-    "uid-3": {
-      "start": {
-        "line": 66,
-        "column": 4
-      },
-      "end": {
-        "line": 66,
-        "column": 36
-      }
-    },
-    "uid-4": {
-      "start": {
         "line": 68,
         "column": 2
       },
       "end": {
-        "line": 70,
+        "line": 68,
+        "column": 68
+      }
+    },
+    "uid-3": {
+      "start": {
+        "line": 69,
+        "column": 2
+      },
+      "end": {
+        "line": 71,
         "column": 8
       }
     },
-    "uid-5": {
+    "uid-4": {
       "start": {
-        "line": 69,
+        "line": 70,
         "column": 4
       },
       "end": {
-        "line": 69,
+        "line": 70,
         "column": 46
       }
     }

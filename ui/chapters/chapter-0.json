@@ -8,13 +8,11 @@
         "type": "custom",
         "children": [
           {
-            "sourceTag": "span",
+            "sourceTag": "arrowrighticon",
             "type": "custom",
-            "children": [
-              ">"
-            ],
+            "children": [],
             "properties": {
-              "class": "next-icon"
+              "color": "rgba(255, 255, 255, 0.95)"
             },
             "dataUid": "uid-3"
           }
@@ -44,7 +42,7 @@
             "sourceTag": "span",
             "type": "custom",
             "children": [
-              "In this short experience, you will record your voice on this phonograph and play it back."
+              "In this short interactive experience, you will learn how to record your voice on a phonograph, and then play it back."
             ],
             "properties": {
               "class": "body-text"
@@ -122,8 +120,14 @@
         "minWidth": "44px",
         "minHeight": "44px",
         "borderRadius": 22,
+        "display": "flex",
+        "flexDirection": "row",
         "alignItems": "center",
         "justifyContent": "center",
+        "paddingTop": "12px",
+        "paddingBottom": "12px",
+        "paddingLeft": "12px",
+        "paddingRight": "12px",
         "backgroundColor": "rgb(24, 24, 26)",
         "borderWidth": "1px",
         "borderColor": "rgba(255, 255, 255, 0.35)",
@@ -133,13 +137,6 @@
           "backgroundColor": "rgba(24, 24, 26, 0.96)",
           "borderColor": "rgba(255, 255, 255, 0.44)"
         }
-      }
-    },
-    "next-icon": {
-      "content": {
-        "fontSize": "18px",
-        "fontWeight": "700",
-        "color": "rgba(255, 255, 255, 0.95)"
       }
     }
   },
@@ -194,16 +191,6 @@
         "column": 14
       }
     },
-    "next-icon": {
-      "start": {
-        "line": 67,
-        "column": 2
-      },
-      "end": {
-        "line": 67,
-        "column": 12
-      }
-    },
     "uid-1": {
       "start": {
         "line": 75,
@@ -230,8 +217,8 @@
         "column": 4
       },
       "end": {
-        "line": 77,
-        "column": 36
+        "line": 78,
+        "column": 2
       }
     },
     "uid-4": {
@@ -261,7 +248,7 @@
       },
       "end": {
         "line": 81,
-        "column": 124
+        "column": 152
       }
     }
   }

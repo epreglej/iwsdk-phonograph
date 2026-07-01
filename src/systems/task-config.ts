@@ -49,6 +49,7 @@ export const TaskId = {
   PlaybackSetupCarriageReturn: "playback_setup_carriage_return",
   PlaybackSetupReproducerMount: "playback_setup_reproducer_mount",
   PlaybackSetupListeningHornMount: "playback_setup_listening_horn_mount",
+  PlaybackListenIntro: "playback_listen_intro",
   PlaybackBrakeRelease: "playback_brake_release",
   PlaybackCarriageLower: "playback_carriage_lower",
   PlaybackListen: "playback_listen",
@@ -253,6 +254,20 @@ const TASKS: TaskDef[] = [
     snapPointId: "listening_horn_snap_point",
     nameTagPartId: "listening_horn",
     interactive: true,
+  },
+  {
+    id: TaskId.PlaybackListenIntro,
+    panel: {
+      panelConfig: "./ui/chapters/chapter-4.json",
+      maxWidth: PHONOGRAPH_CHAPTER_PANEL_MAX_WIDTH,
+      anchor: "phonograph",
+      offsetY: PHONOGRAPH_CHAPTER_OFFSET_Y,
+      offsetZ: PHONOGRAPH_CHAPTER_OFFSET_Z,
+      faceTarget: true,
+      billboard: true,
+      buttonId: "playback-listen-intro-button",
+      deferCompleteOnDismiss: true,
+    },
   },
   {
     id: TaskId.PlaybackBrakeRelease,

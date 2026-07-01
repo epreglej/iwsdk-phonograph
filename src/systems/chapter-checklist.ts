@@ -31,12 +31,18 @@ const RECORDING_CHECKLIST_CONFIGS = [
   "./ui/checklists/chapter-2-record-step-5.json",
 ];
 
-const PLAYBACK_CHECKLIST_CONFIGS = [
+const PLAYBACK_SETUP_CHECKLIST_CONFIGS = [
   "./ui/checklists/chapter-3-playback-step-1.json",
   "./ui/checklists/chapter-3-playback-step-2.json",
   "./ui/checklists/chapter-3-playback-step-3.json",
   "./ui/checklists/chapter-3-playback-step-4.json",
   "./ui/checklists/chapter-3-playback-step-5.json",
+];
+
+const PLAYBACK_LISTEN_CHECKLIST_CONFIGS = [
+  "./ui/checklists/chapter-4-playback-step-1.json",
+  "./ui/checklists/chapter-4-playback-step-2.json",
+  "./ui/checklists/chapter-4-playback-step-3.json",
 ];
 
 /**
@@ -60,7 +66,7 @@ const RECORDING_CHECKLIST_ORDER = [
   TaskId.RecordingSpeak,
 ] as const;
 
-const PLAYBACK_CHECKLIST_ORDER = [
+const PLAYBACK_SETUP_CHECKLIST_ORDER = [
   TaskId.PlaybackSetupRecordingHornUnmount,
   TaskId.PlaybackSetupRecorderUnmount,
   TaskId.PlaybackSetupCarriageReturn,
@@ -68,7 +74,13 @@ const PLAYBACK_CHECKLIST_ORDER = [
   TaskId.PlaybackSetupListeningHornMount,
 ] as const;
 
-type ChecklistGroup = "assembly" | "recording" | "playback";
+const PLAYBACK_LISTEN_CHECKLIST_ORDER = [
+  TaskId.PlaybackBrakeRelease,
+  TaskId.PlaybackCarriageLower,
+  TaskId.PlaybackListen,
+] as const;
+
+type ChecklistGroup = "assembly" | "recording" | "playbackSetup" | "playbackListen";
 
 interface ChecklistState {
   group: ChecklistGroup;
@@ -86,10 +98,19 @@ function checklistState(taskId: string): ChecklistState | null {
   );
   if (recordingStep >= 0) return { group: "recording", step: recordingStep };
 
-  const playbackStep = PLAYBACK_CHECKLIST_ORDER.indexOf(
-    taskId as (typeof PLAYBACK_CHECKLIST_ORDER)[number],
+  const playbackSetupStep = PLAYBACK_SETUP_CHECKLIST_ORDER.indexOf(
+    taskId as (typeof PLAYBACK_SETUP_CHECKLIST_ORDER)[number],
   );
-  if (playbackStep >= 0) return { group: "playback", step: playbackStep };
+  if (playbackSetupStep >= 0) {
+    return { group: "playbackSetup", step: playbackSetupStep };
+  }
+
+  const playbackListenStep = PLAYBACK_LISTEN_CHECKLIST_ORDER.indexOf(
+    taskId as (typeof PLAYBACK_LISTEN_CHECKLIST_ORDER)[number],
+  );
+  if (playbackListenStep >= 0) {
+    return { group: "playbackListen", step: playbackListenStep };
+  }
 
   return null;
 }
@@ -131,7 +152,8 @@ export class ChapterChecklistSystem extends createSystem({
         if (
           taskId === TaskId.AssemblyRecordingHornMount ||
           taskId === TaskId.RecordingSpeak ||
-          taskId === TaskId.PlaybackSetupListeningHornMount
+          taskId === TaskId.PlaybackSetupListeningHornMount ||
+          taskId === TaskId.PlaybackListen
         ) {
           this.hideChecklist();
         }
@@ -217,7 +239,9 @@ export class ChapterChecklistSystem extends createSystem({
         ? ASSEMBLY_CHECKLIST_CONFIGS
         : this.currentGroup === "recording"
           ? RECORDING_CHECKLIST_CONFIGS
-          : PLAYBACK_CHECKLIST_CONFIGS;
+          : this.currentGroup === "playbackSetup"
+            ? PLAYBACK_SETUP_CHECKLIST_CONFIGS
+            : PLAYBACK_LISTEN_CHECKLIST_CONFIGS;
 
     for (let step = 0; step < configs.length; step += 1) {
       const config = configs[step];

@@ -1,6 +1,6 @@
 import { AssetManifest, AssetType, SessionMode, World } from "@iwsdk/core";
 import * as horizonKit from "@pmndrs/uikit-horizon";
-import { ArrowRightIcon } from "@pmndrs/uikit-lucide";
+import { ArrowRightIcon, CircleDotIcon } from "@pmndrs/uikit-lucide";
 
 import { Task, ActiveTask } from "./systems/task.js";
 import { TaskId } from "./systems/task-config.js";
@@ -95,7 +95,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
     sceneUnderstanding: false,
     environmentRaycast: true,
     spatialUI: {
-      kits: [horizonKit, { ArrowRightIcon }],
+      kits: [horizonKit, { ArrowRightIcon, CircleDotIcon }],
     },
   },
 }).then((world) => {

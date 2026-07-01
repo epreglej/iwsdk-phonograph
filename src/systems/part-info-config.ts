@@ -84,6 +84,33 @@ export const TASK_NAME_TAG_SPECS: Record<
       infoButtonId: "",
     },
   },
+  [TaskId.PlaybackSetupCarriageReturn]: {
+    carriage: {
+      ...spec("carriage", { offsetY: 0.17 }),
+      nameTagConfig: "./ui/info/carriage-label-name-tag.json",
+      infoButtonId: "",
+      detailConfig: "",
+      detailNarration: "",
+    },
+  },
+  [TaskId.PlaybackBrakeRelease]: {
+    brake: {
+      ...spec("brake"),
+      nameTagConfig: "./ui/info/brake-label-name-tag.json",
+      infoButtonId: "",
+      detailConfig: "",
+      detailNarration: "",
+    },
+  },
+  [TaskId.PlaybackCarriageLower]: {
+    carriage: {
+      ...spec("carriage", { offsetY: 0.17 }),
+      nameTagConfig: "./ui/info/carriage-label-name-tag.json",
+      infoButtonId: "",
+      detailConfig: "",
+      detailNarration: "",
+    },
+  },
 };
 
 export function partNameTagSpecFor(partId: string): PartNameTagSpec | undefined {

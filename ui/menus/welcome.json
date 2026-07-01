@@ -7,7 +7,7 @@
         "sourceTag": "span",
         "type": "custom",
         "children": [
-          "The Phonograph"
+          "Phonograph"
         ],
         "properties": {
           "class": "title"
@@ -18,7 +18,7 @@
         "sourceTag": "span",
         "type": "custom",
         "children": [
-          "Record your voice on a wax cylinder phonograph"
+          "Record your voice on wax, then hear it play back."
         ],
         "properties": {
           "class": "subtitle"
@@ -46,97 +46,81 @@
           "class": "menu-button"
         },
         "dataUid": "uid-4"
-      },
-      {
-        "sourceTag": "button",
-        "type": "custom",
-        "children": [
-          {
-            "sourceTag": "span",
-            "type": "custom",
-            "children": [
-              "Settings"
-            ],
-            "properties": {
-              "class": "menu-button-label"
-            },
-            "dataUid": "uid-7"
-          }
-        ],
-        "properties": {
-          "id": "settings-button",
-          "class": "menu-button"
-        },
-        "dataUid": "uid-6"
       }
     ],
     "properties": {
       "id": "panel-root",
-      "class": "menu-card"
+      "class": "container"
     },
     "dataUid": "uid-1"
   },
   "classes": {
-    "menu-card": {
+    "container": {
       "content": {
-        "width": "273px",
+        "width": "100px",
+        "maxWidth": "100px",
+        "borderRadius": 10,
+        "backgroundColor": "rgba(20, 20, 24, 0.92)",
+        "borderWidth": "1px",
+        "borderColor": "rgba(255, 255, 255, 0.18)",
+        "paddingTop": "4px",
+        "paddingBottom": "4px",
+        "paddingLeft": "4px",
+        "paddingRight": "4px",
         "display": "flex",
         "flexDirection": "column",
-        "borderRadius": 22,
-        "backgroundColor": "rgb(24, 24, 26)",
-        "borderWidth": "1px",
-        "borderColor": "rgba(255, 255, 255, 0.4)",
-        "paddingTop": "18px",
-        "paddingBottom": "14px",
-        "paddingLeft": "18px",
-        "paddingRight": "18px"
+        "alignItems": "center"
       }
     },
     "title": {
       "content": {
-        "fontSize": "30px",
-        "fontWeight": "700",
-        "color": "#ffffff",
-        "marginBottom": "4px",
-        "textAlign": "center"
+        "fontSize": "2px",
+        "fontWeight": "600",
+        "color": "rgba(255, 255, 255, 0.96)",
+        "marginBottom": "0",
+        "textAlign": "center",
+        "lineHeight": "1"
       }
     },
     "subtitle": {
       "content": {
-        "fontSize": "14px",
-        "fontWeight": "500",
-        "color": "rgba(255, 255, 255, 0.95)",
-        "marginBottom": "16px",
-        "textAlign": "center"
+        "fontSize": "2px",
+        "fontWeight": "600",
+        "color": "rgba(255, 255, 255, 0.96)",
+        "marginBottom": "0",
+        "textAlign": "center",
+        "lineHeight": "1"
       }
     },
     "menu-button": {
       "content": {
         "width": "100%",
-        "marginTop": "8px",
-        "borderRadius": 16,
-        "paddingTop": "12px",
-        "paddingBottom": "12px",
+        "borderRadius": 4,
+        "paddingTop": "0",
+        "paddingBottom": "0",
+        "paddingLeft": "0",
+        "paddingRight": "0",
         "alignItems": "center",
         "justifyContent": "center",
-        "backgroundColor": "rgba(255, 255, 255, 0.1)",
+        "backgroundColor": "rgba(255, 255, 255, 0.14)",
         "borderWidth": "1px",
-        "borderColor": "rgba(255, 255, 255, 0.15)",
+        "borderColor": "rgba(255, 255, 255, 0.18)",
         "hover": {
-          "backgroundColor": "rgba(255, 255, 255, 0.18)"
+          "backgroundColor": "rgba(255, 255, 255, 0.24)"
         }
       }
     },
     "menu-button-label": {
       "content": {
-        "fontSize": "14px",
+        "fontSize": "2px",
         "fontWeight": "600",
-        "color": "rgba(255, 255, 255, 0.95)"
+        "color": "rgba(255, 255, 255, 0.96)",
+        "lineHeight": "1"
       }
     }
   },
   "ranges": {
-    "menu-card": {
+    "container": {
       "start": {
         "line": 1,
         "column": 2
@@ -148,112 +132,92 @@
     },
     "title": {
       "start": {
-        "line": 15,
+        "line": 18,
         "column": 2
       },
       "end": {
-        "line": 15,
+        "line": 18,
         "column": 8
       }
     },
     "subtitle": {
       "start": {
-        "line": 23,
+        "line": 27,
         "column": 2
       },
       "end": {
-        "line": 23,
+        "line": 27,
         "column": 11
       }
     },
     "menu-button": {
       "start": {
-        "line": 31,
+        "line": 36,
         "column": 2
       },
       "end": {
-        "line": 31,
+        "line": 36,
         "column": 14
       }
     },
     "menu-button-label": {
       "start": {
-        "line": 48,
+        "line": 54,
         "column": 2
       },
       "end": {
-        "line": 48,
+        "line": 54,
         "column": 20
       }
     },
     "uid-1": {
       "start": {
-        "line": 55,
+        "line": 62,
         "column": 0
       },
       "end": {
-        "line": 66,
+        "line": 68,
         "column": 6
       }
     },
     "uid-2": {
       "start": {
-        "line": 56,
+        "line": 63,
         "column": 2
       },
       "end": {
-        "line": 56,
-        "column": 43
+        "line": 63,
+        "column": 39
       }
     },
     "uid-3": {
       "start": {
-        "line": 57,
+        "line": 64,
         "column": 2
       },
       "end": {
-        "line": 57,
-        "column": 78
+        "line": 64,
+        "column": 81
       }
     },
     "uid-4": {
       "start": {
-        "line": 59,
+        "line": 65,
         "column": 2
       },
       "end": {
-        "line": 61,
+        "line": 67,
         "column": 11
       }
     },
     "uid-5": {
       "start": {
-        "line": 60,
+        "line": 66,
         "column": 4
       },
       "end": {
-        "line": 60,
+        "line": 66,
         "column": 48
-      }
-    },
-    "uid-6": {
-      "start": {
-        "line": 63,
-        "column": 2
-      },
-      "end": {
-        "line": 65,
-        "column": 11
-      }
-    },
-    "uid-7": {
-      "start": {
-        "line": 64,
-        "column": 4
-      },
-      "end": {
-        "line": 64,
-        "column": 51
       }
     }
   }

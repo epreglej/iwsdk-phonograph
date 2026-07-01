@@ -70,18 +70,13 @@ export const TASK_NAME_TAG_SPECS: Record<
   string,
   Record<string, PartNameTagSpec>
 > = {
-  [TaskId.RecordingCarriageLower]: {
-    carriage: {
-      ...spec("carriage", { offsetY: 0.17 }),
-      nameTagConfig: "./ui/info/carriage-start-recording-name-tag.json",
-      infoButtonId: "",
-    },
-  },
   [TaskId.RecordingSpeak]: {
     brake: {
       ...spec("brake"),
-      nameTagConfig: "./ui/info/brake-stop-recording-name-tag.json",
+      nameTagConfig: "./ui/info/brake-label-name-tag.json",
       infoButtonId: "",
+      detailConfig: "",
+      detailNarration: "",
     },
   },
   [TaskId.PlaybackSetupRecordingHornUnmount]: {

@@ -11,20 +11,41 @@ import {
 import { resumeAudioContext } from "../audio/context.js";
 import { Task, ActiveTask, CompletedTask } from "./task.js";
 import { TaskId } from "./task-config.js";
-import { Phonograph, PhonographPart } from "./phonograph.js";
-import {
-  Highlight,
-  RECORDING_INPUT_HIGHLIGHT_COLOR,
-} from "./highlight.js";
+import { Phonograph } from "./phonograph.js";
 import { PopIn2D } from "./animation.js";
 import { Billboard } from "./billboard.js";
 import { hidePanelEntity, stripPanelSurface } from "./panel-lifecycle.js";
 
 const RECORDING_PANEL_CONFIG = "./ui/panels/recording-panel.json";
-const RECORDING_PANEL_MAX_WIDTH = 0.14;
-const RECORDING_PANEL_OFFSET: [number, number, number] = [0, 0.4, 0];
+const RECORDING_STOP_HINT_CONFIG = "./ui/panels/recording-stop-hint.json";
+const RECORDING_PANEL_MAX_WIDTH = 0.175;
+const RECORDING_PANEL_OFFSET: [number, number, number] = [0, 0.5, 0];
+const RECORDING_STOP_HINT_OFFSET: [number, number, number] = [0, 0.43, 0];
+const RECORDING_MAX_DURATION_MS = 60_000;
+export const RECORDING_STOP_UI_DELAY_MS = 5000;
+
+let recordingStartedAtMs: number | null = null;
+
+export function recordingStopUiDelayMs(): number {
+  if (recordingStartedAtMs == null) {
+    return RECORDING_STOP_UI_DELAY_MS;
+  }
+  return Math.max(
+    0,
+    RECORDING_STOP_UI_DELAY_MS - (Date.now() - recordingStartedAtMs),
+  );
+}
+
+function markRecordingStarted(): void {
+  recordingStartedAtMs = Date.now();
+}
+
+function clearRecordingStarted(): void {
+  recordingStartedAtMs = null;
+}
 
 export const RecordingPanel = createComponent("RecordingPanel", {});
+export const RecordingStopHintPanel = createComponent("RecordingStopHintPanel", {});
 
 export const Recording = createComponent("Recording", {});
 export const StartRecordingSession = createComponent("StartRecordingSession", {});
@@ -101,6 +122,11 @@ const PLAYBACK_HORN_RESONANCE_HZ = 1100;
 const PLAYBACK_HORN_RESONANCE_GAIN_DB = 12;
 
 export class RecordingSystem extends createSystem({
+  activeRecordingSpeakNarrateTask: {
+    required: [Task, ActiveTask],
+    excluded: [CompletedTask],
+    where: [eq(Task, "id", TaskId.RecordingSpeakNarrate)],
+  },
   activeRecordingSpeakTask: {
     required: [Task, ActiveTask],
     excluded: [CompletedTask],
@@ -111,36 +137,41 @@ export class RecordingSystem extends createSystem({
     excluded: [CompletedTask],
     where: [eq(Task, "id", TaskId.PlaybackListen)],
   },
-  recordingHorn: {
-    required: [PhonographPart],
-    where: [eq(PhonographPart, "id", "recording_horn")],
-  },
   phonograph: { required: [Phonograph] },
   stopRequested: { required: [StopRecording] },
   clearRequested: { required: [ClearRecording] },
   startRecordingSession: { required: [StartRecordingSession] },
   startCarvingAmbience: { required: [StartCarvingAmbience] },
   recordingPanels: { required: [RecordingPanel, PanelDocument] },
+  recordingStopHintPanels: {
+    required: [RecordingStopHintPanel, PanelDocument],
+  },
 }) {
   private recordingTaskEntity: Entity | null = null;
+  private recordingOwnerTaskEntity: Entity | null = null;
+  private pendingCompleteRecordingSpeak = false;
+  private recordingMaxDurationTimeout: ReturnType<typeof setTimeout> | null =
+    null;
   private carvingSource: AudioBufferSourceNode | null = null;
   private recordingPanelEntity: Entity | null = null;
+  private recordingStopHintEntity: Entity | null = null;
+  private recordingStopHintTimer: ReturnType<typeof setTimeout> | null = null;
 
   init() {
     this.triggerEarlyPermissionPrompt();
 
     this.cleanupFuncs.push(
       this.queries.recordingPanels.subscribe("qualify", (panel) => {
-        stripPanelSurface(panel);
-        if (!panel.hasComponent(PopIn2D)) {
-          panel.addComponent(PopIn2D);
-        }
+        this.popInRecordingUiPanel(panel);
+      }),
+
+      this.queries.recordingStopHintPanels.subscribe("qualify", (panel) => {
+        this.popInRecordingUiPanel(panel);
       }),
 
       this.queries.startRecordingSession.subscribe("qualify", () => {
         this.world.sceneEntity.removeComponent(StartRecordingSession);
-        if (activeRecorder?.state === "recording") return;
-        this.onRecordingStart();
+        if (activeRecorder?.state === "recording" || getRecordedAudio()) return;
         void this.ensureCarvingAmbience();
         void this.startRecording();
       }),
@@ -152,8 +183,19 @@ export class RecordingSystem extends createSystem({
 
       this.queries.activeRecordingSpeakTask.subscribe("qualify", (taskEntity) => {
         this.recordingTaskEntity = taskEntity;
+        this.scheduleRecordingStopHint();
+
+        if (this.pendingCompleteRecordingSpeak && getRecordedAudio()) {
+          this.pendingCompleteRecordingSpeak = false;
+          if (!taskEntity.hasComponent(CompletedTask)) {
+            taskEntity.addComponent(CompletedTask);
+          }
+          return;
+        }
+
+        if (getRecordedAudio()) return;
+
         if (activeRecorder?.state !== "recording") {
-          this.onRecordingStart();
           void this.ensureCarvingAmbience();
           void this.startRecording();
         } else {
@@ -163,6 +205,8 @@ export class RecordingSystem extends createSystem({
 
       this.queries.activeRecordingSpeakTask.subscribe("disqualify", () => {
         this.recordingTaskEntity = null;
+        this.clearRecordingStopHintTimer();
+        this.hideRecordingStopHint();
         this.stopCarvingAmbience();
         this.onRecordingStop();
         abortActiveRecording();
@@ -181,8 +225,10 @@ export class RecordingSystem extends createSystem({
 
       this.queries.clearRequested.subscribe("qualify", () => {
         this.stopCarvingAmbience();
+        this.pendingCompleteRecordingSpeak = false;
+        this.recordingOwnerTaskEntity = null;
         clearRecordedAudio();
-        this.hideRecordingPanel();
+        this.onRecordingStop();
         this.world.sceneEntity
           .removeComponent(ClearRecording)
           .removeComponent(Recording)
@@ -210,6 +256,7 @@ export class RecordingSystem extends createSystem({
       const chunks: BlobPart[] = [];
       const recorder = new MediaRecorder(stream);
       registerActiveRecording(recorder, stream);
+      this.recordingOwnerTaskEntity = this.captureRecordingOwnerTask();
       this.world.sceneEntity.addComponent(Recording);
       this.showRecordingPanel();
 
@@ -218,6 +265,7 @@ export class RecordingSystem extends createSystem({
       };
 
       recorder.onstop = async () => {
+        this.clearRecordingMaxDurationTimeout();
         clearActiveRecording();
         this.world.sceneEntity.removeComponent(Recording);
         this.onRecordingStop();
@@ -228,34 +276,61 @@ export class RecordingSystem extends createSystem({
         const buffer = await ctx.decodeAudioData(arrayBuffer);
         setRecordedAudio(ctx, buffer);
 
-        const taskEntity = this.recordingTaskEntity;
-        if (
-          taskEntity?.active &&
-          !taskEntity.hasComponent(CompletedTask)
-        ) {
+        const taskEntity =
+          this.recordingOwnerTaskEntity ?? this.recordingTaskEntity;
+        this.recordingOwnerTaskEntity = null;
+
+        if (taskEntity?.active && !taskEntity.hasComponent(CompletedTask)) {
+          const taskId = taskEntity.getValue(Task, "id");
           taskEntity.addComponent(CompletedTask);
+          if (taskId === TaskId.RecordingSpeakNarrate) {
+            this.pendingCompleteRecordingSpeak = true;
+          }
         }
       };
 
       recorder.start();
+      markRecordingStarted();
+      this.scheduleRecordingMaxDuration();
     } catch (err) {
       console.error("Recording failed:", err);
       clearActiveRecording();
+      this.recordingOwnerTaskEntity = null;
       this.world.sceneEntity.removeComponent(Recording);
       this.onRecordingStop();
     }
   }
 
-  private onRecordingStart(): void {
-    const recordingHorn = this.first(this.queries.recordingHorn.entities);
-    if (recordingHorn && !recordingHorn.hasComponent(Highlight)) {
-      recordingHorn.addComponent(Highlight, { color: RECORDING_INPUT_HIGHLIGHT_COLOR });
+  private captureRecordingOwnerTask(): Entity | null {
+    for (const task of this.queries.activeRecordingSpeakTask.entities) {
+      return task;
     }
+    for (const task of this.queries.activeRecordingSpeakNarrateTask.entities) {
+      return task;
+    }
+    return null;
+  }
+
+  private scheduleRecordingMaxDuration(): void {
+    this.clearRecordingMaxDurationTimeout();
+    this.recordingMaxDurationTimeout = setTimeout(() => {
+      this.recordingMaxDurationTimeout = null;
+      if (activeRecorder?.state !== "recording") return;
+      this.stopCarvingAmbience();
+      stopRecording();
+    }, RECORDING_MAX_DURATION_MS);
+  }
+
+  private clearRecordingMaxDurationTimeout(): void {
+    if (this.recordingMaxDurationTimeout == null) return;
+    clearTimeout(this.recordingMaxDurationTimeout);
+    this.recordingMaxDurationTimeout = null;
   }
 
   private onRecordingStop(): void {
-    const recordingHorn = this.first(this.queries.recordingHorn.entities);
-    recordingHorn?.removeComponent(Highlight);
+    this.clearRecordingMaxDurationTimeout();
+    this.clearRecordingStopHintTimer();
+    clearRecordingStarted();
     this.hideRecordingPanel();
   }
 
@@ -285,9 +360,75 @@ export class RecordingSystem extends createSystem({
     this.recordingPanelEntity = panel;
   }
 
+  private scheduleRecordingStopHint(): void {
+    this.clearRecordingStopHintTimer();
+    this.hideRecordingStopHint();
+
+    const delayMs = recordingStopUiDelayMs();
+    if (delayMs <= 0) {
+      this.showRecordingStopHint();
+      return;
+    }
+
+    this.recordingStopHintTimer = setTimeout(() => {
+      this.recordingStopHintTimer = null;
+      if (this.queries.activeRecordingSpeakTask.entities.size === 0) return;
+      if (!this.world.sceneEntity.hasComponent(Recording)) return;
+      this.showRecordingStopHint();
+    }, delayMs);
+  }
+
+  private clearRecordingStopHintTimer(): void {
+    if (this.recordingStopHintTimer == null) return;
+    clearTimeout(this.recordingStopHintTimer);
+    this.recordingStopHintTimer = null;
+  }
+
+  private showRecordingStopHint(): void {
+    if (this.recordingStopHintEntity?.active) return;
+
+    const phonograph = this.first(this.queries.phonograph.entities);
+    const phonographObj = phonograph?.object3D;
+    if (!phonograph || !phonographObj) return;
+
+    const hintPanel = this.world
+      .createTransformEntity(undefined, { parent: this.world.sceneEntity })
+      .addComponent(PanelUI, {
+        config: RECORDING_STOP_HINT_CONFIG,
+        maxWidth: RECORDING_PANEL_MAX_WIDTH,
+      })
+      .addComponent(RecordingStopHintPanel)
+      .addComponent(Follower, {
+        behavior: FollowBehavior.NoRotation,
+        target: phonographObj,
+        offsetPosition: RECORDING_STOP_HINT_OFFSET,
+      })
+      .addComponent(Billboard);
+
+    hintPanel.object3D!.scale.setScalar(0.001);
+    hintPanel.object3D!.visible = true;
+    this.recordingStopHintEntity = hintPanel;
+  }
+
+  private hideRecordingStopHint(): void {
+    this.disposeRecordingUiPanel(this.recordingStopHintEntity);
+    this.recordingStopHintEntity = null;
+  }
+
   private hideRecordingPanel(): void {
-    const panel = this.recordingPanelEntity;
+    this.disposeRecordingUiPanel(this.recordingPanelEntity);
     this.recordingPanelEntity = null;
+    this.hideRecordingStopHint();
+  }
+
+  private popInRecordingUiPanel(panel: Entity): void {
+    stripPanelSurface(panel);
+    if (!panel.hasComponent(PopIn2D)) {
+      panel.addComponent(PopIn2D);
+    }
+  }
+
+  private disposeRecordingUiPanel(panel: Entity | null): void {
     if (!panel?.active) return;
     hidePanelEntity(panel);
     panel.dispose();

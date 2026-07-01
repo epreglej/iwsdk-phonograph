@@ -60,6 +60,13 @@ export class TaskFlowSystem extends createSystem({
 
         this.activeTaskEntity = entity;
 
+        if (task.autoCompleteOnStart) {
+          if (!entity.hasComponent(CompletedTask)) {
+            entity.addComponent(CompletedTask);
+          }
+          return;
+        }
+
         if (task.interactive) {
           this.world.sceneEntity.addComponent(InteractionGate);
         } else {

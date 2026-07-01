@@ -10,7 +10,7 @@ import { Task, ActiveTask, CompletedTask } from "./task.js";
 import { TaskId } from "./task-config.js";
 import { MoveDone, MoveTo, TeleportTo } from "./animation.js";
 import { Highlight, STOP_HIGHLIGHT_COLOR } from "./highlight.js";
-import { Recording, StopRecording } from "./recording.js";
+import { Recording, StopRecording, recordingStopUiDelayMs } from "./recording.js";
 import { ReleaseGrab } from "./interaction-gate.js";
 import { playSnap } from "../audio/sfx.js";
 
@@ -63,6 +63,9 @@ export class BrakeSystem extends createSystem({
   brakeShiftDone: { required: [Brake, MoveDone, BrakeShifted] },
   brakeReturnDone: { required: [Brake, MoveDone, BrakeReturning] },
 }) {
+  private recordingStopActivationTimer: ReturnType<typeof setTimeout> | null =
+    null;
+
   init() {
     this.cleanupFuncs.push(
       this.queries.activeBrakeShiftTask.subscribe(
@@ -87,10 +90,11 @@ export class BrakeSystem extends createSystem({
 
       this.queries.activeRecordingSpeakTask.subscribe("qualify", () => {
         const brake = this.first(this.queries.brake.entities);
-        if (brake) this.activateRecordingStop(brake);
+        if (brake) this.scheduleRecordingStopActivation(brake);
       }),
 
       this.queries.activeRecordingSpeakTask.subscribe("disqualify", () => {
+        this.clearRecordingStopActivationTimer();
         const brake = this.first(this.queries.brake.entities);
         if (!brake) return;
         this.deactivateRecordingStop(brake);
@@ -164,7 +168,7 @@ export class BrakeSystem extends createSystem({
       .removeComponent(Grabbed);
 
     if (this.queries.activeRecordingSpeakTask.entities.size > 0) {
-      this.activateRecordingStop(brake);
+      this.scheduleRecordingStopActivation(brake);
       return;
     }
 
@@ -174,6 +178,30 @@ export class BrakeSystem extends createSystem({
     }
 
     brake.removeComponent(OneHandGrabbable).removeComponent(Highlight);
+  }
+
+  private clearRecordingStopActivationTimer(): void {
+    if (this.recordingStopActivationTimer == null) return;
+    clearTimeout(this.recordingStopActivationTimer);
+    this.recordingStopActivationTimer = null;
+  }
+
+  private scheduleRecordingStopActivation(brake: Entity): void {
+    this.clearRecordingStopActivationTimer();
+    this.deactivateRecordingStop(brake);
+
+    const delayMs = recordingStopUiDelayMs();
+    if (delayMs <= 0) {
+      this.activateRecordingStop(brake);
+      return;
+    }
+
+    this.recordingStopActivationTimer = setTimeout(() => {
+      this.recordingStopActivationTimer = null;
+      if (this.queries.activeRecordingSpeakTask.entities.size === 0) return;
+      const currentBrake = this.first(this.queries.brake.entities);
+      if (currentBrake) this.activateRecordingStop(currentBrake);
+    }, delayMs);
   }
 
   private activateRecordingStop(brake: Entity): void {

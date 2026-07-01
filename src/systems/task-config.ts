@@ -41,6 +41,7 @@ export const TaskId = {
   RecordingCrankWind: "recording_crank_wind",
   RecordingBrakeRelease: "recording_brake_release",
   RecordingCarriageLower: "recording_carriage_lower",
+  RecordingIntermission: "recording_intermission",
   RecordingSpeakNarrate: "recording_speak_narrate",
   RecordingSpeak: "recording_speak",
   PlaybackChapterIntro: "playback_chapter_intro",
@@ -104,6 +105,8 @@ export interface TaskDef {
   unmount?: boolean;
   interactive?: boolean;
   startRecordingOnStart?: boolean;
+  /** Skip UI/interaction and advance to the next task immediately. */
+  autoCompleteOnStart?: boolean;
   /** Part(s) that show a floating name tag while this task is active. */
   nameTagPartId?: string;
   nameTagPartIds?: string[];
@@ -194,6 +197,10 @@ const TASKS: TaskDef[] = [
     partId: "carriage",
     nameTagPartId: "carriage",
     interactive: true,
+  },
+  {
+    id: TaskId.RecordingIntermission,
+    autoCompleteOnStart: true,
   },
   {
     id: TaskId.RecordingSpeakNarrate,

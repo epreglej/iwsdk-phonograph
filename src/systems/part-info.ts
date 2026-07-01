@@ -34,6 +34,8 @@ import { playInfoDetailNarration } from "../audio/narration.js";
 import { PhonographPart } from "./phonograph.js";
 import { Snapped } from "./snap.js";
 import { Task, ActiveTask, CompletedTask } from "./task.js";
+import { TaskId } from "./task-config.js";
+import { recordingStopUiDelayMs } from "./recording.js";
 import { ACTION_NAME_TAGS_BY_TASK, NAME_TAGS_BY_TASK } from "./task-config.js";
 import {
   actionNameTagSpecForTaskPart,
@@ -296,7 +298,7 @@ export class PartInfoSystem extends createSystem({
           part.setValue(
             PartNameTag,
             "panelSpawnDelayRemainingMs",
-            PANEL_SPAWN_AFTER_PART_POP_IN_MS,
+            this.partNameTagSpawnDelayMs(part),
           );
         }
         this.trySpawnNameTag(part);
@@ -559,7 +561,7 @@ export class PartInfoSystem extends createSystem({
         part.setValue(
           PartNameTag,
           "panelSpawnDelayRemainingMs",
-          PANEL_SPAWN_AFTER_PART_POP_IN_MS,
+          this.partNameTagSpawnDelayMs(part),
         );
       }
       return;
@@ -1137,6 +1139,20 @@ export class PartInfoSystem extends createSystem({
     if (panel) this.teardownMicroInstruction(panel);
   }
 
+  private partNameTagSpawnDelayMs(part: Entity): number {
+    const partId = part.getValue(PhonographPart, "id");
+    if (!partId) return PANEL_SPAWN_AFTER_PART_POP_IN_MS;
+
+    for (const task of this.queries.activeTask.entities) {
+      const taskId = task.getValue(Task, "id");
+      if (taskId === TaskId.RecordingSpeak && partId === "brake") {
+        return recordingStopUiDelayMs();
+      }
+    }
+
+    return PANEL_SPAWN_AFTER_PART_POP_IN_MS;
+  }
+
   private applyNameTagForTask(taskId: string): void {
     const partIds = NAME_TAGS_BY_TASK[taskId];
     if (!partIds?.length) return;
@@ -1161,7 +1177,7 @@ export class PartInfoSystem extends createSystem({
       part.addComponent(PartNameTag, {
         ...spec,
         panelSpawnDelayRemainingMs: isPartPopInComplete(part)
-          ? PANEL_SPAWN_AFTER_PART_POP_IN_MS
+          ? this.partNameTagSpawnDelayMs(part)
           : PANEL_SPAWN_DELAY_PENDING,
       });
     }

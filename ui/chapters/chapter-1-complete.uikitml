@@ -15,8 +15,14 @@
     min-width: 44px;
     min-height: 44px;
     border-radius: 22px;
+    display: flex;
+    flex-direction: row;
     align-items: center;
     justify-content: center;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    padding-left: 12px;
+    padding-right: 12px;
     background-color: rgb(24, 24, 26);
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.35);
@@ -27,12 +33,6 @@
   .next-button:hover {
     background-color: rgba(24, 24, 26, 0.96);
     border-color: rgba(255, 255, 255, 0.44);
-  }
-
-  .next-icon {
-    font-size: 18px;
-    font-weight: 700;
-    color: rgba(255, 255, 255, 0.95);
   }
 
   .card {
@@ -75,7 +75,7 @@
 
 <div id="panel-root" class="outer-layer">
   <button id="assembly-chapter-complete-button" class="next-button">
-    <span class="next-icon">></span>
+    <ArrowRightIcon color="rgba(255, 255, 255, 0.95)" />
   </button>
   <div class="card">
     <span class="title-label">Chapter 1: Assemble</span>

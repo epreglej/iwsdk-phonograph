@@ -15,8 +15,17 @@
     min-width: 36px;
     min-height: 36px;
     border-radius: 18px;
+    display: flex;
+    flex-direction: row;
     align-items: center;
     justify-content: center;
+    padding-left: 0px;
+    padding-right: 0px;
+    font-size: 18px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.95);
+    text-align: center;
+    line-height: 1;
     background-color: rgb(24, 24, 26);
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.35);
@@ -27,13 +36,6 @@
   .help-button:hover {
     background-color: rgba(24, 24, 26, 0.96);
     border-color: rgba(255, 255, 255, 0.44);
-  }
-
-
-  .help-icon {
-    font-size: 16px;
-    font-weight: 700;
-    color: rgba(255, 255, 255, 0.95);
   }
 
   .name-tag {
@@ -64,9 +66,7 @@
 </style>
 
 <div id="panel-root" class="outer-layer">
-  <button id="recorder-info-button" class="help-button">
-    <span class="help-icon">?</span>
-  </button>
+  <button id="recorder-info-button" class="help-button">?</button>
   <div class="name-tag">
     <span class="name-label">Recorder</span>
   </div>

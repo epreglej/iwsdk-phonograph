@@ -1,4 +1,6 @@
 import { AssetManifest, AssetType, SessionMode, World } from "@iwsdk/core";
+import * as horizonKit from "@pmndrs/uikit-horizon";
+import { ArrowRightIcon } from "@pmndrs/uikit-lucide";
 
 import { Task, ActiveTask } from "./systems/task.js";
 import { TaskId } from "./systems/task-config.js";
@@ -92,6 +94,9 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
     physics: false,
     sceneUnderstanding: false,
     environmentRaycast: true,
+    spatialUI: {
+      kits: [horizonKit, { ArrowRightIcon }],
+    },
   },
 }).then((world) => {
   const { camera } = world;

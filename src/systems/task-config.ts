@@ -32,6 +32,7 @@ export const PHONOGRAPH_SPAWN_BELOW_HEAD_M = 0.35;
 export const TaskId = {
   Welcome: "welcome",
   AssemblyIntro: "assembly_intro",
+  AssemblyChapterIntro: "assembly_chapter_intro",
   AssemblyCylinderMount: "assembly_cylinder_mount",
   AssemblyRecorderMount: "assembly_recorder_mount",
   AssemblyRecordingHornMount: "assembly_recording_horn_mount",
@@ -127,6 +128,10 @@ const TASKS: TaskDef[] = [
   },
   {
     id: TaskId.AssemblyIntro,
+    nameTagPartId: "phonograph",
+  },
+  {
+    id: TaskId.AssemblyChapterIntro,
     nameTagPartId: "phonograph",
   },
   {

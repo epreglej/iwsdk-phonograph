@@ -17,27 +17,60 @@ import { Phonograph } from "./phonograph.js";
 import { ActiveTask, CompletedTask, Task } from "./task.js";
 import { PHONOGRAPH_CHAPTER_PANEL_MAX_WIDTH, TaskId } from "./task-config.js";
 
-const CHECKLIST_CONFIG_BY_TASK: Record<string, string> = {
-  [TaskId.AssemblyCylinderMount]: "./ui/checklists/chapter-1-assemble-step-1.json",
-  [TaskId.AssemblyRecorderMount]: "./ui/checklists/chapter-1-assemble-step-2.json",
-  [TaskId.AssemblyRecordingHornMount]:
-    "./ui/checklists/chapter-1-assemble-step-3.json",
-};
+const ASSEMBLY_CHECKLIST_CONFIGS = [
+  "./ui/checklists/chapter-1-assemble-step-1.json",
+  "./ui/checklists/chapter-1-assemble-step-2.json",
+  "./ui/checklists/chapter-1-assemble-step-3.json",
+];
 
-const CHECKLIST_MAX_WIDTH = PHONOGRAPH_CHAPTER_PANEL_MAX_WIDTH;
+const RECORDING_CHECKLIST_CONFIGS = [
+  "./ui/checklists/chapter-2-record-step-1.json",
+  "./ui/checklists/chapter-2-record-step-2.json",
+  "./ui/checklists/chapter-2-record-step-3.json",
+  "./ui/checklists/chapter-2-record-step-4.json",
+  "./ui/checklists/chapter-2-record-step-5.json",
+];
+
+/**
+ * Keep world-space px scale aligned with the narrower UIKitML checklist card
+ * so text size does not inflate when reducing panel width.
+ */
+const CHECKLIST_MAX_WIDTH = PHONOGRAPH_CHAPTER_PANEL_MAX_WIDTH * 0.85;
 const CHECKLIST_OFFSET: [number, number, number] = [0, 0.44, -0.12];
 
-const CHECKLIST_ORDER = [
+const ASSEMBLY_CHECKLIST_ORDER = [
   TaskId.AssemblyCylinderMount,
   TaskId.AssemblyRecorderMount,
   TaskId.AssemblyRecordingHornMount,
 ] as const;
 
-type ChecklistTaskId = (typeof CHECKLIST_ORDER)[number];
+const RECORDING_CHECKLIST_ORDER = [
+  TaskId.RecordingCrankWind,
+  TaskId.RecordingBrakeRelease,
+  TaskId.RecordingCarriageLower,
+  TaskId.RecordingSpeakNarrate,
+  TaskId.RecordingSpeak,
+] as const;
 
-function checklistStep(taskId: string): number {
-  const index = CHECKLIST_ORDER.indexOf(taskId as ChecklistTaskId);
-  return index >= 0 ? index : -1;
+type ChecklistGroup = "assembly" | "recording";
+
+interface ChecklistState {
+  group: ChecklistGroup;
+  step: number;
+}
+
+function checklistState(taskId: string): ChecklistState | null {
+  const assemblyStep = ASSEMBLY_CHECKLIST_ORDER.indexOf(
+    taskId as (typeof ASSEMBLY_CHECKLIST_ORDER)[number],
+  );
+  if (assemblyStep >= 0) return { group: "assembly", step: assemblyStep };
+
+  const recordingStep = RECORDING_CHECKLIST_ORDER.indexOf(
+    taskId as (typeof RECORDING_CHECKLIST_ORDER)[number],
+  );
+  if (recordingStep >= 0) return { group: "recording", step: recordingStep };
+
+  return null;
 }
 
 export const ChapterChecklist = createComponent("ChapterChecklist", {
@@ -62,6 +95,7 @@ export class ChapterChecklistSystem extends createSystem({
   checklistDocs: { required: [ChapterChecklistInstance, PanelDocument] },
   poppedOut: { required: [ChapterChecklistInstance, PopOut2DDone] },
 }) {
+  private currentGroup: ChecklistGroup | null = null;
   private currentStep = 0;
 
   init() {
@@ -73,7 +107,10 @@ export class ChapterChecklistSystem extends createSystem({
 
       this.queries.activeTask.subscribe("disqualify", (taskEntity) => {
         const taskId = taskEntity.getValue(Task, "id")!;
-        if (taskId === TaskId.AssemblyRecordingHornMount) {
+        if (
+          taskId === TaskId.AssemblyRecordingHornMount ||
+          taskId === TaskId.RecordingSpeak
+        ) {
           this.hideChecklist();
         }
       }),
@@ -102,21 +139,26 @@ export class ChapterChecklistSystem extends createSystem({
   }
 
   private onTaskActive(taskId: string): void {
-    const step = checklistStep(taskId);
-    if (step < 0) {
+    const state = checklistState(taskId);
+    if (!state) {
       this.hideChecklist();
       return;
     }
 
-    this.currentStep = step;
-    this.showChecklist();
+    const groupChanged = this.currentGroup !== state.group;
+    this.currentGroup = state.group;
+    this.currentStep = state.step;
+    this.showChecklist(groupChanged);
     this.updateChecklistVisibility();
   }
 
-  private showChecklist(): void {
+  private showChecklist(groupChanged = false): void {
     for (const anchor of this.queries.anchors.entities) {
       if (!anchor.getValue(ChapterChecklist, "visible")) {
         anchor.setValue(ChapterChecklist, "visible", true);
+      }
+      if (groupChanged) {
+        this.teardownAllPanels();
       }
       if (this.queries.instances.entities.size === 0) {
         this.spawnChecklistPanels();
@@ -130,21 +172,28 @@ export class ChapterChecklistSystem extends createSystem({
   }
 
   private hideChecklist(): void {
+    this.currentGroup = null;
     for (const anchor of this.queries.anchors.entities) {
       anchor.removeComponent(ChapterChecklist);
     }
   }
 
+  private teardownAllPanels(): void {
+    for (const panel of [...this.queries.instances.entities]) {
+      this.teardownPanel(panel);
+    }
+  }
+
   private spawnChecklistPanels(): void {
+    if (!this.currentGroup) return;
     const anchor = this.first(this.queries.anchors.entities);
     const anchorObj = anchor?.object3D;
     if (!anchorObj) return;
 
-    const configs = [
-      CHECKLIST_CONFIG_BY_TASK[TaskId.AssemblyCylinderMount],
-      CHECKLIST_CONFIG_BY_TASK[TaskId.AssemblyRecorderMount],
-      CHECKLIST_CONFIG_BY_TASK[TaskId.AssemblyRecordingHornMount],
-    ];
+    const configs =
+      this.currentGroup === "assembly"
+        ? ASSEMBLY_CHECKLIST_CONFIGS
+        : RECORDING_CHECKLIST_CONFIGS;
 
     for (let step = 0; step < configs.length; step += 1) {
       const config = configs[step];

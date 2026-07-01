@@ -42,8 +42,10 @@
 </style>
 
 <div id="panel-root" class="card">
-  <span class="title-label">Chapter 1: Assemble</span>
-  <span class="row">• Mount the cylinder</span>
-  <span class="row">• Attach the recorder</span>
-  <span class="row current">• Fit the recording horn</span>
+  <span class="title-label">Chapter 2: Record</span>
+  <span class="row">• Wind the crank</span>
+  <span class="row current">• Release the brake</span>
+  <span class="row">• Lower the carriage</span>
+  <span class="row">• Speak into the horn</span>
+  <span class="row">• Engage the brake</span>
 </div>

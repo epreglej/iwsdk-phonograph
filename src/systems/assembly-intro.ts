@@ -2,7 +2,6 @@ import {
   createComponent,
   createSystem,
   Entity,
-  eq,
   FollowBehavior,
   Follower,
   PanelDocument,
@@ -48,7 +47,6 @@ export class AssemblyIntroSystem extends createSystem({
   activeIntroTask: {
     required: [Task, ActiveTask],
     excluded: [CompletedTask],
-    where: [eq(Task, "id", TaskId.AssemblyIntro)],
   },
   phonograph: { required: [Phonograph] },
   introPanels: { required: [AssemblyIntroPanel] },
@@ -57,18 +55,24 @@ export class AssemblyIntroSystem extends createSystem({
   introPoppedOut: { required: [AssemblyIntroPanel, PopOut2DDone] },
   activeTasks: { required: [Task, ActiveTask], excluded: [CompletedTask] },
 }) {
-  private pendingTaskComplete = false;
+  private pendingCompleteTaskId: string | null = null;
+  private pendingCompleteRole: "step1" | "step2" | null = null;
   private pendingWiring: Entity[] = [];
   private pendingPoke: Entity[] = [];
   private wiredPanelIds = new Set<number>();
 
   init() {
     this.cleanupFuncs.push(
-      this.queries.activeIntroTask.subscribe("qualify", () => {
-        this.spawnStep1();
+      this.queries.activeIntroTask.subscribe("qualify", (taskEntity) => {
+        const taskId = taskEntity.getValue(Task, "id");
+        if (!this.isIntroTaskId(taskId)) return;
+        if (!taskId) return;
+        this.spawnPanelForIntroTask(taskId);
       }),
 
-      this.queries.activeIntroTask.subscribe("disqualify", () => {
+      this.queries.activeIntroTask.subscribe("disqualify", (taskEntity) => {
+        const taskId = taskEntity.getValue(Task, "id");
+        if (!this.isIntroTaskId(taskId)) return;
         this.teardownAll();
       }),
 
@@ -84,7 +88,9 @@ export class AssemblyIntroSystem extends createSystem({
         }
         if (role === "step1") {
           void resumeAudioContext().then(() => {
-            playTaskNarration(STEP1_NARRATION);
+            playTaskNarration(STEP1_NARRATION, 1, () => {
+              // Keep behavior simple: narration may finish while panel remains visible.
+            });
           });
         }
       }),
@@ -121,32 +127,14 @@ export class AssemblyIntroSystem extends createSystem({
     this.pendingPoke.length = 0;
   }
 
-  private spawnStep1(): void {
+  private spawnPanelForIntroTask(taskId: string): void {
     this.teardownAll();
 
     const phonograph = this.first(this.queries.phonograph.entities);
     if (!phonograph?.object3D) return;
 
-    this.spawnPanel(
-      phonograph,
-      STEP1_CONFIG,
-      PHONOGRAPH_CHAPTER_PANEL_MAX_WIDTH,
-      INTRO_OFFSET,
-      "step1",
-    );
-  }
-
-  private spawnStep2(): void {
-    const phonograph = this.first(this.queries.phonograph.entities);
-    if (!phonograph?.object3D) return;
-
-    this.spawnPanel(
-      phonograph,
-      STEP2_CONFIG,
-      PHONOGRAPH_CHAPTER_PANEL_MAX_WIDTH,
-      INTRO_OFFSET,
-      "step2",
-    );
+    const isStep1 = taskId === TaskId.AssemblyIntro;
+    this.spawnPanel(phonograph, isStep1 ? STEP1_CONFIG : STEP2_CONFIG, PHONOGRAPH_CHAPTER_PANEL_MAX_WIDTH, INTRO_OFFSET, isStep1 ? "step1" : "step2");
   }
 
   private spawnPanel(
@@ -223,11 +211,9 @@ export class AssemblyIntroSystem extends createSystem({
 
   private onNextPressed(): void {
     stopTaskNarration();
-
-    const hasStep2 = [...this.queries.introPanels.entities].some(
-      (panel) => panel.getValue(AssemblyIntroPanel, "role") === "step2",
-    );
-    if (hasStep2) return;
+    if (this.activeTaskId() !== TaskId.AssemblyIntro || this.pendingCompleteTaskId) return;
+    this.pendingCompleteTaskId = TaskId.AssemblyIntro;
+    this.pendingCompleteRole = "step1";
 
     for (const panel of [...this.queries.introPanels.entities]) {
       if (panel.getValue(AssemblyIntroPanel, "role") === "step1") {
@@ -235,16 +221,21 @@ export class AssemblyIntroSystem extends createSystem({
         beginPanelPopOut(panel);
       }
     }
-
-    this.spawnStep2();
   }
 
   private onClosePressed(): void {
-    if (this.pendingTaskComplete) return;
+    if (
+      this.pendingCompleteTaskId ||
+      this.activeTaskId() !== TaskId.AssemblyChapterIntro
+    ) {
+      return;
+    }
+    stopTaskNarration();
 
     for (const panel of this.queries.introPanels.entities) {
       if (panel.getValue(AssemblyIntroPanel, "role") === "step2") {
-        this.pendingTaskComplete = true;
+        this.pendingCompleteTaskId = TaskId.AssemblyChapterIntro;
+        this.pendingCompleteRole = "step2";
         panel.removeComponent(PokeInteractable);
         beginPanelPopOut(panel);
         return;
@@ -256,19 +247,18 @@ export class AssemblyIntroSystem extends createSystem({
     const role = panel.getValue(AssemblyIntroPanel, "role") ?? "";
     this.disposePanel(panel);
 
-    if (this.pendingTaskComplete && role === "step2") {
-      this.pendingTaskComplete = false;
-      this.completeIntroTask();
+    if (this.pendingCompleteTaskId && role === this.pendingCompleteRole) {
+      const taskId = this.pendingCompleteTaskId;
+      this.pendingCompleteTaskId = null;
+      this.pendingCompleteRole = null;
+      this.completeIntroTask(taskId);
     }
   }
 
-  private completeIntroTask(): void {
+  private completeIntroTask(taskId: string): void {
     this.defer(() => {
       for (const task of this.queries.activeTasks.entities) {
-        if (
-          task.getValue(Task, "id") === TaskId.AssemblyIntro &&
-          !task.hasComponent(CompletedTask)
-        ) {
+        if (task.getValue(Task, "id") === taskId && !task.hasComponent(CompletedTask)) {
           task.addComponent(CompletedTask);
           return;
         }
@@ -278,7 +268,8 @@ export class AssemblyIntroSystem extends createSystem({
 
   private teardownAll(): void {
     stopTaskNarration();
-    this.pendingTaskComplete = false;
+    this.pendingCompleteTaskId = null;
+    this.pendingCompleteRole = null;
     this.pendingWiring.length = 0;
     this.pendingPoke.length = 0;
     this.wiredPanelIds.clear();
@@ -298,5 +289,14 @@ export class AssemblyIntroSystem extends createSystem({
   private first(entities: Iterable<Entity>): Entity | undefined {
     for (const entity of entities) return entity;
     return undefined;
+  }
+
+  private activeTaskId(): string | undefined {
+    const task = this.first(this.queries.activeTasks.entities);
+    return task?.getValue(Task, "id") ?? undefined;
+  }
+
+  private isIntroTaskId(taskId: string | null | undefined): boolean {
+    return taskId === TaskId.AssemblyIntro || taskId === TaskId.AssemblyChapterIntro;
   }
 }

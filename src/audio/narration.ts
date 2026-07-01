@@ -10,18 +10,7 @@ let onEndedListener: (() => void) | null = null;
 const bufferCache = new Map<string, AudioBuffer>();
 
 /** Playback rate for all narrated voice lines. */
-export const NARRATION_PLAYBACK_RATE = 0.9;
-/**
- * Offset pitch drop from sub-1.0 playbackRate via detune (cents).
- * 1.0 ≈ full compensation; lower keeps more slowdown but leaves some pitch drop.
- */
-const NARRATION_PITCH_COMPENSATION = 0.85;
-
-/** Detune cents to partially restore pitch when slowing narration. */
-function narrationDetuneCents(rate: number): number {
-  if (rate >= 1) return 0;
-  return 1200 * Math.log2(1 / rate) * NARRATION_PITCH_COMPENSATION;
-}
+export const NARRATION_PLAYBACK_RATE = 1;
 
 async function loadBuffer(url: string): Promise<AudioBuffer> {
   const resolved = publicUrl(url);
@@ -90,7 +79,6 @@ export function playTaskNarration(
       const source = ctx.createBufferSource();
       source.buffer = buffer;
       source.playbackRate.value = NARRATION_PLAYBACK_RATE;
-      source.detune.value = narrationDetuneCents(NARRATION_PLAYBACK_RATE);
 
       const gain = ctx.createGain();
       gain.gain.value = volume;

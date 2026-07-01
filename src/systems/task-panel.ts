@@ -28,6 +28,7 @@ import {
   type TaskPanelSpec,
 } from "./task-config.js";
 import { resumeAudioContext } from "../audio/context.js";
+import { stopTaskNarration } from "../audio/narration.js";
 
 export const TaskPanel = createComponent("TaskPanel", {
   panelConfig: { type: Types.String, default: "" },
@@ -247,8 +248,6 @@ export class TaskPanelSystem extends createSystem({
       panel.addComponent(Billboard);
     }
 
-    const autoCompleteMs = anchor.getValue(TaskPanel, "autoCompleteMs") ?? 0;
-
     panel.object3D!.scale.set(0.001, 0.001, 0.001);
     panel.object3D!.visible = true;
   }
@@ -283,6 +282,7 @@ export class TaskPanelSystem extends createSystem({
     const doc = panel.getValue(PanelDocument, "document") as UIKitDocument | null;
     const button = doc?.getElementById(buttonId);
     button?.addEventListener("click", () => {
+      stopTaskNarration();
       void resumeAudioContext();
       const taskId = panel.getValue(TaskPanelInstance, "taskId")!;
       const defer = anchor.getValue(TaskPanel, "deferCompleteOnDismiss") ?? false;

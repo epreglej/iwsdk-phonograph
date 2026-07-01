@@ -1,5 +1,5 @@
 import { createSystem, Entity, PanelDocument, PanelUI } from "@iwsdk/core";
-import { playTaskNarration } from "../audio/narration.js";
+import { playTaskNarration, stopTaskNarration } from "../audio/narration.js";
 import { resumeAudioContext } from "../audio/context.js";
 import { playTaskChime } from "../audio/sfx.js";
 import { InteractionGate } from "./interaction-gate.js";
@@ -117,6 +117,8 @@ export class TaskFlowSystem extends createSystem({
       }),
 
       this.queries.completedActiveTask.subscribe("qualify", (entity) => {
+        // Never let narration block task progression: ending a task cuts active VO.
+        stopTaskNarration();
         const completedId = entity.getValue(Task, "id")!;
         const completedTask = TASK_BY_ID[completedId];
         if (completedTask?.revealOnComplete) {

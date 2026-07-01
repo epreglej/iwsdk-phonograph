@@ -1,9 +1,20 @@
-import { PANEL_MAX_WIDTH } from "./task-config.js";
-
-const NAME_TAG_MAX_WIDTH = 0.15;
-const DETAIL_PANEL_MAX_WIDTH = PANEL_MAX_WIDTH;
 const PANEL_OFFSET_Y = 0.11;
 const HORN_PANEL_OFFSET_Y = PANEL_OFFSET_Y * 1.2;
+
+/** uikitml width of `.outer-layer` name tags (px). */
+const NAME_TAG_UI_WIDTH_PX = 140;
+/** uikitml width of `*-detail` panels (px). */
+const DETAIL_PANEL_UI_WIDTH_PX = 200;
+/**
+ * World meters per uikitml pixel for part info panels.
+ * Calibrated from ~0.14m at 130px on the prior name-tag layout.
+ */
+const INFO_PANEL_METERS_PER_PX = 0.14 / 130;
+
+/** World-space max width for floating part name tags (meters). */
+const NAME_TAG_MAX_WIDTH = NAME_TAG_UI_WIDTH_PX * INFO_PANEL_METERS_PER_PX;
+/** World-space max width for part detail / info panels (meters). */
+const DETAIL_PANEL_MAX_WIDTH = DETAIL_PANEL_UI_WIDTH_PX * INFO_PANEL_METERS_PER_PX;
 
 export interface PartNameTagSpec {
   nameTagConfig: string;
@@ -31,9 +42,9 @@ function spec(
 ): PartNameTagSpec {
   return {
     nameTagConfig: `./ui/info/${slug}-name-tag.json`,
-    detailConfig: "",
-    detailNarration: "",
-    infoButtonId: "",
+    detailConfig: `./ui/info/${slug}-detail.json`,
+    detailNarration: `./audio/${slug}-1.wav`,
+    infoButtonId: `${slug}-info-button`,
     ...defaults,
     ...overrides,
   };
@@ -91,7 +102,7 @@ export function actionNameTagSpecForTaskPart(
   return TASK_ACTION_NAME_TAG_SPECS[taskId]?.[partId];
 }
 
-export const MICRO_INSTRUCTION_MAX_WIDTH = PANEL_MAX_WIDTH;
+export const MICRO_INSTRUCTION_MAX_WIDTH = DETAIL_PANEL_MAX_WIDTH;
 /** World-space offset above the part; keep clear of name tags at PANEL_OFFSET_Y. */
 export const MICRO_INSTRUCTION_OFFSET_Y = 0.28;
 /** World-space offset below the part (negative Y). */

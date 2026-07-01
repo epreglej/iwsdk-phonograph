@@ -1,25 +1,73 @@
 <style>
-  .container {
-    width: 100px;
-    max-width: 100px;
-    border-radius: 10px;
+  .outer-layer {
+    width: 140px;
+    max-width: 140px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    padding-top: 8px;
+    padding-right: 8px;
+  }
+
+  .help-button {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    border-radius: 18px;
+    align-items: center;
+    justify-content: center;
+    background-color: rgb(24, 24, 26);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.35);
+    margin-bottom: -17px;
+    margin-right: -5px;
+  }
+
+  .help-button:hover {
+    background-color: rgba(24, 24, 26, 0.96);
+    border-color: rgba(255, 255, 255, 0.44);
+  }
+
+
+  .help-icon {
+    font-size: 16px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.95);
+  }
+
+  .name-tag {
+    width: 120px;
+    max-width: 120px;
+    align-self: center;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
     background-color: rgba(20, 20, 24, 0.92);
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.18);
-    padding-top: 4px;
-    padding-bottom: 4px;
-    padding-left: 4px;
-    padding-right: 4px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    padding-left: 10px;
+    padding-right: 10px;
   }
 
   .name-label {
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 600;
     color: rgba(255, 255, 255, 0.96);
-    line-height: 1;
+    line-height: 1.15;
+    text-align: center;
   }
 </style>
 
-<div id="panel-root" class="container">
-  <span class="name-label">Brake</span>
+<div id="panel-root" class="outer-layer">
+  <button id="brake-info-button" class="help-button">
+    <span class="help-icon">?</span>
+  </button>
+  <div class="name-tag">
+    <span class="name-label">Brake</span>
+  </div>
 </div>

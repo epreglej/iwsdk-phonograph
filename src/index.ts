@@ -8,6 +8,8 @@ import { AnimationSystem } from "./systems/animation.js";
 import { BillboardSystem } from "./systems/billboard.js";
 import { PartInfoSystem } from "./systems/part-info.js";
 import { TaskPanelSystem } from "./systems/task-panel.js";
+import { ChapterChecklistSystem } from "./systems/chapter-checklist.js";
+import { AssemblyIntroSystem } from "./systems/assembly-intro.js";
 import { WorldResetSystem } from "./systems/world-reset.js";
 import { HighlightSystem } from "./systems/highlight.js";
 import { SnapSystem } from "./systems/snap.js";
@@ -105,6 +107,8 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       .registerSystem(TaskFlowSystem)
       .registerSystem(BillboardSystem)
       .registerSystem(TaskPanelSystem)
+      .registerSystem(AssemblyIntroSystem)
+      .registerSystem(ChapterChecklistSystem)
       .registerSystem(InteractionGateSystem)
       .registerSystem(WorldResetSystem)
       .registerSystem(SnapSystem)

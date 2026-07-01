@@ -52,6 +52,7 @@ function spec(
 
 /** Part id → panel config for name tags and detail panels. */
 export const PART_NAME_TAG_SPECS: Record<string, PartNameTagSpec> = {
+  phonograph: spec("phonograph", { offsetY: 0.24 }),
   cylinder: spec("cylinder", { offsetY: 0.16 }),
   recorder: spec("recorder"),
   recording_horn: spec("recording-horn", { offsetY: HORN_PANEL_OFFSET_Y }),

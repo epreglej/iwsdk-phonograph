@@ -32,6 +32,8 @@ export function isPartPopInComplete(part: Entity): boolean {
 const POP_FIELDS = {
   elapsed: { type: Types.Float32, default: 0 },
   from: { type: Types.Float32, default: -1 },
+  /** Final scale for PopIn (PopOut always targets 0.001). */
+  target: { type: Types.Float32, default: 1 },
 } as const;
 
 export const PopIn = createComponent("PopIn", { ...POP_FIELDS });
@@ -195,9 +197,12 @@ export class AnimationSystem extends createSystem({
         entity.setValue(component, "from", from);
       }
 
+      const popTarget =
+        component === PopIn ? entity.getValue(PopIn, "target")! : target;
+
       const elapsed = entity.getValue(component, "elapsed")! + dtMs;
       const t = Math.min(elapsed / durationMs, 1);
-      obj.scale.setScalar(from + (target - from) * easing(t));
+      obj.scale.setScalar(from + (popTarget - from) * easing(t));
 
       if (t >= 1) this.finished.push(entity);
       else entity.setValue(component, "elapsed", elapsed);

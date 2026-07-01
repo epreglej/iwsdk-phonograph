@@ -2,7 +2,7 @@
 export const NARRATION_POST_DELAY_MS = 400;
 
 /** World-space max width for menu panels (meters). */
-export const MENU_PANEL_MAX_WIDTH = 0.25;
+export const MENU_PANEL_MAX_WIDTH = 0.3;
 
 /** World-space max width for placards and legacy panel defaults (meters). */
 export const PANEL_MAX_WIDTH = 10;
@@ -17,6 +17,12 @@ export const HEAD_PANEL_MAX_WIDTH = MENU_PANEL_MAX_WIDTH;
 export const PHONOGRAPH_PANEL_MAX_WIDTH = PANEL_MAX_WIDTH;
 /** Vertical offset for panels above the phonograph root. */
 export const PHONOGRAPH_ABOVE_OFFSET_Y = 0.55;
+/** Chapter intro card above the phonograph (meters). */
+export const PHONOGRAPH_CHAPTER_OFFSET_Y = 0.48;
+/** Chapter intro card offset on Z relative to the phonograph (meters). */
+export const PHONOGRAPH_CHAPTER_OFFSET_Z = -0.1;
+/** World-space max width for the assembly chapter intro card (meters). */
+export const PHONOGRAPH_CHAPTER_PANEL_MAX_WIDTH = 0.3;
 /** Forward distance from the user when the phonograph appears (meters). */
 export const PHONOGRAPH_SPAWN_FORWARD_M = 0.8;
 /** Vertical offset below the user's head when the phonograph appears (meters). */
@@ -25,9 +31,11 @@ export const PHONOGRAPH_SPAWN_BELOW_HEAD_M = 0.35;
 /** Story task identifiers — phase prefix + step name. */
 export const TaskId = {
   Welcome: "welcome",
+  AssemblyIntro: "assembly_intro",
   AssemblyCylinderMount: "assembly_cylinder_mount",
   AssemblyRecorderMount: "assembly_recorder_mount",
   AssemblyRecordingHornMount: "assembly_recording_horn_mount",
+  AssemblyChapterComplete: "assembly_chapter_complete",
   RecordingCrankWind: "recording_crank_wind",
   RecordingBrakeRelease: "recording_brake_release",
   RecordingCarriageLower: "recording_carriage_lower",
@@ -118,6 +126,10 @@ const TASKS: TaskDef[] = [
     },
   },
   {
+    id: TaskId.AssemblyIntro,
+    nameTagPartId: "phonograph",
+  },
+  {
     id: TaskId.AssemblyCylinderMount,
     partId: "cylinder",
     snapPointId: "cylinder_snap_point",
@@ -139,6 +151,20 @@ const TASKS: TaskDef[] = [
     snapPointId: "horn_snap_point",
     nameTagPartId: "recording_horn",
     interactive: true,
+  },
+  {
+    id: TaskId.AssemblyChapterComplete,
+    panel: {
+      panelConfig: "./ui/chapters/chapter-1-complete.json",
+      maxWidth: PHONOGRAPH_CHAPTER_PANEL_MAX_WIDTH,
+      anchor: "phonograph",
+      offsetY: PHONOGRAPH_CHAPTER_OFFSET_Y,
+      offsetZ: PHONOGRAPH_CHAPTER_OFFSET_Z,
+      faceTarget: true,
+      billboard: true,
+      buttonId: "assembly-chapter-complete-button",
+      deferCompleteOnDismiss: true,
+    },
   },
   {
     id: TaskId.RecordingCrankWind,

@@ -1,0 +1,226 @@
+{
+  "element": {
+    "type": "container",
+    "sourceTag": "div",
+    "children": [
+      {
+        "sourceTag": "button",
+        "type": "custom",
+        "children": [
+          {
+            "sourceTag": "span",
+            "type": "custom",
+            "children": [
+              "?"
+            ],
+            "properties": {
+              "class": "help-icon"
+            },
+            "dataUid": "uid-3"
+          }
+        ],
+        "properties": {
+          "id": "phonograph-info-button",
+          "class": "help-button"
+        },
+        "dataUid": "uid-2"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          {
+            "sourceTag": "span",
+            "type": "custom",
+            "children": [
+              "Phonograph"
+            ],
+            "properties": {
+              "class": "name-label"
+            },
+            "dataUid": "uid-5"
+          }
+        ],
+        "properties": {
+          "class": "name-tag"
+        },
+        "dataUid": "uid-4"
+      }
+    ],
+    "properties": {
+      "id": "panel-root",
+      "class": "outer-layer"
+    },
+    "dataUid": "uid-1"
+  },
+  "classes": {
+    "outer-layer": {
+      "content": {
+        "width": "140px",
+        "maxWidth": "140px",
+        "display": "flex",
+        "flexDirection": "column",
+        "alignItems": "flex-end",
+        "paddingTop": "8px",
+        "paddingRight": "8px"
+      }
+    },
+    "help-button": {
+      "content": {
+        "width": "36px",
+        "height": "36px",
+        "minWidth": "36px",
+        "minHeight": "36px",
+        "borderRadius": 18,
+        "alignItems": "center",
+        "justifyContent": "center",
+        "backgroundColor": "rgb(24, 24, 26)",
+        "borderWidth": "1px",
+        "borderColor": "rgba(255, 255, 255, 0.35)",
+        "marginBottom": "-17px",
+        "marginRight": "-5px",
+        "hover": {
+          "backgroundColor": "rgba(24, 24, 26, 0.96)",
+          "borderColor": "rgba(255, 255, 255, 0.44)"
+        }
+      }
+    },
+    "help-icon": {
+      "content": {
+        "fontSize": "16px",
+        "fontWeight": "700",
+        "color": "rgba(255, 255, 255, 0.95)"
+      }
+    },
+    "name-tag": {
+      "content": {
+        "width": "120px",
+        "maxWidth": "120px",
+        "alignSelf": "center",
+        "display": "flex",
+        "flexDirection": "row",
+        "alignItems": "center",
+        "justifyContent": "center",
+        "borderRadius": 12,
+        "backgroundColor": "rgba(20, 20, 24, 0.92)",
+        "borderWidth": "1px",
+        "borderColor": "rgba(255, 255, 255, 0.18)",
+        "paddingTop": "8px",
+        "paddingBottom": "8px",
+        "paddingLeft": "10px",
+        "paddingRight": "10px"
+      }
+    },
+    "name-label": {
+      "content": {
+        "fontSize": "14px",
+        "fontWeight": "600",
+        "color": "rgba(255, 255, 255, 0.96)",
+        "lineHeight": "1.15",
+        "textAlign": "center"
+      }
+    }
+  },
+  "ranges": {
+    "outer-layer": {
+      "start": {
+        "line": 1,
+        "column": 2
+      },
+      "end": {
+        "line": 1,
+        "column": 14
+      }
+    },
+    "help-button": {
+      "start": {
+        "line": 11,
+        "column": 2
+      },
+      "end": {
+        "line": 11,
+        "column": 14
+      }
+    },
+    "help-icon": {
+      "start": {
+        "line": 31,
+        "column": 2
+      },
+      "end": {
+        "line": 31,
+        "column": 12
+      }
+    },
+    "name-tag": {
+      "start": {
+        "line": 37,
+        "column": 2
+      },
+      "end": {
+        "line": 37,
+        "column": 11
+      }
+    },
+    "name-label": {
+      "start": {
+        "line": 55,
+        "column": 2
+      },
+      "end": {
+        "line": 55,
+        "column": 13
+      }
+    },
+    "uid-1": {
+      "start": {
+        "line": 64,
+        "column": 0
+      },
+      "end": {
+        "line": 71,
+        "column": 6
+      }
+    },
+    "uid-2": {
+      "start": {
+        "line": 65,
+        "column": 2
+      },
+      "end": {
+        "line": 67,
+        "column": 11
+      }
+    },
+    "uid-3": {
+      "start": {
+        "line": 66,
+        "column": 4
+      },
+      "end": {
+        "line": 66,
+        "column": 36
+      }
+    },
+    "uid-4": {
+      "start": {
+        "line": 68,
+        "column": 2
+      },
+      "end": {
+        "line": 70,
+        "column": 8
+      }
+    },
+    "uid-5": {
+      "start": {
+        "line": 69,
+        "column": 4
+      },
+      "end": {
+        "line": 69,
+        "column": 46
+      }
+    }
+  }
+}

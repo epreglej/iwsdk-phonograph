@@ -27,8 +27,6 @@ const RECORDING_CHECKLIST_CONFIGS = [
   "./ui/checklists/chapter-2-record-step-1.json",
   "./ui/checklists/chapter-2-record-step-2.json",
   "./ui/checklists/chapter-2-record-step-3.json",
-  "./ui/checklists/chapter-2-record-step-4.json",
-  "./ui/checklists/chapter-2-record-step-5.json",
 ];
 
 const PLAYBACK_SETUP_CHECKLIST_CONFIGS = [
@@ -62,8 +60,6 @@ const RECORDING_CHECKLIST_ORDER = [
   TaskId.RecordingCrankWind,
   TaskId.RecordingBrakeRelease,
   TaskId.RecordingCarriageLower,
-  TaskId.RecordingSpeakNarrate,
-  TaskId.RecordingSpeak,
 ] as const;
 
 const PLAYBACK_SETUP_CHECKLIST_ORDER = [
@@ -151,7 +147,7 @@ export class ChapterChecklistSystem extends createSystem({
         const taskId = taskEntity.getValue(Task, "id")!;
         if (
           taskId === TaskId.AssemblyRecordingHornMount ||
-          taskId === TaskId.RecordingSpeak ||
+          taskId === TaskId.RecordingCarriageLower ||
           taskId === TaskId.PlaybackSetupListeningHornMount ||
           taskId === TaskId.PlaybackListen
         ) {

@@ -7,12 +7,11 @@ import {
   Follower,
   PanelDocument,
   PanelUI,
-  Types,
 } from "@iwsdk/core";
 import { resumeAudioContext } from "../audio/context.js";
 import { Task, ActiveTask, CompletedTask } from "./task.js";
 import { TaskId } from "./task-config.js";
-import { PhonographPart } from "./phonograph.js";
+import { Phonograph, PhonographPart } from "./phonograph.js";
 import {
   Highlight,
   RECORDING_INPUT_HIGHLIGHT_COLOR,
@@ -21,15 +20,11 @@ import { PopIn2D } from "./animation.js";
 import { Billboard } from "./billboard.js";
 import { hidePanelEntity, stripPanelSurface } from "./panel-lifecycle.js";
 
-const RECORDING_INDICATOR_CONFIG =
-  "./ui/info/recording-horn-recording-indicator.json";
-/** Compact indicator above the recording horn (meters). */
-const RECORDING_INDICATOR_MAX_WIDTH = 0.146;
-const RECORDING_INDICATOR_OFFSET: [number, number, number] = [0, 0.2, 0];
+const RECORDING_PANEL_CONFIG = "./ui/panels/recording-panel.json";
+const RECORDING_PANEL_MAX_WIDTH = 0.14;
+const RECORDING_PANEL_OFFSET: [number, number, number] = [0, 0.4, 0];
 
-export const RecordingIndicator = createComponent("RecordingIndicator", {
-  horn: { type: Types.Entity, default: null },
-});
+export const RecordingPanel = createComponent("RecordingPanel", {});
 
 export const Recording = createComponent("Recording", {});
 export const StartRecordingSession = createComponent("StartRecordingSession", {});
@@ -120,23 +115,22 @@ export class RecordingSystem extends createSystem({
     required: [PhonographPart],
     where: [eq(PhonographPart, "id", "recording_horn")],
   },
+  phonograph: { required: [Phonograph] },
   stopRequested: { required: [StopRecording] },
   clearRequested: { required: [ClearRecording] },
   startRecordingSession: { required: [StartRecordingSession] },
   startCarvingAmbience: { required: [StartCarvingAmbience] },
-  recordingIndicatorPanels: {
-    required: [RecordingIndicator, PanelDocument],
-  },
+  recordingPanels: { required: [RecordingPanel, PanelDocument] },
 }) {
   private recordingTaskEntity: Entity | null = null;
   private carvingSource: AudioBufferSourceNode | null = null;
-  private recordingIndicatorPanel: Entity | null = null;
+  private recordingPanelEntity: Entity | null = null;
 
   init() {
     this.triggerEarlyPermissionPrompt();
 
     this.cleanupFuncs.push(
-      this.queries.recordingIndicatorPanels.subscribe("qualify", (panel) => {
+      this.queries.recordingPanels.subscribe("qualify", (panel) => {
         stripPanelSurface(panel);
         if (!panel.hasComponent(PopIn2D)) {
           panel.addComponent(PopIn2D);
@@ -188,7 +182,7 @@ export class RecordingSystem extends createSystem({
       this.queries.clearRequested.subscribe("qualify", () => {
         this.stopCarvingAmbience();
         clearRecordedAudio();
-        this.hideRecordingIndicator();
+        this.hideRecordingPanel();
         this.world.sceneEntity
           .removeComponent(ClearRecording)
           .removeComponent(Recording)
@@ -217,7 +211,7 @@ export class RecordingSystem extends createSystem({
       const recorder = new MediaRecorder(stream);
       registerActiveRecording(recorder, stream);
       this.world.sceneEntity.addComponent(Recording);
-      this.showRecordingIndicator();
+      this.showRecordingPanel();
 
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunks.push(e.data);
@@ -262,38 +256,38 @@ export class RecordingSystem extends createSystem({
   private onRecordingStop(): void {
     const recordingHorn = this.first(this.queries.recordingHorn.entities);
     recordingHorn?.removeComponent(Highlight);
-    this.hideRecordingIndicator();
+    this.hideRecordingPanel();
   }
 
-  private showRecordingIndicator(): void {
-    if (this.recordingIndicatorPanel?.active) return;
+  private showRecordingPanel(): void {
+    if (this.recordingPanelEntity?.active) return;
 
-    const recordingHorn = this.first(this.queries.recordingHorn.entities);
-    const hornObj = recordingHorn?.object3D;
-    if (!recordingHorn || !hornObj) return;
+    const phonograph = this.first(this.queries.phonograph.entities);
+    const phonographObj = phonograph?.object3D;
+    if (!phonograph || !phonographObj) return;
 
     const panel = this.world
       .createTransformEntity(undefined, { parent: this.world.sceneEntity })
       .addComponent(PanelUI, {
-        config: RECORDING_INDICATOR_CONFIG,
-        maxWidth: RECORDING_INDICATOR_MAX_WIDTH,
+        config: RECORDING_PANEL_CONFIG,
+        maxWidth: RECORDING_PANEL_MAX_WIDTH,
       })
-      .addComponent(RecordingIndicator, { horn: recordingHorn })
+      .addComponent(RecordingPanel)
       .addComponent(Follower, {
         behavior: FollowBehavior.NoRotation,
-        target: hornObj,
-        offsetPosition: RECORDING_INDICATOR_OFFSET,
+        target: phonographObj,
+        offsetPosition: RECORDING_PANEL_OFFSET,
       })
       .addComponent(Billboard);
 
     panel.object3D!.scale.setScalar(0.001);
     panel.object3D!.visible = true;
-    this.recordingIndicatorPanel = panel;
+    this.recordingPanelEntity = panel;
   }
 
-  private hideRecordingIndicator(): void {
-    const panel = this.recordingIndicatorPanel;
-    this.recordingIndicatorPanel = null;
+  private hideRecordingPanel(): void {
+    const panel = this.recordingPanelEntity;
+    this.recordingPanelEntity = null;
     if (!panel?.active) return;
     hidePanelEntity(panel);
     panel.dispose();

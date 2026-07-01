@@ -84,6 +84,24 @@ export const TASK_NAME_TAG_SPECS: Record<
       infoButtonId: "",
     },
   },
+  [TaskId.PlaybackSetupRecordingHornUnmount]: {
+    recording_horn: {
+      ...spec("recording-horn", { offsetY: HORN_PANEL_OFFSET_Y }),
+      nameTagConfig: "./ui/info/recording-horn-label-name-tag.json",
+      infoButtonId: "",
+      detailConfig: "",
+      detailNarration: "",
+    },
+  },
+  [TaskId.PlaybackSetupRecorderUnmount]: {
+    recorder: {
+      ...spec("recorder"),
+      nameTagConfig: "./ui/info/recorder-label-name-tag.json",
+      infoButtonId: "",
+      detailConfig: "",
+      detailNarration: "",
+    },
+  },
   [TaskId.PlaybackSetupCarriageReturn]: {
     carriage: {
       ...spec("carriage", { offsetY: 0.17 }),

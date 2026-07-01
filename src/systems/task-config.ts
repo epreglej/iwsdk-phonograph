@@ -224,12 +224,14 @@ const TASKS: TaskDef[] = [
   {
     id: TaskId.PlaybackSetupRecordingHornUnmount,
     partId: "recording_horn",
+    nameTagPartId: "recording_horn",
     unmount: true,
     interactive: true,
   },
   {
     id: TaskId.PlaybackSetupRecorderUnmount,
     partId: "recorder",
+    nameTagPartId: "recorder",
     unmount: true,
     interactive: true,
   },

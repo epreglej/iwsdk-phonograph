@@ -5,9 +5,6 @@ import { PopIn } from "./animation.js";
 
 export const Phonograph = createComponent("Phonograph", {});
 
-/** Uniform scale applied to the phonograph root (parts, carriage, snap points inherit). */
-export const PHONOGRAPH_SCALE = 0.9;
-
 /** Fixed world anchor where the phonograph will appear (set when Welcome completes). */
 export const PhonographSpawnAnchor = createComponent("PhonographSpawnAnchor", {});
 
@@ -95,7 +92,7 @@ export class PhonographSystem extends createSystem({
         phonographEntity.object3D.lookAt(this.spawnCamX, spawn.y, this.spawnCamZ);
 
         phonographEntity.object3D.scale.setScalar(0.001);
-        phonographEntity.addComponent(PopIn, { target: PHONOGRAPH_SCALE });
+        phonographEntity.addComponent(PopIn);
         this.destroySpawnAnchor();
       }),
     );

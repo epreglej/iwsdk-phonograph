@@ -32,6 +32,7 @@ export const PHONOGRAPH_SPAWN_BELOW_HEAD_M = 0.35;
 export const TaskId = {
   Welcome: "welcome",
   AssemblyIntro: "assembly_intro",
+  AssemblyPhonographInfo: "assembly_phonograph_info",
   AssemblyChapterIntro: "assembly_chapter_intro",
   AssemblyCylinderMount: "assembly_cylinder_mount",
   AssemblyRecorderMount: "assembly_recorder_mount",
@@ -42,6 +43,7 @@ export const TaskId = {
   RecordingCarriageLower: "recording_carriage_lower",
   RecordingSpeakNarrate: "recording_speak_narrate",
   RecordingSpeak: "recording_speak",
+  PlaybackChapterIntro: "playback_chapter_intro",
   PlaybackSetupRecordingHornUnmount: "playback_setup_recording_horn_unmount",
   PlaybackSetupRecorderUnmount: "playback_setup_recorder_unmount",
   PlaybackSetupCarriageReturn: "playback_setup_carriage_return",
@@ -128,11 +130,13 @@ const TASKS: TaskDef[] = [
   },
   {
     id: TaskId.AssemblyIntro,
+  },
+  {
+    id: TaskId.AssemblyPhonographInfo,
     nameTagPartId: "phonograph",
   },
   {
     id: TaskId.AssemblyChapterIntro,
-    nameTagPartId: "phonograph",
   },
   {
     id: TaskId.AssemblyCylinderMount,
@@ -160,7 +164,7 @@ const TASKS: TaskDef[] = [
   {
     id: TaskId.AssemblyChapterComplete,
     panel: {
-      panelConfig: "./ui/chapters/chapter-1-complete.json",
+      panelConfig: "./ui/chapters/chapter-2.json",
       maxWidth: PHONOGRAPH_CHAPTER_PANEL_MAX_WIDTH,
       anchor: "phonograph",
       offsetY: PHONOGRAPH_CHAPTER_OFFSET_Y,
@@ -201,6 +205,20 @@ const TASKS: TaskDef[] = [
     partId: "brake",
     nameTagPartId: "brake",
     interactive: true,
+  },
+  {
+    id: TaskId.PlaybackChapterIntro,
+    panel: {
+      panelConfig: "./ui/chapters/chapter-3.json",
+      maxWidth: PHONOGRAPH_CHAPTER_PANEL_MAX_WIDTH,
+      anchor: "phonograph",
+      offsetY: PHONOGRAPH_CHAPTER_OFFSET_Y,
+      offsetZ: PHONOGRAPH_CHAPTER_OFFSET_Z,
+      faceTarget: true,
+      billboard: true,
+      buttonId: "playback-chapter-intro-button",
+      deferCompleteOnDismiss: true,
+    },
   },
   {
     id: TaskId.PlaybackSetupRecordingHornUnmount,

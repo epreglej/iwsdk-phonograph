@@ -1,5 +1,5 @@
 <style>
-  .info-tag {
+  .hint-tag {
     width: 200px;
     max-width: 200px;
     display: flex;
@@ -16,20 +16,10 @@
     padding-right: 10px;
   }
 
-  .title-label {
-    font-size: 10px;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.62);
-    line-height: 1.2;
-    text-align: left;
-    margin: 0;
-    margin-bottom: 4px;
-  }
-
   .body-text {
     font-size: 13px;
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.96);
+    color: rgba(255, 255, 255, 0.92);
     line-height: 1.4;
     text-align: left;
     margin: 0;
@@ -37,7 +27,6 @@
 
 </style>
 
-<div id="panel-root" class="info-tag">
-  <p class="title-label">PHONOGRAPH</p>
-  <p class="body-text">The phonograph was the first machine in history that could both record sound and play it back.</p>
+<div id="panel-root" class="hint-tag">
+  <p class="body-text">Press ? on the phonograph label to learn more.</p>
 </div>

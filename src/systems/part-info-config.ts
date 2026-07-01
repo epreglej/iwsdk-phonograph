@@ -54,7 +54,7 @@ function spec(
 
 /** Part id → panel config for name tags and detail panels. */
 export const PART_NAME_TAG_SPECS: Record<string, PartNameTagSpec> = {
-  phonograph: spec("phonograph", { offsetY: 0.24 }),
+  phonograph: spec("phonograph", { offsetY: 0.44 }),
   cylinder: spec("cylinder", { offsetY: 0.16 }),
   recorder: spec("recorder"),
   recording_horn: spec("recording-horn", { offsetY: HORN_PANEL_OFFSET_Y }),
@@ -147,7 +147,23 @@ export interface MicroInstructionBinding {
 export const TASK_MICRO_INSTRUCTION_SPECS: Record<
   string,
   Record<string, MicroInstructionBinding>
-> = {};
+> = {
+  [TaskId.AssemblyPhonographInfo]: {
+    phonograph: {
+      steps: [
+        {
+          panelConfig: "./ui/instructions/phonograph-info-tutorial.json",
+          maxWidth: MICRO_INSTRUCTION_MAX_WIDTH,
+          offsetX: 0,
+          offsetY: 0.56,
+          offsetZ: 0,
+        },
+      ],
+      flow: "info-tutorial",
+      completeTaskOnInfoClose: true,
+    },
+  },
+};
 
 export function microInstructionBindingForTaskPart(
   taskId: string,

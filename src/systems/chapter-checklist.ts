@@ -31,6 +31,14 @@ const RECORDING_CHECKLIST_CONFIGS = [
   "./ui/checklists/chapter-2-record-step-5.json",
 ];
 
+const PLAYBACK_CHECKLIST_CONFIGS = [
+  "./ui/checklists/chapter-3-playback-step-1.json",
+  "./ui/checklists/chapter-3-playback-step-2.json",
+  "./ui/checklists/chapter-3-playback-step-3.json",
+  "./ui/checklists/chapter-3-playback-step-4.json",
+  "./ui/checklists/chapter-3-playback-step-5.json",
+];
+
 /**
  * Keep world-space px scale aligned with the narrower UIKitML checklist card
  * so text size does not inflate when reducing panel width.
@@ -52,7 +60,15 @@ const RECORDING_CHECKLIST_ORDER = [
   TaskId.RecordingSpeak,
 ] as const;
 
-type ChecklistGroup = "assembly" | "recording";
+const PLAYBACK_CHECKLIST_ORDER = [
+  TaskId.PlaybackSetupRecordingHornUnmount,
+  TaskId.PlaybackSetupRecorderUnmount,
+  TaskId.PlaybackSetupCarriageReturn,
+  TaskId.PlaybackSetupReproducerMount,
+  TaskId.PlaybackSetupListeningHornMount,
+] as const;
+
+type ChecklistGroup = "assembly" | "recording" | "playback";
 
 interface ChecklistState {
   group: ChecklistGroup;
@@ -69,6 +85,11 @@ function checklistState(taskId: string): ChecklistState | null {
     taskId as (typeof RECORDING_CHECKLIST_ORDER)[number],
   );
   if (recordingStep >= 0) return { group: "recording", step: recordingStep };
+
+  const playbackStep = PLAYBACK_CHECKLIST_ORDER.indexOf(
+    taskId as (typeof PLAYBACK_CHECKLIST_ORDER)[number],
+  );
+  if (playbackStep >= 0) return { group: "playback", step: playbackStep };
 
   return null;
 }
@@ -109,7 +130,8 @@ export class ChapterChecklistSystem extends createSystem({
         const taskId = taskEntity.getValue(Task, "id")!;
         if (
           taskId === TaskId.AssemblyRecordingHornMount ||
-          taskId === TaskId.RecordingSpeak
+          taskId === TaskId.RecordingSpeak ||
+          taskId === TaskId.PlaybackSetupListeningHornMount
         ) {
           this.hideChecklist();
         }
@@ -193,7 +215,9 @@ export class ChapterChecklistSystem extends createSystem({
     const configs =
       this.currentGroup === "assembly"
         ? ASSEMBLY_CHECKLIST_CONFIGS
-        : RECORDING_CHECKLIST_CONFIGS;
+        : this.currentGroup === "recording"
+          ? RECORDING_CHECKLIST_CONFIGS
+          : PLAYBACK_CHECKLIST_CONFIGS;
 
     for (let step = 0; step < configs.length; step += 1) {
       const config = configs[step];

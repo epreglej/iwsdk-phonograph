@@ -7,33 +7,22 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "PHONOGRAPH"
-        ],
-        "properties": {
-          "class": "title-label"
-        },
-        "dataUid": "uid-2"
-      },
-      {
-        "sourceTag": "p",
-        "type": "custom",
-        "children": [
-          "The phonograph was the first machine in history that could both record sound and play it back."
+          "Press ? on the phonograph label to learn more."
         ],
         "properties": {
           "class": "body-text"
         },
-        "dataUid": "uid-3"
+        "dataUid": "uid-2"
       }
     ],
     "properties": {
       "id": "panel-root",
-      "class": "info-tag"
+      "class": "hint-tag"
     },
     "dataUid": "uid-1"
   },
   "classes": {
-    "info-tag": {
+    "hint-tag": {
       "content": {
         "width": "200px",
         "maxWidth": "200px",
@@ -51,22 +40,11 @@
         "paddingRight": "10px"
       }
     },
-    "title-label": {
-      "content": {
-        "fontSize": "10px",
-        "fontWeight": "600",
-        "color": "rgba(255, 255, 255, 0.62)",
-        "lineHeight": "1.2",
-        "textAlign": "left",
-        "margin": "0",
-        "marginBottom": "4px"
-      }
-    },
     "body-text": {
       "content": {
         "fontSize": "13px",
         "fontWeight": "600",
-        "color": "rgba(255, 255, 255, 0.96)",
+        "color": "rgba(255, 255, 255, 0.92)",
         "lineHeight": "1.4",
         "textAlign": "left",
         "margin": "0"
@@ -74,7 +52,7 @@
     }
   },
   "ranges": {
-    "info-tag": {
+    "hint-tag": {
       "start": {
         "line": 1,
         "column": 2
@@ -84,54 +62,34 @@
         "column": 11
       }
     },
-    "title-label": {
-      "start": {
-        "line": 18,
-        "column": 2
-      },
-      "end": {
-        "line": 18,
-        "column": 14
-      }
-    },
     "body-text": {
       "start": {
-        "line": 28,
+        "line": 18,
         "column": 2
       },
       "end": {
-        "line": 28,
+        "line": 18,
         "column": 12
       }
     },
     "uid-1": {
       "start": {
-        "line": 39,
+        "line": 29,
         "column": 0
       },
       "end": {
-        "line": 42,
+        "line": 31,
         "column": 6
       }
     },
     "uid-2": {
       "start": {
-        "line": 40,
+        "line": 30,
         "column": 2
       },
       "end": {
-        "line": 40,
-        "column": 39
-      }
-    },
-    "uid-3": {
-      "start": {
-        "line": 41,
-        "column": 2
-      },
-      "end": {
-        "line": 41,
-        "column": 121
+        "line": 30,
+        "column": 73
       }
     }
   }

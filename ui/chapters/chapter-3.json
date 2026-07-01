@@ -18,7 +18,7 @@
           }
         ],
         "properties": {
-          "id": "assembly-chapter-complete-button",
+          "id": "playback-chapter-intro-button",
           "class": "next-button"
         },
         "dataUid": "uid-2"
@@ -31,7 +31,7 @@
             "sourceTag": "span",
             "type": "custom",
             "children": [
-              "Chapter 1: Assemble"
+              "Chapter 3: Playback"
             ],
             "properties": {
               "class": "title-label"
@@ -42,7 +42,7 @@
             "sourceTag": "span",
             "type": "custom",
             "children": [
-              "Nice work, you have assembled the phonograph, but now you have to prepare it for recording."
+              "Good job, you recorded your voice successfully, but to play the recording you will need to reassemble the phonograph for playback."
             ],
             "properties": {
               "class": "body-text"
@@ -248,7 +248,7 @@
       },
       "end": {
         "line": 81,
-        "column": 126
+        "column": 165
       }
     }
   }

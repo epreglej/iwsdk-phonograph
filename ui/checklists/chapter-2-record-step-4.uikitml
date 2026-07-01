@@ -39,6 +39,14 @@
     color: rgba(255, 255, 255, 0.92);
   }
 
+  .row.recording {
+    color: rgba(0, 230, 38, 0.95);
+  }
+
+  .row.stopping {
+    color: rgba(255, 35, 23, 0.95);
+  }
+
 </style>
 
 <div id="panel-root" class="card">
@@ -46,6 +54,6 @@
   <span class="row">• Wind the crank</span>
   <span class="row">• Release the brake</span>
   <span class="row">• Lower the carriage</span>
-  <span class="row current">• Speak into the horn</span>
+  <span class="row recording">• Speak into the horn</span>
   <span class="row">• Engage the brake</span>
 </div>

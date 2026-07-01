@@ -281,7 +281,7 @@ export class TaskPanelSystem extends createSystem({
 
     const doc = panel.getValue(PanelDocument, "document") as UIKitDocument | null;
     const button = doc?.getElementById(buttonId);
-    button?.addEventListener("click", () => {
+    button?.addEventListener("pointerdown", () => {
       stopTaskNarration();
       void resumeAudioContext();
       const taskId = panel.getValue(TaskPanelInstance, "taskId")!;

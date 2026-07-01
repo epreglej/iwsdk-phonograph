@@ -199,7 +199,7 @@ export class AssemblyIntroSystem extends createSystem({
     const button = doc.getElementById(buttonId);
     if (!button) return false;
 
-    button.addEventListener("click", () => {
+    button.addEventListener("pointerdown", () => {
       void resumeAudioContext();
       if (role === "step1") this.onNextPressed();
       else this.onClosePressed();

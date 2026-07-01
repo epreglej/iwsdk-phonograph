@@ -858,7 +858,7 @@ export class PartInfoSystem extends createSystem({
     const button = doc?.getElementById(buttonId);
     if (!button) return;
 
-    button.addEventListener("click", () => {
+    button.addEventListener("pointerdown", () => {
       void resumeAudioContext();
       this.beginOpenDetail(part, panel);
     });

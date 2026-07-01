@@ -1,3 +1,5 @@
+import { TaskId } from "./task-config.js";
+
 const PANEL_OFFSET_Y = 0.11;
 const HORN_PANEL_OFFSET_Y = PANEL_OFFSET_Y * 1.2;
 
@@ -67,7 +69,22 @@ export const PART_NAME_TAG_SPECS: Record<string, PartNameTagSpec> = {
 export const TASK_NAME_TAG_SPECS: Record<
   string,
   Record<string, PartNameTagSpec>
-> = {};
+> = {
+  [TaskId.RecordingCarriageLower]: {
+    carriage: {
+      ...spec("carriage", { offsetY: 0.17 }),
+      nameTagConfig: "./ui/info/carriage-start-recording-name-tag.json",
+      infoButtonId: "",
+    },
+  },
+  [TaskId.RecordingSpeak]: {
+    brake: {
+      ...spec("brake"),
+      nameTagConfig: "./ui/info/brake-stop-recording-name-tag.json",
+      infoButtonId: "",
+    },
+  },
+};
 
 export function partNameTagSpecFor(partId: string): PartNameTagSpec | undefined {
   return PART_NAME_TAG_SPECS[partId];

@@ -18,7 +18,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "Carves your voice into the cylinder."
+          "Carves sound waves into the cylinder."
         ],
         "properties": {
           "class": "body-text"
@@ -131,7 +131,7 @@
       },
       "end": {
         "line": 41,
-        "column": 63
+        "column": 64
       }
     }
   }

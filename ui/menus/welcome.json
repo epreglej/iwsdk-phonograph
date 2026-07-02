@@ -17,9 +17,7 @@
       {
         "sourceTag": "span",
         "type": "custom",
-        "children": [
-          "Record your voice on wax, then hear it play back."
-        ],
+        "children": [],
         "properties": {
           "class": "subtitle"
         },
@@ -198,7 +196,7 @@
       },
       "end": {
         "line": 65,
-        "column": 81
+        "column": 32
       }
     },
     "uid-4": {

@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "CRANK"
+          "Crank"
         ],
         "properties": {
           "class": "title-label"

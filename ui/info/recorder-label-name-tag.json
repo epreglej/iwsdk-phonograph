@@ -4,42 +4,53 @@
     "sourceTag": "div",
     "children": [
       {
-        "sourceTag": "p",
-        "type": "custom",
+        "type": "container",
+        "sourceTag": "div",
         "children": [
-          "Carriage"
+          {
+            "sourceTag": "span",
+            "type": "custom",
+            "children": [
+              "Recorder"
+            ],
+            "properties": {
+              "class": "name-label"
+            },
+            "dataUid": "uid-3"
+          }
         ],
         "properties": {
-          "class": "title-label"
+          "class": "name-tag"
         },
         "dataUid": "uid-2"
-      },
-      {
-        "sourceTag": "p",
-        "type": "custom",
-        "children": [
-          "Moves the recorder across the spinning cylinder."
-        ],
-        "properties": {
-          "class": "body-text"
-        },
-        "dataUid": "uid-3"
       }
     ],
     "properties": {
       "id": "panel-root",
-      "class": "info-tag"
+      "class": "outer-layer"
     },
     "dataUid": "uid-1"
   },
   "classes": {
-    "info-tag": {
+    "outer-layer": {
       "content": {
-        "width": "200px",
-        "maxWidth": "200px",
+        "width": "140px",
+        "maxWidth": "140px",
         "display": "flex",
         "flexDirection": "column",
-        "alignItems": "flex-start",
+        "alignItems": "center",
+        "paddingTop": "8px",
+        "paddingRight": "8px"
+      }
+    },
+    "name-tag": {
+      "content": {
+        "width": "120px",
+        "maxWidth": "120px",
+        "alignSelf": "center",
+        "display": "flex",
+        "flexDirection": "row",
+        "alignItems": "center",
         "justifyContent": "center",
         "borderRadius": 12,
         "backgroundColor": "rgba(20, 20, 24, 0.92)",
@@ -51,62 +62,50 @@
         "paddingRight": "10px"
       }
     },
-    "title-label": {
-      "content": {
-        "fontSize": "10px",
-        "fontWeight": "600",
-        "color": "rgba(255, 255, 255, 0.62)",
-        "lineHeight": "1.2",
-        "textAlign": "left",
-        "margin": "0",
-        "marginBottom": "4px"
-      }
-    },
-    "body-text": {
+    "name-label": {
       "content": {
         "fontSize": "14px",
         "fontWeight": "600",
         "color": "rgba(255, 255, 255, 0.96)",
         "lineHeight": "1.15",
-        "textAlign": "left",
-        "margin": "0"
+        "textAlign": "center"
       }
     }
   },
   "ranges": {
-    "info-tag": {
+    "outer-layer": {
       "start": {
         "line": 1,
         "column": 2
       },
       "end": {
         "line": 1,
-        "column": 11
-      }
-    },
-    "title-label": {
-      "start": {
-        "line": 18,
-        "column": 2
-      },
-      "end": {
-        "line": 18,
         "column": 14
       }
     },
-    "body-text": {
+    "name-tag": {
       "start": {
-        "line": 28,
+        "line": 11,
         "column": 2
       },
       "end": {
-        "line": 28,
-        "column": 12
+        "line": 11,
+        "column": 11
+      }
+    },
+    "name-label": {
+      "start": {
+        "line": 29,
+        "column": 2
+      },
+      "end": {
+        "line": 29,
+        "column": 13
       }
     },
     "uid-1": {
       "start": {
-        "line": 39,
+        "line": 38,
         "column": 0
       },
       "end": {
@@ -116,22 +115,22 @@
     },
     "uid-2": {
       "start": {
-        "line": 40,
+        "line": 39,
         "column": 2
       },
       "end": {
-        "line": 40,
-        "column": 37
+        "line": 41,
+        "column": 8
       }
     },
     "uid-3": {
       "start": {
-        "line": 41,
-        "column": 2
+        "line": 40,
+        "column": 4
       },
       "end": {
-        "line": 41,
-        "column": 75
+        "line": 40,
+        "column": 44
       }
     }
   }

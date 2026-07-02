@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "PHONOGRAPH"
+          "Phonograph"
         ],
         "properties": {
           "class": "title-label"
@@ -18,7 +18,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "The phonograph was the first machine in history that could both record sound and play it back."
+          "The first machine in history that could record sound, and also play it back."
         ],
         "properties": {
           "class": "body-text"
@@ -131,7 +131,7 @@
       },
       "end": {
         "line": 41,
-        "column": 121
+        "column": 103
       }
     }
   }

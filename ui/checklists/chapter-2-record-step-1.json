@@ -51,23 +51,12 @@
         "sourceTag": "span",
         "type": "custom",
         "children": [
-          "• Speak into the horn"
+          "• Record your voice"
         ],
         "properties": {
           "class": "row"
         },
         "dataUid": "uid-6"
-      },
-      {
-        "sourceTag": "span",
-        "type": "custom",
-        "children": [
-          "• Engage the brake"
-        ],
-        "properties": {
-          "class": "row"
-        },
-        "dataUid": "uid-7"
       }
     ],
     "properties": {
@@ -84,7 +73,7 @@
         "display": "flex",
         "flexDirection": "column",
         "alignItems": "flex-start",
-        "borderRadius": 22,
+        "borderRadius": 12,
         "backgroundColor": "rgba(20, 20, 24, 0.92)",
         "borderWidth": "1px",
         "borderColor": "rgba(255, 255, 255, 0.18)",
@@ -119,16 +108,6 @@
     "current": {
       "content": {
         "color": "rgba(255, 255, 255, 0.92)"
-      }
-    },
-    "recording": {
-      "content": {
-        "color": "rgba(0, 230, 38, 0.95)"
-      }
-    },
-    "stopping": {
-      "content": {
-        "color": "rgba(255, 35, 23, 0.95)"
       }
     }
   },
@@ -173,94 +152,64 @@
         "column": 14
       }
     },
-    "recording": {
-      "start": {
-        "line": 41,
-        "column": 6
-      },
-      "end": {
-        "line": 41,
-        "column": 16
-      }
-    },
-    "stopping": {
-      "start": {
-        "line": 45,
-        "column": 6
-      },
-      "end": {
-        "line": 45,
-        "column": 15
-      }
-    },
     "uid-1": {
       "start": {
-        "line": 51,
+        "line": 43,
         "column": 0
       },
       "end": {
-        "line": 58,
+        "line": 49,
         "column": 6
       }
     },
     "uid-2": {
       "start": {
-        "line": 52,
+        "line": 44,
         "column": 2
       },
       "end": {
-        "line": 52,
+        "line": 44,
         "column": 52
       }
     },
     "uid-3": {
       "start": {
-        "line": 53,
+        "line": 45,
         "column": 2
       },
       "end": {
-        "line": 53,
+        "line": 45,
         "column": 51
       }
     },
     "uid-4": {
       "start": {
-        "line": 54,
+        "line": 46,
         "column": 2
       },
       "end": {
-        "line": 54,
+        "line": 46,
         "column": 46
       }
     },
     "uid-5": {
       "start": {
-        "line": 55,
+        "line": 47,
         "column": 2
       },
       "end": {
-        "line": 55,
+        "line": 47,
         "column": 47
       }
     },
     "uid-6": {
       "start": {
-        "line": 56,
+        "line": 48,
         "column": 2
       },
       "end": {
-        "line": 56,
-        "column": 48
-      }
-    },
-    "uid-7": {
-      "start": {
-        "line": 57,
-        "column": 2
-      },
-      "end": {
-        "line": 57,
-        "column": 45
+        "line": 48,
+        "column": 46
       }
     }
   }

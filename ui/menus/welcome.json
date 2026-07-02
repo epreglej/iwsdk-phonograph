@@ -33,7 +33,7 @@
             "sourceTag": "span",
             "type": "custom",
             "children": [
-              "Begin"
+              "Start"
             ],
             "properties": {
               "class": "menu-button-label"

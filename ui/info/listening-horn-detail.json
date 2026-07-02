@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "LISTENING HORN"
+          "Listening Horn"
         ],
         "properties": {
           "class": "title-label"
@@ -18,7 +18,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "Makes the sound from the reproducer loud enough to hear."
+          "Makes the sound from the reproducer louder and easier to hear."
         ],
         "properties": {
           "class": "body-text"
@@ -131,7 +131,7 @@
       },
       "end": {
         "line": 41,
-        "column": 83
+        "column": 89
       }
     }
   }

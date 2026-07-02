@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "REPRODUCER"
+          "Reproducer"
         ],
         "properties": {
           "class": "title-label"

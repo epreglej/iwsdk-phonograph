@@ -7,7 +7,7 @@
         "sourceTag": "span",
         "type": "custom",
         "children": [
-          "Chapter 2: Record"
+          "Chapter 4: Playback"
         ],
         "properties": {
           "class": "title-label"
@@ -18,23 +18,12 @@
         "sourceTag": "span",
         "type": "custom",
         "children": [
-          "• Wind the crank"
-        ],
-        "properties": {
-          "class": "row"
-        },
-        "dataUid": "uid-3"
-      },
-      {
-        "sourceTag": "span",
-        "type": "custom",
-        "children": [
           "• Release the brake"
         ],
         "properties": {
           "class": "row current"
         },
-        "dataUid": "uid-4"
+        "dataUid": "uid-3"
       },
       {
         "sourceTag": "span",
@@ -45,18 +34,18 @@
         "properties": {
           "class": "row"
         },
-        "dataUid": "uid-5"
+        "dataUid": "uid-4"
       },
       {
         "sourceTag": "span",
         "type": "custom",
         "children": [
-          "• Record your voice"
+          "• Listen"
         ],
         "properties": {
           "class": "row"
         },
-        "dataUid": "uid-6"
+        "dataUid": "uid-5"
       }
     ],
     "properties": {
@@ -158,7 +147,7 @@
         "column": 0
       },
       "end": {
-        "line": 49,
+        "line": 48,
         "column": 6
       }
     },
@@ -169,7 +158,7 @@
       },
       "end": {
         "line": 44,
-        "column": 52
+        "column": 54
       }
     },
     "uid-3": {
@@ -179,7 +168,7 @@
       },
       "end": {
         "line": 45,
-        "column": 43
+        "column": 54
       }
     },
     "uid-4": {
@@ -189,7 +178,7 @@
       },
       "end": {
         "line": 46,
-        "column": 54
+        "column": 47
       }
     },
     "uid-5": {
@@ -199,17 +188,7 @@
       },
       "end": {
         "line": 47,
-        "column": 47
-      }
-    },
-    "uid-6": {
-      "start": {
-        "line": 48,
-        "column": 2
-      },
-      "end": {
-        "line": 48,
-        "column": 46
+        "column": 35
       }
     }
   }

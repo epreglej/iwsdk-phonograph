@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "CYLINDER"
+          "Cylinder"
         ],
         "properties": {
           "class": "title-label"
@@ -18,7 +18,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "Your recording surface."
+          "Phonograph’s recording medium made out of wax."
         ],
         "properties": {
           "class": "body-text"
@@ -131,7 +131,7 @@
       },
       "end": {
         "line": 41,
-        "column": 50
+        "column": 73
       }
     }
   }

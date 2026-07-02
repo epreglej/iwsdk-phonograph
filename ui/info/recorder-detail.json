@@ -7,7 +7,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "RECORDER"
+          "Recorder"
         ],
         "properties": {
           "class": "title-label"
@@ -18,7 +18,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "Carves sound into the cylinder."
+          "Carves your voice into the cylinder."
         ],
         "properties": {
           "class": "body-text"
@@ -131,7 +131,7 @@
       },
       "end": {
         "line": 41,
-        "column": 58
+        "column": 63
       }
     }
   }

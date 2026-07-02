@@ -4,31 +4,32 @@
     "sourceTag": "div",
     "children": [
       {
-        "sourceTag": "p",
+        "sourceTag": "span",
         "type": "custom",
         "children": [
-          "Press ? on the phonograph label to learn more."
+          "Engage the brake to stop recording"
         ],
         "properties": {
-          "class": "body-text"
+          "class": "label"
         },
         "dataUid": "uid-2"
       }
     ],
     "properties": {
       "id": "panel-root",
-      "class": "hint-tag"
+      "class": "panel"
     },
     "dataUid": "uid-1"
   },
   "classes": {
-    "hint-tag": {
+    "panel": {
       "content": {
-        "width": "200px",
-        "maxWidth": "200px",
+        "width": "240px",
+        "maxWidth": "240px",
+        "minWidth": "240px",
         "display": "flex",
-        "flexDirection": "column",
-        "alignItems": "flex-start",
+        "flexDirection": "row",
+        "alignItems": "center",
         "justifyContent": "center",
         "borderRadius": 12,
         "backgroundColor": "rgba(20, 20, 24, 0.92)",
@@ -36,40 +37,39 @@
         "borderColor": "rgba(255, 255, 255, 0.18)",
         "paddingTop": "8px",
         "paddingBottom": "8px",
-        "paddingLeft": "10px",
-        "paddingRight": "10px"
+        "paddingLeft": "12px",
+        "paddingRight": "12px"
       }
     },
-    "body-text": {
+    "label": {
       "content": {
         "fontSize": "13px",
         "fontWeight": "600",
-        "color": "rgba(255, 255, 255, 0.92)",
-        "lineHeight": "1.4",
-        "textAlign": "left",
-        "margin": "0"
+        "color": "rgba(255, 255, 255, 0.88)",
+        "lineHeight": "1.25",
+        "textAlign": "center"
       }
     }
   },
   "ranges": {
-    "hint-tag": {
+    "panel": {
       "start": {
         "line": 1,
         "column": 2
       },
       "end": {
         "line": 1,
-        "column": 11
+        "column": 8
       }
     },
-    "body-text": {
+    "label": {
       "start": {
-        "line": 18,
+        "line": 19,
         "column": 2
       },
       "end": {
-        "line": 18,
-        "column": 12
+        "line": 19,
+        "column": 8
       }
     },
     "uid-1": {
@@ -89,7 +89,7 @@
       },
       "end": {
         "line": 30,
-        "column": 73
+        "column": 63
       }
     }
   }

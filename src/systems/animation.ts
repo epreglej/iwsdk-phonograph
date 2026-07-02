@@ -14,13 +14,6 @@ export const POP_IN_MS = 700;
 export const POP_OUT_MS = 550;
 export const SPIN_PERIOD_MS = 1000;
 
-/** Wait after a 3D part finishes popping in before its name tag or placard appears. */
-export const PANEL_SPAWN_AFTER_PART_POP_IN_MS = 250;
-/** Wait after a name tag finishes popping in before micro-instructions appear. */
-export const MICRO_INSTRUCTION_SPAWN_AFTER_NAME_TAG_MS = 400;
-/** Spawn delay not started yet (waiting for a prerequisite animation). */
-export const PANEL_SPAWN_DELAY_PENDING = -1;
-
 export function isPartPopInComplete(part: Entity): boolean {
   if (part.hasComponent(PopInDone)) return true;
   const obj = part.object3D;

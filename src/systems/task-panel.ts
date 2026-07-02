@@ -28,7 +28,7 @@ import {
   type TaskPanelSpec,
 } from "./task-config.js";
 import { resumeAudioContext } from "../audio/context.js";
-import { stopTaskNarration } from "../audio/narration.js";
+import { playTaskNarration, stopTaskNarration } from "../audio/narration.js";
 
 export const TaskPanel = createComponent("TaskPanel", {
   panelConfig: { type: Types.String, default: "" },
@@ -42,6 +42,7 @@ export const TaskPanel = createComponent("TaskPanel", {
   buttonId: { type: Types.String, default: "" },
   deferCompleteOnDismiss: { type: Types.Boolean, default: false },
   autoCompleteMs: { type: Types.Float32, default: 0 },
+  narration: { type: Types.String, default: "" },
 });
 
 export const TaskPanelInstance = createComponent("TaskPanelInstance", {
@@ -80,6 +81,7 @@ export class TaskPanelSystem extends createSystem({
   autoCompletePanels: { required: [TaskPanelInstance, TaskPanelAutoComplete] },
 }) {
   private readonly deferredTaskComplete = new DeferredTaskCompletion();
+  private panelNarrationGeneration = 0;
 
   init() {
     this.cleanupFuncs.push(
@@ -97,6 +99,7 @@ export class TaskPanelSystem extends createSystem({
       this.queries.activeTask.subscribe("disqualify", (taskEntity) => {
         const taskId = taskEntity.getValue(Task, "id")!;
         if (!TASK_PANEL_BY_TASK[taskId]) return;
+        this.cancelPanelNarration();
         this.deferredTaskComplete.clear();
         this.stripPanel(taskId);
       }),
@@ -122,6 +125,7 @@ export class TaskPanelSystem extends createSystem({
         this.popInPanel(panel);
         this.wireButton(panel);
         this.scheduleAutoComplete(panel);
+        this.startPanelNarration(panel);
       }),
 
       this.queries.poppedOut.subscribe("qualify", (panel) => {
@@ -203,6 +207,24 @@ export class TaskPanelSystem extends createSystem({
       buttonId: spec.buttonId ?? "",
       deferCompleteOnDismiss: spec.deferCompleteOnDismiss ?? false,
       autoCompleteMs: spec.autoCompleteMs ?? 0,
+      narration: spec.narration ?? "",
+    });
+  }
+
+  private cancelPanelNarration(): void {
+    this.panelNarrationGeneration += 1;
+    stopTaskNarration();
+  }
+
+  private startPanelNarration(panel: Entity): void {
+    const anchor = panel.getValue(TaskPanelInstance, "anchor");
+    const url = anchor?.getValue(TaskPanel, "narration") ?? "";
+    if (!url) return;
+
+    const generation = this.panelNarrationGeneration;
+    void resumeAudioContext().then(() => {
+      if (generation !== this.panelNarrationGeneration) return;
+      playTaskNarration(url, 1);
     });
   }
 
@@ -282,7 +304,7 @@ export class TaskPanelSystem extends createSystem({
     const doc = panel.getValue(PanelDocument, "document") as UIKitDocument | null;
     const button = doc?.getElementById(buttonId);
     button?.addEventListener("pointerdown", () => {
-      stopTaskNarration();
+      this.cancelPanelNarration();
       void resumeAudioContext();
       const taskId = panel.getValue(TaskPanelInstance, "taskId")!;
       const defer = anchor.getValue(TaskPanel, "deferCompleteOnDismiss") ?? false;

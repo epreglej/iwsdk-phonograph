@@ -1,6 +1,3 @@
-/** Pause after narration before advancing/closing any narrated panel. */
-export const NARRATION_POST_DELAY_MS = 400;
-
 /** World-space max width for menu panels (meters). */
 export const MENU_PANEL_MAX_WIDTH = 0.3;
 
@@ -25,8 +22,11 @@ export const PHONOGRAPH_CHAPTER_OFFSET_Z = -0.1;
 export const PHONOGRAPH_CHAPTER_PANEL_MAX_WIDTH = 0.3;
 /** Forward distance from the user when the phonograph appears (meters). */
 export const PHONOGRAPH_SPAWN_FORWARD_M = 0.8;
-/** Vertical offset below the user's head when the phonograph appears (meters). */
-export const PHONOGRAPH_SPAWN_BELOW_HEAD_M = 0.35;
+/** Eye-height fraction for phonograph spawn Y. */
+export const PHONOGRAPH_SPAWN_HEIGHT_FACTOR = 0.5;
+/** Clamped world Y range for phonograph spawn height (meters). */
+export const PHONOGRAPH_SPAWN_HEIGHT_MIN_M = 0.6;
+export const PHONOGRAPH_SPAWN_HEIGHT_MAX_M = 0.85;
 
 /** Story task identifiers — phase prefix + step name. */
 export const TaskId = {
@@ -54,6 +54,7 @@ export const TaskId = {
   PlaybackBrakeRelease: "playback_brake_release",
   PlaybackCarriageLower: "playback_carriage_lower",
   PlaybackListen: "playback_listen",
+  ExperienceComplete: "experience_complete",
 } as const;
 
 export interface PlacardSpec {
@@ -81,6 +82,7 @@ export interface TaskPanelSpec {
   buttonId?: string;
   deferCompleteOnDismiss?: boolean;
   autoCompleteMs?: number;
+  narration?: string;
 }
 
 export interface PlacardBinding {
@@ -99,18 +101,13 @@ export interface TaskDef {
   revealPart?: boolean;
   revealPartId?: string;
   revealOnComplete?: string;
-  narration?: string;
-  afterNarrationMs?: number;
-  hintAudio?: string;
   unmount?: boolean;
   interactive?: boolean;
   startRecordingOnStart?: boolean;
-  /** Skip UI/interaction and advance to the next task immediately. */
   autoCompleteOnStart?: boolean;
-  /** Part(s) that show a floating name tag while this task is active. */
   nameTagPartId?: string;
   nameTagPartIds?: string[];
-  /** Part(s) that also show an extra action label alongside the info name tag. */
+  completeOnInfoDetailClose?: boolean;
   actionNameTagPartId?: string;
   actionNameTagPartIds?: string[];
 }
@@ -138,6 +135,7 @@ const TASKS: TaskDef[] = [
   {
     id: TaskId.AssemblyPhonographInfo,
     nameTagPartId: "phonograph",
+    completeOnInfoDetailClose: true,
   },
   {
     id: TaskId.AssemblyChapterIntro,
@@ -177,6 +175,7 @@ const TASKS: TaskDef[] = [
       billboard: true,
       buttonId: "assembly-chapter-complete-button",
       deferCompleteOnDismiss: true,
+      narration: "./audio/chapter-2.wav",
     },
   },
   {
@@ -200,18 +199,23 @@ const TASKS: TaskDef[] = [
   },
   {
     id: TaskId.RecordingIntermission,
-    autoCompleteOnStart: true,
+    panel: {
+      panelConfig: "./ui/chapters/chapter-2-intermission.json",
+      maxWidth: PHONOGRAPH_CHAPTER_PANEL_MAX_WIDTH,
+      anchor: "phonograph",
+      offsetY: PHONOGRAPH_CHAPTER_OFFSET_Y,
+      offsetZ: PHONOGRAPH_CHAPTER_OFFSET_Z,
+      faceTarget: true,
+      billboard: true,
+      buttonId: "chapter-2-intermission-button",
+      deferCompleteOnDismiss: true,
+      narration: "./audio/chapter-2-intermission.wav",
+    },
   },
   {
     id: TaskId.RecordingSpeakNarrate,
     nameTagPartId: "recording_horn",
-    afterNarrationMs: 1500,
     startRecordingOnStart: true,
-  },
-  {
-    id: TaskId.RecordingSpeak,
-    partId: "brake",
-    nameTagPartId: "brake",
     interactive: true,
   },
   {
@@ -226,6 +230,7 @@ const TASKS: TaskDef[] = [
       billboard: true,
       buttonId: "playback-chapter-intro-button",
       deferCompleteOnDismiss: true,
+      narration: "./audio/chapter-3.wav",
     },
   },
   {
@@ -276,6 +281,7 @@ const TASKS: TaskDef[] = [
       billboard: true,
       buttonId: "playback-listen-intro-button",
       deferCompleteOnDismiss: true,
+      narration: "./audio/chapter-4.wav",
     },
   },
   {
@@ -291,6 +297,15 @@ const TASKS: TaskDef[] = [
     interactive: true,
   },
   { id: TaskId.PlaybackListen },
+  {
+    id: TaskId.ExperienceComplete,
+    panel: {
+      ...HEAD_MENU_PANEL,
+      panelConfig: "./ui/menus/experience-complete.json",
+      buttonId: "experience-complete-try-again-button",
+      deferCompleteOnDismiss: true,
+    },
+  },
 ];
 
 export const TASK_ORDER: string[] = TASKS.map((task) => task.id);

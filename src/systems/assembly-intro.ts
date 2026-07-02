@@ -13,7 +13,12 @@ import {
 } from "@iwsdk/core";
 import { resumeAudioContext } from "../audio/context.js";
 import { playTaskNarration, stopTaskNarration } from "../audio/narration.js";
-import { PopIn2D, PopIn2DDone, PopOut2D, PopOut2DDone } from "./animation.js";
+import {
+  PopIn2D,
+  PopIn2DDone,
+  PopOut2D,
+  PopOut2DDone,
+} from "./animation.js";
 import { Billboard } from "./billboard.js";
 import {
   beginPanelPopOut,
@@ -28,16 +33,31 @@ import {
   PHONOGRAPH_CHAPTER_PANEL_MAX_WIDTH,
   TaskId,
 } from "./task-config.js";
+import {
+  INSTRUCTION_PANEL_FOLLOW_SPEED,
+  INSTRUCTION_PANEL_FOLLOW_TOLERANCE,
+} from "./instruction-config.js";
 
 const STEP1_CONFIG = "./ui/chapters/chapter-0.json";
+const STEP1_INSTRUCTION_CONFIG = "./ui/instructions/continue-instruction.json";
 const STEP1_NARRATION = "./audio/chapter-0.wav";
 const STEP2_CONFIG = "./ui/chapters/chapter-1.json";
+const STEP2_NARRATION = "./audio/chapter-1.wav";
 
 const INTRO_OFFSET: [number, number, number] = [
   0,
   PHONOGRAPH_CHAPTER_OFFSET_Y,
   PHONOGRAPH_CHAPTER_OFFSET_Z,
 ];
+
+/** Slightly below and to the right of the chapter-0 panel. */
+const STEP1_INSTRUCTION_OFFSET: [number, number, number] = [
+  INTRO_OFFSET[0] + 0.14,
+  INTRO_OFFSET[1] - 0.12,
+  PHONOGRAPH_CHAPTER_OFFSET_Z,
+];
+
+const STEP1_INSTRUCTION_MAX_WIDTH = 0.16;
 
 export const AssemblyIntroPanel = createComponent("AssemblyIntroPanel", {
   role: { type: Types.String, default: "" },
@@ -60,6 +80,9 @@ export class AssemblyIntroSystem extends createSystem({
   private pendingWiring: Entity[] = [];
   private pendingPoke: Entity[] = [];
   private wiredPanelIds = new Set<number>();
+  private pendingIntroTaskId: string | null = null;
+  /** Invalidates pending chapter-0 narration work. */
+  private introFlowGeneration = 0;
 
   init() {
     this.cleanupFuncs.push(
@@ -67,7 +90,10 @@ export class AssemblyIntroSystem extends createSystem({
         const taskId = taskEntity.getValue(Task, "id");
         if (!this.isIntroTaskId(taskId)) return;
         if (!taskId) return;
-        this.spawnPanelForIntroTask(taskId);
+        if (taskId === TaskId.AssemblyIntro) {
+          this.invalidateIntroFlow();
+        }
+        this.schedulePanelSpawnForIntroTask(taskId);
       }),
 
       this.queries.activeIntroTask.subscribe("disqualify", (taskEntity) => {
@@ -79,19 +105,15 @@ export class AssemblyIntroSystem extends createSystem({
       this.queries.introPanelDocs.subscribe("qualify", (panel) => {
         this.popInPanel(panel);
         this.pendingWiring.push(panel);
-      }),
 
-      this.queries.introPopInDone.subscribe("qualify", (panel) => {
         const role = panel.getValue(AssemblyIntroPanel, "role");
         if (role === "step1" || role === "step2") {
           this.pendingPoke.push(panel);
         }
         if (role === "step1") {
-          void resumeAudioContext().then(() => {
-            playTaskNarration(STEP1_NARRATION, 1, () => {
-              // Keep behavior simple: narration may finish while panel remains visible.
-            });
-          });
+          this.startNarration(STEP1_NARRATION);
+        } else if (role === "step2") {
+          this.startNarration(STEP2_NARRATION);
         }
       }),
 
@@ -127,14 +149,52 @@ export class AssemblyIntroSystem extends createSystem({
     this.pendingPoke.length = 0;
   }
 
+  private schedulePanelSpawnForIntroTask(taskId: string): void {
+    this.pendingIntroTaskId = taskId;
+
+    if (taskId === TaskId.AssemblyIntro) {
+      const phonograph = this.first(this.queries.phonograph.entities);
+      if (phonograph?.object3D) {
+        this.spawnPanelForIntroTask(taskId);
+      }
+      return;
+    }
+
+    this.spawnPanelForIntroTask(taskId);
+  }
+
+  private startNarration(url: string): void {
+    const generation = this.introFlowGeneration;
+    void resumeAudioContext().then(() => {
+      if (!this.isIntroFlowActive(generation)) return;
+      playTaskNarration(url, 1);
+    });
+  }
+
   private spawnPanelForIntroTask(taskId: string): void {
-    this.teardownAll();
+    this.teardownIntroPanels();
 
     const phonograph = this.first(this.queries.phonograph.entities);
     if (!phonograph?.object3D) return;
 
     const isStep1 = taskId === TaskId.AssemblyIntro;
-    this.spawnPanel(phonograph, isStep1 ? STEP1_CONFIG : STEP2_CONFIG, PHONOGRAPH_CHAPTER_PANEL_MAX_WIDTH, INTRO_OFFSET, isStep1 ? "step1" : "step2");
+    this.spawnPanel(
+      phonograph,
+      isStep1 ? STEP1_CONFIG : STEP2_CONFIG,
+      PHONOGRAPH_CHAPTER_PANEL_MAX_WIDTH,
+      INTRO_OFFSET,
+      isStep1 ? "step1" : "step2",
+    );
+
+    if (isStep1) {
+      this.spawnPanel(
+        phonograph,
+        STEP1_INSTRUCTION_CONFIG,
+        STEP1_INSTRUCTION_MAX_WIDTH,
+        STEP1_INSTRUCTION_OFFSET,
+        "step1-instruction",
+      );
+    }
   }
 
   private spawnPanel(
@@ -152,6 +212,8 @@ export class AssemblyIntroSystem extends createSystem({
         behavior: FollowBehavior.NoRotation,
         target: phonograph.object3D!,
         offsetPosition: offset,
+        speed: INSTRUCTION_PANEL_FOLLOW_SPEED,
+        tolerance: INSTRUCTION_PANEL_FOLLOW_TOLERANCE,
       })
       .addComponent(Billboard);
 
@@ -210,13 +272,14 @@ export class AssemblyIntroSystem extends createSystem({
   }
 
   private onNextPressed(): void {
-    stopTaskNarration();
+    this.cancelStep1FlowWork();
     if (this.activeTaskId() !== TaskId.AssemblyIntro || this.pendingCompleteTaskId) return;
     this.pendingCompleteTaskId = TaskId.AssemblyIntro;
     this.pendingCompleteRole = "step1";
 
     for (const panel of [...this.queries.introPanels.entities]) {
-      if (panel.getValue(AssemblyIntroPanel, "role") === "step1") {
+      const role = panel.getValue(AssemblyIntroPanel, "role");
+      if (role === "step1" || role === "step1-instruction") {
         panel.removeComponent(PokeInteractable);
         beginPanelPopOut(panel);
       }
@@ -266,10 +329,20 @@ export class AssemblyIntroSystem extends createSystem({
     });
   }
 
-  private teardownAll(): void {
+  private invalidateIntroFlow(): void {
+    this.introFlowGeneration += 1;
+  }
+
+  private isIntroFlowActive(generation: number): boolean {
+    return generation === this.introFlowGeneration;
+  }
+
+  private cancelStep1FlowWork(): void {
+    this.invalidateIntroFlow();
     stopTaskNarration();
-    this.pendingCompleteTaskId = null;
-    this.pendingCompleteRole = null;
+  }
+
+  private teardownIntroPanels(): void {
     this.pendingWiring.length = 0;
     this.pendingPoke.length = 0;
     this.wiredPanelIds.clear();
@@ -277,6 +350,14 @@ export class AssemblyIntroSystem extends createSystem({
     for (const panel of [...this.queries.introPanels.entities]) {
       this.disposePanel(panel);
     }
+  }
+
+  private teardownAll(): void {
+    this.cancelStep1FlowWork();
+    this.pendingIntroTaskId = null;
+    this.pendingCompleteTaskId = null;
+    this.pendingCompleteRole = null;
+    this.teardownIntroPanels();
   }
 
   private disposePanel(panel: Entity): void {

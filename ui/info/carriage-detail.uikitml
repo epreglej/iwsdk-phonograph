@@ -38,6 +38,6 @@
 </style>
 
 <div id="panel-root" class="info-tag">
-  <p class="title-label">CARRIAGE</p>
-  <p class="body-text">Drags the recorder across the length of a spinning cylinder.</p>
+  <p class="title-label">Carriage</p>
+  <p class="body-text">Moves the recorder across the spinning cylinder.</p>
 </div>

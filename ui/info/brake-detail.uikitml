@@ -38,6 +38,6 @@
 </style>
 
 <div id="panel-root" class="info-tag">
-  <p class="title-label">BRAKE</p>
+  <p class="title-label">Brake</p>
   <p class="body-text">Keeps the cylinder from spinning when not needed.</p>
 </div>

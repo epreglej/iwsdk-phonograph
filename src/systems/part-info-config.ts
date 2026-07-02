@@ -45,7 +45,7 @@ function spec(
   return {
     nameTagConfig: `./ui/info/${slug}-name-tag.json`,
     detailConfig: `./ui/info/${slug}-detail.json`,
-    detailNarration: `./audio/${slug}-1.wav`,
+    detailNarration: `./audio/${slug}.wav`,
     infoButtonId: `${slug}-info-button`,
     ...defaults,
     ...overrides,
@@ -70,7 +70,7 @@ export const TASK_NAME_TAG_SPECS: Record<
   string,
   Record<string, PartNameTagSpec>
 > = {
-  [TaskId.RecordingSpeak]: {
+  [TaskId.RecordingSpeakNarrate]: {
     brake: {
       ...spec("brake"),
       nameTagConfig: "./ui/info/brake-label-name-tag.json",
@@ -158,64 +158,6 @@ export function actionNameTagSpecForTaskPart(
   partId: string,
 ): PartActionNameTagSpec | undefined {
   return TASK_ACTION_NAME_TAG_SPECS[taskId]?.[partId];
-}
-
-export const MICRO_INSTRUCTION_MAX_WIDTH = DETAIL_PANEL_MAX_WIDTH;
-/** World-space offset above the part; keep clear of name tags at PANEL_OFFSET_Y. */
-export const MICRO_INSTRUCTION_OFFSET_Y = 0.28;
-/** World-space offset below the part (negative Y). */
-export const MICRO_INSTRUCTION_OFFSET_Y_BELOW = -0.13;
-
-export interface MicroInstructionStep {
-  panelConfig: string;
-  maxWidth: number;
-  offsetX: number;
-  offsetY: number;
-  offsetZ: number;
-}
-
-export type MicroInstructionFlow = "single" | "info-tutorial";
-
-export interface MicroInstructionBinding {
-  steps: MicroInstructionStep[];
-  flow?: MicroInstructionFlow;
-  /** Complete the active task when the narrated info panel auto-closes. */
-  completeTaskOnInfoClose?: boolean;
-}
-
-/** Task-specific micro instructions shown above a part during interactive steps. */
-export const TASK_MICRO_INSTRUCTION_SPECS: Record<
-  string,
-  Record<string, MicroInstructionBinding>
-> = {
-  [TaskId.AssemblyPhonographInfo]: {
-    phonograph: {
-      steps: [
-        {
-          panelConfig: "./ui/instructions/phonograph-info-tutorial.json",
-          maxWidth: MICRO_INSTRUCTION_MAX_WIDTH,
-          offsetX: 0,
-          offsetY: 0.56,
-          offsetZ: 0,
-        },
-      ],
-      flow: "info-tutorial",
-      completeTaskOnInfoClose: true,
-    },
-  },
-};
-
-export function microInstructionBindingForTaskPart(
-  taskId: string,
-  partId: string,
-): MicroInstructionBinding | undefined {
-  return TASK_MICRO_INSTRUCTION_SPECS[taskId]?.[partId];
-}
-
-/** Part ids that show a micro instruction panel for each task. */
-export const MICRO_INSTRUCTIONS_BY_TASK: Record<string, string[]> = {};
-for (const [taskId, bindings] of Object.entries(TASK_MICRO_INSTRUCTION_SPECS)) {
-  MICRO_INSTRUCTIONS_BY_TASK[taskId] = Object.keys(bindings);
 }
 
 export { NAME_TAG_MAX_WIDTH, DETAIL_PANEL_MAX_WIDTH, PANEL_OFFSET_Y };

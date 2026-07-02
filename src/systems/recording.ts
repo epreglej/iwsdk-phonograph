@@ -11,7 +11,7 @@ import {
 import { resumeAudioContext } from "../audio/context.js";
 import { Task, ActiveTask, CompletedTask } from "./task.js";
 import { TaskId } from "./task-config.js";
-import { Phonograph } from "./phonograph.js";
+import { Phonograph, PhonographPart } from "./phonograph.js";
 import { PopIn2D } from "./animation.js";
 import { Billboard } from "./billboard.js";
 import { hidePanelEntity, stripPanelSurface } from "./panel-lifecycle.js";
@@ -21,28 +21,8 @@ const RECORDING_STOP_HINT_CONFIG = "./ui/panels/recording-stop-hint.json";
 const RECORDING_PANEL_MAX_WIDTH = 0.175;
 const RECORDING_PANEL_OFFSET: [number, number, number] = [0, 0.5, 0];
 const RECORDING_STOP_HINT_OFFSET: [number, number, number] = [0, 0.43, 0];
+const RECORDING_STOP_ARM_DELAY_MS = 7000;
 const RECORDING_MAX_DURATION_MS = 60_000;
-export const RECORDING_STOP_UI_DELAY_MS = 5000;
-
-let recordingStartedAtMs: number | null = null;
-
-export function recordingStopUiDelayMs(): number {
-  if (recordingStartedAtMs == null) {
-    return RECORDING_STOP_UI_DELAY_MS;
-  }
-  return Math.max(
-    0,
-    RECORDING_STOP_UI_DELAY_MS - (Date.now() - recordingStartedAtMs),
-  );
-}
-
-function markRecordingStarted(): void {
-  recordingStartedAtMs = Date.now();
-}
-
-function clearRecordingStarted(): void {
-  recordingStartedAtMs = null;
-}
 
 export const RecordingPanel = createComponent("RecordingPanel", {});
 export const RecordingStopHintPanel = createComponent("RecordingStopHintPanel", {});
@@ -53,6 +33,8 @@ export const StartCarriageRecording = createComponent("StartCarriageRecording", 
 export const StartCarvingAmbience = createComponent("StartCarvingAmbience", {});
 export const StopRecording = createComponent("StopRecording", {});
 export const ClearRecording = createComponent("ClearRecording", {});
+/** Added to the brake part after the minimum recording duration. */
+export const BrakeRecordingStopArmed = createComponent("BrakeRecordingStopArmed", {});
 
 let recordedBuffer: AudioBuffer | null = null;
 let audioContext: AudioContext | null = null;
@@ -127,19 +109,19 @@ export class RecordingSystem extends createSystem({
     excluded: [CompletedTask],
     where: [eq(Task, "id", TaskId.RecordingSpeakNarrate)],
   },
-  activeRecordingSpeakTask: {
-    required: [Task, ActiveTask],
-    excluded: [CompletedTask],
-    where: [eq(Task, "id", TaskId.RecordingSpeak)],
-  },
   activePlaybackTask: {
     required: [Task, ActiveTask],
     excluded: [CompletedTask],
     where: [eq(Task, "id", TaskId.PlaybackListen)],
   },
   phonograph: { required: [Phonograph] },
+  brakePart: {
+    required: [PhonographPart],
+    where: [eq(PhonographPart, "id", "brake")],
+  },
   stopRequested: { required: [StopRecording] },
   clearRequested: { required: [ClearRecording] },
+  recording: { required: [Recording] },
   startRecordingSession: { required: [StartRecordingSession] },
   startCarvingAmbience: { required: [StartCarvingAmbience] },
   recordingPanels: { required: [RecordingPanel, PanelDocument] },
@@ -149,13 +131,14 @@ export class RecordingSystem extends createSystem({
 }) {
   private recordingTaskEntity: Entity | null = null;
   private recordingOwnerTaskEntity: Entity | null = null;
-  private pendingCompleteRecordingSpeak = false;
   private recordingMaxDurationTimeout: ReturnType<typeof setTimeout> | null =
     null;
+  private recordingStopArmTimeout: ReturnType<typeof setTimeout> | null = null;
+  private recordingStartInFlight = false;
   private carvingSource: AudioBufferSourceNode | null = null;
   private recordingPanelEntity: Entity | null = null;
   private recordingStopHintEntity: Entity | null = null;
-  private recordingStopHintTimer: ReturnType<typeof setTimeout> | null = null;
+  private pendingStartRecordingSession = false;
 
   init() {
     this.triggerEarlyPermissionPrompt();
@@ -170,10 +153,7 @@ export class RecordingSystem extends createSystem({
       }),
 
       this.queries.startRecordingSession.subscribe("qualify", () => {
-        this.world.sceneEntity.removeComponent(StartRecordingSession);
-        if (activeRecorder?.state === "recording" || getRecordedAudio()) return;
-        void this.ensureCarvingAmbience();
-        void this.startRecording();
+        this.pendingStartRecordingSession = true;
       }),
 
       this.queries.startCarvingAmbience.subscribe("qualify", () => {
@@ -181,36 +161,32 @@ export class RecordingSystem extends createSystem({
         void this.ensureCarvingAmbience();
       }),
 
-      this.queries.activeRecordingSpeakTask.subscribe("qualify", (taskEntity) => {
-        this.recordingTaskEntity = taskEntity;
-        this.scheduleRecordingStopHint();
-
-        if (this.pendingCompleteRecordingSpeak && getRecordedAudio()) {
-          this.pendingCompleteRecordingSpeak = false;
-          if (!taskEntity.hasComponent(CompletedTask)) {
-            taskEntity.addComponent(CompletedTask);
+      this.queries.activeRecordingSpeakNarrateTask.subscribe(
+        "qualify",
+        (taskEntity) => {
+          this.recordingTaskEntity = taskEntity;
+          if (
+            activeRecorder?.state === "recording" ||
+            this.world.sceneEntity.hasComponent(Recording)
+          ) {
+            this.recordingOwnerTaskEntity = taskEntity;
           }
-          return;
-        }
+        },
+      ),
 
-        if (getRecordedAudio()) return;
-
-        if (activeRecorder?.state !== "recording") {
-          void this.ensureCarvingAmbience();
-          void this.startRecording();
-        } else {
-          void this.ensureCarvingAmbience();
-        }
-      }),
-
-      this.queries.activeRecordingSpeakTask.subscribe("disqualify", () => {
+      this.queries.activeRecordingSpeakNarrateTask.subscribe("disqualify", () => {
         this.recordingTaskEntity = null;
-        this.clearRecordingStopHintTimer();
-        this.hideRecordingStopHint();
-        this.stopCarvingAmbience();
-        this.onRecordingStop();
-        abortActiveRecording();
-        this.world.sceneEntity.removeComponent(Recording);
+        this.defer(() => {
+          this.disarmRecordingStopHint();
+          this.stopCarvingAmbience();
+          if (activeRecorder?.state === "recording") {
+            abortActiveRecording();
+          }
+          if (this.world.sceneEntity.hasComponent(Recording)) {
+            this.onRecordingStop();
+            this.world.sceneEntity.removeComponent(Recording);
+          }
+        });
       }),
 
       this.queries.activePlaybackTask.subscribe("qualify", (taskEntity) => {
@@ -225,16 +201,32 @@ export class RecordingSystem extends createSystem({
 
       this.queries.clearRequested.subscribe("qualify", () => {
         this.stopCarvingAmbience();
-        this.pendingCompleteRecordingSpeak = false;
+        this.disarmRecordingStopHint();
         this.recordingOwnerTaskEntity = null;
         clearRecordedAudio();
         this.onRecordingStop();
         this.world.sceneEntity
           .removeComponent(ClearRecording)
           .removeComponent(Recording)
-          .removeComponent(StopRecording);
+          .removeComponent(StopRecording)
+          .removeComponent(StartRecordingSession);
       }),
     );
+  }
+
+  update() {
+    if (this.pendingStartRecordingSession) {
+      this.pendingStartRecordingSession = false;
+      this.world.sceneEntity.removeComponent(StartRecordingSession);
+      if (activeRecorder?.state === "recording" || getRecordedAudio()) return;
+      void this.ensureCarvingAmbience();
+      void this.startRecording();
+    }
+  }
+
+  /** Avoid ECS mutations during query qualify/disqualify callbacks. */
+  private defer(fn: () => void): void {
+    queueMicrotask(fn);
   }
 
   private async triggerEarlyPermissionPrompt() {
@@ -248,17 +240,42 @@ export class RecordingSystem extends createSystem({
     }
   }
 
+  private hasActiveRecordingSession(): boolean {
+    return (
+      activeRecorder?.state === "recording" ||
+      this.world.sceneEntity.hasComponent(Recording)
+    );
+  }
+
   private async startRecording() {
+    if (
+      this.recordingStartInFlight ||
+      this.hasActiveRecordingSession() ||
+      getRecordedAudio()
+    ) {
+      return;
+    }
+
+    this.recordingStartInFlight = true;
     try {
       const ctx = await resumeAudioContext();
+      if (this.hasActiveRecordingSession()) return;
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (this.hasActiveRecordingSession()) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
 
       const chunks: BlobPart[] = [];
       const recorder = new MediaRecorder(stream);
       registerActiveRecording(recorder, stream);
       this.recordingOwnerTaskEntity = this.captureRecordingOwnerTask();
-      this.world.sceneEntity.addComponent(Recording);
-      this.showRecordingPanel();
+      this.defer(() => {
+        this.world.sceneEntity.addComponent(Recording);
+        this.showRecordingPanel();
+        this.armRecordingStopHint();
+      });
 
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunks.push(e.data);
@@ -266,6 +283,7 @@ export class RecordingSystem extends createSystem({
 
       recorder.onstop = async () => {
         this.clearRecordingMaxDurationTimeout();
+        this.clearRecordingStopArmTimeout();
         clearActiveRecording();
         this.world.sceneEntity.removeComponent(Recording);
         this.onRecordingStop();
@@ -276,21 +294,15 @@ export class RecordingSystem extends createSystem({
         const buffer = await ctx.decodeAudioData(arrayBuffer);
         setRecordedAudio(ctx, buffer);
 
-        const taskEntity =
-          this.recordingOwnerTaskEntity ?? this.recordingTaskEntity;
+        const taskEntity = this.recordingCompletionTask();
         this.recordingOwnerTaskEntity = null;
 
         if (taskEntity?.active && !taskEntity.hasComponent(CompletedTask)) {
-          const taskId = taskEntity.getValue(Task, "id");
           taskEntity.addComponent(CompletedTask);
-          if (taskId === TaskId.RecordingSpeakNarrate) {
-            this.pendingCompleteRecordingSpeak = true;
-          }
         }
       };
 
       recorder.start();
-      markRecordingStarted();
       this.scheduleRecordingMaxDuration();
     } catch (err) {
       console.error("Recording failed:", err);
@@ -298,15 +310,23 @@ export class RecordingSystem extends createSystem({
       this.recordingOwnerTaskEntity = null;
       this.world.sceneEntity.removeComponent(Recording);
       this.onRecordingStop();
+    } finally {
+      this.recordingStartInFlight = false;
     }
   }
 
   private captureRecordingOwnerTask(): Entity | null {
-    for (const task of this.queries.activeRecordingSpeakTask.entities) {
-      return task;
-    }
+    return this.recordingCompletionTask();
+  }
+
+  private recordingCompletionTask(): Entity | null {
     for (const task of this.queries.activeRecordingSpeakNarrateTask.entities) {
-      return task;
+      if (!task.hasComponent(CompletedTask)) return task;
+    }
+
+    const fallback = this.recordingOwnerTaskEntity ?? this.recordingTaskEntity;
+    if (fallback?.active && !fallback.hasComponent(CompletedTask)) {
+      return fallback;
     }
     return null;
   }
@@ -327,10 +347,35 @@ export class RecordingSystem extends createSystem({
     this.recordingMaxDurationTimeout = null;
   }
 
+  private armRecordingStopHint(): void {
+    this.clearRecordingStopArmTimeout();
+    this.recordingStopArmTimeout = setTimeout(() => {
+      this.recordingStopArmTimeout = null;
+      if (activeRecorder?.state !== "recording") return;
+      if (this.queries.activeRecordingSpeakNarrateTask.entities.size === 0) return;
+      const brake = this.first(this.queries.brakePart.entities);
+      if (brake) brake.addComponent(BrakeRecordingStopArmed);
+      this.showRecordingStopHint();
+    }, RECORDING_STOP_ARM_DELAY_MS);
+  }
+
+  private clearRecordingStopArmTimeout(): void {
+    if (this.recordingStopArmTimeout == null) return;
+    clearTimeout(this.recordingStopArmTimeout);
+    this.recordingStopArmTimeout = null;
+  }
+
+  private disarmRecordingStopHint(): void {
+    this.clearRecordingStopArmTimeout();
+    for (const brake of this.queries.brakePart.entities) {
+      brake.removeComponent(BrakeRecordingStopArmed);
+    }
+    this.hideRecordingStopHint();
+  }
+
   private onRecordingStop(): void {
     this.clearRecordingMaxDurationTimeout();
-    this.clearRecordingStopHintTimer();
-    clearRecordingStarted();
+    this.disarmRecordingStopHint();
     this.hideRecordingPanel();
   }
 
@@ -358,30 +403,6 @@ export class RecordingSystem extends createSystem({
     panel.object3D!.scale.setScalar(0.001);
     panel.object3D!.visible = true;
     this.recordingPanelEntity = panel;
-  }
-
-  private scheduleRecordingStopHint(): void {
-    this.clearRecordingStopHintTimer();
-    this.hideRecordingStopHint();
-
-    const delayMs = recordingStopUiDelayMs();
-    if (delayMs <= 0) {
-      this.showRecordingStopHint();
-      return;
-    }
-
-    this.recordingStopHintTimer = setTimeout(() => {
-      this.recordingStopHintTimer = null;
-      if (this.queries.activeRecordingSpeakTask.entities.size === 0) return;
-      if (!this.world.sceneEntity.hasComponent(Recording)) return;
-      this.showRecordingStopHint();
-    }, delayMs);
-  }
-
-  private clearRecordingStopHintTimer(): void {
-    if (this.recordingStopHintTimer == null) return;
-    clearTimeout(this.recordingStopHintTimer);
-    this.recordingStopHintTimer = null;
   }
 
   private showRecordingStopHint(): void {

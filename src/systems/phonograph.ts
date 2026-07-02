@@ -1,6 +1,12 @@
 import { createComponent, createSystem, Entity, eq, Quaternion, Types, Vector3 } from "@iwsdk/core";
 import { Task, ActiveTask, CompletedTask } from "./task.js";
-import { PHONOGRAPH_SPAWN_BELOW_HEAD_M, PHONOGRAPH_SPAWN_FORWARD_M, TaskId } from "./task-config.js";
+import {
+  PHONOGRAPH_SPAWN_FORWARD_M,
+  PHONOGRAPH_SPAWN_HEIGHT_FACTOR,
+  PHONOGRAPH_SPAWN_HEIGHT_MAX_M,
+  PHONOGRAPH_SPAWN_HEIGHT_MIN_M,
+  TaskId,
+} from "./task-config.js";
 import { PopIn } from "./animation.js";
 
 export const Phonograph = createComponent("Phonograph", {});
@@ -24,7 +30,10 @@ export function computePhonographSpawnPosition(
   if (forward.lengthSq() < 0.001) forward.set(0, 0, -1);
   forward.normalize();
 
-  const y = headY - PHONOGRAPH_SPAWN_BELOW_HEAD_M;
+  const y = Math.min(
+    Math.max(headY * PHONOGRAPH_SPAWN_HEIGHT_FACTOR, PHONOGRAPH_SPAWN_HEIGHT_MIN_M),
+    PHONOGRAPH_SPAWN_HEIGHT_MAX_M,
+  );
   return {
     x: camX + forward.x * PHONOGRAPH_SPAWN_FORWARD_M,
     y,

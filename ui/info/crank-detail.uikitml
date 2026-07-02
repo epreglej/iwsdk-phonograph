@@ -38,6 +38,6 @@
 </style>
 
 <div id="panel-root" class="info-tag">
-  <p class="title-label">CRANK</p>
-  <p class="body-text">Powers the motor that spins the cylinder.</p>
+  <p class="title-label">Crank</p>
+  <p class="body-text">Powers the internal motor that spins the cylinder.</p>
 </div>

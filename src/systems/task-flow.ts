@@ -1,15 +1,12 @@
-import { createSystem, Entity, PanelDocument, PanelUI } from "@iwsdk/core";
-import { playTaskNarration, stopTaskNarration } from "../audio/narration.js";
-import { resumeAudioContext } from "../audio/context.js";
+import { createSystem, Entity } from "@iwsdk/core";
+import { stopTaskNarration } from "../audio/narration.js";
 import { playTaskChime } from "../audio/sfx.js";
 import { InteractionGate } from "./interaction-gate.js";
 import { PhonographPart } from "./phonograph.js";
 import { revealPart } from "./part-reveal.js";
-import { PlacardInstance } from "./placard.js";
 import { StartCarriageRecording, StartRecordingSession } from "./recording.js";
 import { Task, ActiveTask, CompletedTask } from "./task.js";
 import {
-  PLACARDS_BY_TASK,
   TaskId,
   TASK_BY_ID,
   TASK_ORDER,
@@ -18,7 +15,6 @@ import {
 
 export { Task, ActiveTask, CompletedTask } from "./task.js";
 export {
-  NARRATION_POST_DELAY_MS,
   TaskId,
   TASK_BY_ID,
   TASK_ORDER,
@@ -39,17 +35,9 @@ export class TaskFlowSystem extends createSystem({
   completedActiveTask: { required: [Task, ActiveTask, CompletedTask] },
   activeTask: { required: [Task, ActiveTask], excluded: [CompletedTask] },
   parts: { required: [PhonographPart] },
-  placardReady: {
-    required: [PlacardInstance, PanelUI, PanelDocument],
-  },
 }) {
-  private completeTimer: ReturnType<typeof setTimeout> | null = null;
   private activeTaskEntity: Entity | null = null;
-  private pendingPlacardAdvance: {
-    task: TaskDef;
-    taskEntity: Entity;
-    narrationDone: boolean;
-  } | null = null;
+  private pendingStartRecordingOnStart = false;
 
   init() {
     this.cleanupFuncs.push(
@@ -82,33 +70,8 @@ export class TaskFlowSystem extends createSystem({
         }
 
         if (task.startRecordingOnStart) {
-          this.world.sceneEntity
-            .addComponent(StartRecordingSession)
-            .addComponent(StartCarriageRecording);
+          this.pendingStartRecordingOnStart = true;
         }
-
-        this.queueTaskAudio(task, entity);
-
-        if (
-          task.afterNarrationMs != null &&
-          (task.placard || task.placards?.length)
-        ) {
-          this.pendingPlacardAdvance = {
-            task,
-            taskEntity: entity,
-            narrationDone: !(task.narration ?? task.hintAudio),
-          };
-          this.tryAdvanceAfterPlacard();
-        } else if (
-          task.afterNarrationMs != null &&
-          !(task.narration ?? task.hintAudio)
-        ) {
-          this.scheduleAutoAdvance(task.afterNarrationMs, entity);
-        }
-      }),
-
-      this.queries.placardReady.subscribe("qualify", () => {
-        this.tryAdvanceAfterPlacard();
       }),
 
       this.queries.activeTask.subscribe("disqualify", (entity) => {
@@ -117,14 +80,12 @@ export class TaskFlowSystem extends createSystem({
         if (!task) return;
 
         if (this.activeTaskEntity?.index === entity.index) {
-          this.clearAutoAdvance();
-          this.pendingPlacardAdvance = null;
+          stopTaskNarration();
           this.activeTaskEntity = null;
         }
       }),
 
       this.queries.completedActiveTask.subscribe("qualify", (entity) => {
-        // Never let narration block task progression: ending a task cuts active VO.
         stopTaskNarration();
         const completedId = entity.getValue(Task, "id")!;
         const completedTask = TASK_BY_ID[completedId];
@@ -139,81 +100,12 @@ export class TaskFlowSystem extends createSystem({
     );
   }
 
-  private queueTaskAudio(task: TaskDef, taskEntity: Entity): void {
-    const url = task.narration ?? task.hintAudio;
-    if (!url) return;
-
-    const hasPlacard = !!(task.placard || task.placards?.length);
-    const onEnded = () => {
-      if (
-        hasPlacard &&
-        this.pendingPlacardAdvance?.taskEntity.index === taskEntity.index
-      ) {
-        this.pendingPlacardAdvance.narrationDone = true;
-        this.tryAdvanceAfterPlacard();
-        return;
-      }
-
-      if (task.narration && task.afterNarrationMs != null) {
-        this.scheduleAutoAdvance(task.afterNarrationMs, taskEntity);
-      }
-    };
-
-    void resumeAudioContext().then(() => playTaskNarration(url, 1, onEnded));
-  }
-
-  private tryAdvanceAfterPlacard(): void {
-    const pending = this.pendingPlacardAdvance;
-    if (!pending) return;
-
-    const { task, taskEntity, narrationDone } = pending;
-    if (
-      !taskEntity.active ||
-      taskEntity.hasComponent(CompletedTask) ||
-      task.afterNarrationMs == null
-    ) {
-      this.pendingPlacardAdvance = null;
-      return;
-    }
-
-    if (!narrationDone) return;
-
-    const bindings = PLACARDS_BY_TASK[task.id];
-    if (!bindings?.length) {
-      this.pendingPlacardAdvance = null;
-      this.scheduleAutoAdvance(task.afterNarrationMs, taskEntity);
-      return;
-    }
-
-    const panelConfigs = new Set(
-      bindings.map((binding) => binding.placard.panelConfig),
-    );
-
-    for (const placard of this.queries.placardReady.entities) {
-      const config = placard.getValue(PanelUI, "config");
-      if (config && panelConfigs.has(config)) {
-        this.pendingPlacardAdvance = null;
-        this.scheduleAutoAdvance(task.afterNarrationMs, taskEntity);
-        return;
-      }
-    }
-  }
-
-  private scheduleAutoAdvance(delayMs: number, taskEntity: Entity): void {
-    this.clearAutoAdvance();
-    this.completeTimer = setTimeout(() => {
-      this.completeTimer = null;
-      if (taskEntity.active && !taskEntity.hasComponent(CompletedTask)) {
-        taskEntity.addComponent(CompletedTask);
-      }
-    }, delayMs);
-  }
-
-  private clearAutoAdvance(): void {
-    if (this.completeTimer != null) {
-      clearTimeout(this.completeTimer);
-      this.completeTimer = null;
-    }
+  update() {
+    if (!this.pendingStartRecordingOnStart) return;
+    this.pendingStartRecordingOnStart = false;
+    this.world.sceneEntity
+      .addComponent(StartRecordingSession)
+      .addComponent(StartCarriageRecording);
   }
 
   private advance(completedId: string): void {

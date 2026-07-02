@@ -2,6 +2,7 @@ import {
   createComponent,
   createSystem,
   Entity,
+  eq,
   FollowBehavior,
   Follower,
   Grabbed,
@@ -15,9 +16,6 @@ import {
 } from "@iwsdk/core";
 import {
   isPartPopInComplete,
-  MICRO_INSTRUCTION_SPAWN_AFTER_NAME_TAG_MS,
-  PANEL_SPAWN_AFTER_PART_POP_IN_MS,
-  PANEL_SPAWN_DELAY_PENDING,
   PopIn2D,
   PopIn2DDone,
   PopInDone,
@@ -34,18 +32,13 @@ import { playInfoDetailNarration } from "../audio/narration.js";
 import { PhonographPart } from "./phonograph.js";
 import { Snapped } from "./snap.js";
 import { Task, ActiveTask, CompletedTask } from "./task.js";
-import { TaskId } from "./task-config.js";
-import { recordingStopUiDelayMs } from "./recording.js";
-import { ACTION_NAME_TAGS_BY_TASK, NAME_TAGS_BY_TASK } from "./task-config.js";
+import { ACTION_NAME_TAGS_BY_TASK, NAME_TAGS_BY_TASK, TASK_BY_ID, TaskId } from "./task-config.js";
+import { BrakeRecordingStopArmed } from "./recording.js";
 import {
   actionNameTagSpecForTaskPart,
   DETAIL_PANEL_MAX_WIDTH,
-  MICRO_INSTRUCTION_MAX_WIDTH,
-  MICRO_INSTRUCTION_OFFSET_Y,
-  MICRO_INSTRUCTIONS_BY_TASK,
   NAME_TAG_MAX_WIDTH,
   PANEL_OFFSET_Y,
-  microInstructionBindingForTaskPart,
   nameTagSpecForTaskPart,
 } from "./part-info-config.js";
 
@@ -64,7 +57,6 @@ export const PartNameTag = createComponent("PartNameTag", {
   offsetZ: { type: Types.Float32, default: 0 },
   infoButtonId: { type: Types.String, default: "" },
   detailNarration: { type: Types.String, default: "" },
-  panelSpawnDelayRemainingMs: { type: Types.Float32, default: -1 },
 });
 
 export const PartNameTagInstance = createComponent("PartNameTagInstance", {
@@ -95,28 +87,6 @@ export const PartInfoDetailNarrationActive = createComponent(
   {},
 );
 
-export const PartMicroInstruction = createComponent("PartMicroInstruction", {
-  taskId: { type: Types.String, default: "" },
-  stepIndex: { type: Types.Int8, default: 0 },
-  panelConfig: { type: Types.String, default: "" },
-  maxWidth: { type: Types.Float32, default: MICRO_INSTRUCTION_MAX_WIDTH },
-  offsetX: { type: Types.Float32, default: 0 },
-  offsetY: { type: Types.Float32, default: MICRO_INSTRUCTION_OFFSET_Y },
-  offsetZ: { type: Types.Float32, default: 0 },
-  spawnDelayRemainingMs: { type: Types.Float32, default: 0 },
-});
-
-export const PartMicroInstructionInstance = createComponent(
-  "PartMicroInstructionInstance",
-  {
-    part: { type: Types.Entity, default: null },
-  },
-);
-export const PartMicroInstructionPendingSpawn = createComponent(
-  "PartMicroInstructionPendingSpawn",
-  {},
-);
-
 /**
  * Marker placed on the active task entity when its info detail panel opens.
  * When the panel finishes closing the task is completed via an ECS query.
@@ -142,7 +112,6 @@ export const PartActionNameTag = createComponent("PartActionNameTag", {
   offsetX: { type: Types.Float32, default: 0 },
   offsetY: { type: Types.Float32, default: PANEL_OFFSET_Y },
   offsetZ: { type: Types.Float32, default: 0 },
-  panelSpawnDelayRemainingMs: { type: Types.Float32, default: -1 },
 });
 
 export const PartActionNameTagInstance = createComponent(
@@ -201,14 +170,6 @@ export class PartInfoSystem extends createSystem({
     required: [PartInfoDetailInstance, PopIn2DDone],
     excluded: [PartInfoDetailSwappingOut, PartInfoDetailNarrationActive],
   },
-  microInstructionParts: { required: [PartMicroInstruction] },
-  microInstructionPendingSpawn: {
-    required: [PartMicroInstruction, PartMicroInstructionPendingSpawn],
-  },
-  microInstructionInstances: { required: [PartMicroInstructionInstance] },
-  microInstructionDocs: {
-    required: [PartMicroInstructionInstance, PanelDocument],
-  },
   actionTaggedParts: { required: [PartActionNameTag] },
   actionTaggedPartsGrabbed: { required: [PartActionNameTag, Grabbed] },
   actionNameTagPendingSpawn: {
@@ -217,6 +178,10 @@ export class PartInfoSystem extends createSystem({
   actionNameTagInstances: { required: [PartActionNameTagInstance] },
   actionNameTagDocs: {
     required: [PartActionNameTagInstance, PanelDocument],
+  },
+  brakeRecordingStopArmed: {
+    required: [PhonographPart, BrakeRecordingStopArmed],
+    where: [eq(PhonographPart, "id", "brake")],
   },
 }) {
   private readonly pendingOpen: Entity[] = [];
@@ -233,16 +198,27 @@ export class PartInfoSystem extends createSystem({
         const taskId = taskEntity.getValue(Task, "id")!;
         this.applyNameTagForTask(taskId);
         this.applyActionNameTagForTask(taskId);
-        this.applyMicroInstructionForTask(taskId);
       }),
 
       this.queries.activeTask.subscribe("disqualify", (taskEntity) => {
         const taskId = taskEntity.getValue(Task, "id")!;
         this.removeNameTagForTask(taskId);
         this.removeActionNameTagForTask(taskId);
-        this.removeMicroInstructionForTask(taskId);
+        if (taskId === TaskId.RecordingSpeakNarrate) {
+          const brake = this.partById("brake");
+          if (brake) this.removeRecordingBrakeNameTag(brake);
+        }
         this.cancelDetailAutoClose?.();
         this.cancelDetailAutoClose = null;
+      }),
+
+      this.queries.brakeRecordingStopArmed.subscribe("qualify", (brake) => {
+        if (!this.isRecordingSpeakNarrateActive()) return;
+        this.applyRecordingBrakeNameTag(brake);
+      }),
+
+      this.queries.brakeRecordingStopArmed.subscribe("disqualify", (brake) => {
+        this.removeRecordingBrakeNameTag(brake);
       }),
 
       this.queries.partDetailPendingRelease.subscribe("qualify", (part) => {
@@ -256,7 +232,6 @@ export class PartInfoSystem extends createSystem({
       this.queries.snappedParts.subscribe("qualify", (part) => {
         this.removePartNameTag(part);
         this.removePartActionNameTag(part);
-        this.removePartMicroInstruction(part);
       }),
 
       this.queries.taggedParts.subscribe("qualify", (part) => {
@@ -291,16 +266,6 @@ export class PartInfoSystem extends createSystem({
       }),
 
       this.queries.taggedPartsPopInDone.subscribe("qualify", (part) => {
-        const remaining =
-          part.getValue(PartNameTag, "panelSpawnDelayRemainingMs") ??
-          PANEL_SPAWN_DELAY_PENDING;
-        if (remaining === PANEL_SPAWN_DELAY_PENDING) {
-          part.setValue(
-            PartNameTag,
-            "panelSpawnDelayRemainingMs",
-            this.partNameTagSpawnDelayMs(part),
-          );
-        }
         this.trySpawnNameTag(part);
       }),
 
@@ -326,51 +291,38 @@ export class PartInfoSystem extends createSystem({
       this.queries.nameTagDocs.subscribe("qualify", (panel) => {
         this.popInPanel(panel);
         this.pendingNameTagWiring.push(panel);
+
+        const part = panel.getValue(PartNameTagInstance, "part");
+        if (
+          part?.active &&
+          this.isInfoNameTag(part) &&
+          !panel.hasComponent(PartNameTagSwappingOut)
+        ) {
+          this.pendingNameTagPoke.push(panel);
+        }
       }),
 
       this.queries.detailDocs.subscribe("qualify", (panel) => {
         this.popInPanel(panel);
         this.pendingDetailWiring.push(panel);
+        this.pendingDetailNarration.push(panel);
       }),
 
       this.queries.nameTagPopInDone.subscribe("qualify", (panel) => {
         const part = panel.getValue(PartNameTagInstance, "part");
-        if (part?.active) {
-          this.startMicroInstructionSpawnDelay(part);
-          if (
-            this.isInfoNameTag(part) &&
-            !panel.hasComponent(PartNameTagSwappingOut)
-          ) {
-            this.pendingNameTagPoke.push(panel);
-          }
+        if (
+          part?.active &&
+          this.isInfoNameTag(part) &&
+          !panel.hasComponent(PartNameTagSwappingOut)
+        ) {
+          this.pendingNameTagPoke.push(panel);
         }
       }),
 
       this.queries.detailPopInDone.subscribe("qualify", (panel) => {
-        this.pendingDetailNarration.push(panel);
-      }),
-
-      this.queries.microInstructionParts.subscribe("qualify", (part) => {
-        const nameTag = this.findNameTagForPart(part);
-        if (nameTag?.hasComponent(PopIn2DDone)) {
-          this.startMicroInstructionSpawnDelay(part);
+        if (!this.pendingDetailNarration.includes(panel)) {
+          this.pendingDetailNarration.push(panel);
         }
-        this.trySpawnMicroInstruction(part);
-      }),
-
-      this.queries.microInstructionParts.subscribe("disqualify", (part) => {
-        part.removeComponent(PartMicroInstructionPendingSpawn);
-        this.destroyMicroInstructionForPart(part);
-      }),
-
-      this.queries.microInstructionPendingSpawn.subscribe("qualify", () => {
-        for (const part of this.queries.microInstructionPendingSpawn.entities) {
-          this.trySpawnMicroInstruction(part);
-        }
-      }),
-
-      this.queries.microInstructionDocs.subscribe("qualify", (panel) => {
-        this.popInPanel(panel);
       }),
     );
 
@@ -380,31 +332,9 @@ export class PartInfoSystem extends createSystem({
     for (const part of this.queries.actionTaggedParts.entities) {
       this.trySpawnActionNameTag(part);
     }
-    for (const part of this.queries.microInstructionParts.entities) {
-      this.trySpawnMicroInstruction(part);
-    }
   }
 
-  update(delta: number) {
-    const dtMs = delta * 1000;
-    for (const part of this.queries.taggedParts.entities) {
-      this.tickNameTagSpawnDelay(part, dtMs);
-    }
-    for (const part of this.queries.actionTaggedParts.entities) {
-      this.tickActionNameTagSpawnDelay(part, dtMs);
-    }
-
-    for (const part of this.queries.microInstructionParts.entities) {
-      const remaining =
-        part.getValue(PartMicroInstruction, "spawnDelayRemainingMs") ?? 0;
-      if (remaining <= 0) continue;
-      part.setValue(
-        PartMicroInstruction,
-        "spawnDelayRemainingMs",
-        Math.max(0, remaining - dtMs),
-      );
-    }
-
+  update() {
     this.processNameTagSwapOut();
     this.processDetailSwapOut();
     this.processPendingWiring();
@@ -414,9 +344,6 @@ export class PartInfoSystem extends createSystem({
     for (const part of this.queries.taggedParts.entities) {
       if (!part.object3D?.visible) {
         this.destroyNameTagPanelsForPart(part);
-        if (part.hasComponent(PartMicroInstruction)) {
-          this.destroyMicroInstructionForPart(part);
-        }
         continue;
       }
 
@@ -444,23 +371,6 @@ export class PartInfoSystem extends createSystem({
       ) {
         part.removeComponent(PartActionNameTagPendingSpawn);
         this.spawnActionNameTag(part);
-      }
-    }
-
-    for (const part of this.queries.microInstructionParts.entities) {
-      if (!part.object3D?.visible) {
-        this.destroyMicroInstructionForPart(part);
-        continue;
-      }
-
-      if (
-        this.canSpawnNameTag(part) &&
-        !this.findMicroInstructionForPart(part) &&
-        !this.isMicroInstructionHidden(part) &&
-        this.isMicroInstructionSpawnReady(part)
-      ) {
-        part.removeComponent(PartMicroInstructionPendingSpawn);
-        this.spawnMicroInstruction(part);
       }
     }
   }
@@ -551,45 +461,12 @@ export class PartInfoSystem extends createSystem({
     this.pendingNameTagPoke.length = 0;
   }
 
-  private tickNameTagSpawnDelay(part: Entity, dtMs: number): void {
-    const remaining =
-      part.getValue(PartNameTag, "panelSpawnDelayRemainingMs") ??
-      PANEL_SPAWN_DELAY_PENDING;
-
-    if (remaining === PANEL_SPAWN_DELAY_PENDING) {
-      if (isPartPopInComplete(part)) {
-        part.setValue(
-          PartNameTag,
-          "panelSpawnDelayRemainingMs",
-          this.partNameTagSpawnDelayMs(part),
-        );
-      }
-      return;
-    }
-
-    if (remaining > 0) {
-      part.setValue(
-        PartNameTag,
-        "panelSpawnDelayRemainingMs",
-        Math.max(0, remaining - dtMs),
-      );
-    }
+  private canSpawnNameTag(part: Entity): boolean {
+    return isPartPopInComplete(part);
   }
 
-  private startMicroInstructionSpawnDelay(part: Entity): void {
-    if (!part.hasComponent(PartMicroInstruction)) return;
-
-    const remaining =
-      part.getValue(PartMicroInstruction, "spawnDelayRemainingMs") ??
-      PANEL_SPAWN_DELAY_PENDING;
-    if (remaining >= 0) return;
-
-    part.setValue(
-      PartMicroInstruction,
-      "spawnDelayRemainingMs",
-      MICRO_INSTRUCTION_SPAWN_AFTER_NAME_TAG_MS,
-    );
-    this.trySpawnMicroInstruction(part);
+  private canSpawnActionNameTag(part: Entity): boolean {
+    return isPartPopInComplete(part);
   }
 
   private trySpawnNameTag(part: Entity): void {
@@ -601,8 +478,11 @@ export class PartInfoSystem extends createSystem({
     }
 
     const existing = this.findNameTagForPart(part);
-    if (existing && this.needsNameTagRestore(part, existing)) {
-      this.restoreNameTag(part);
+    if (existing) {
+      if (this.needsNameTagRestore(part, existing)) {
+        this.restoreNameTag(part);
+      }
+      part.removeComponent(PartNameTagPendingSpawn);
       return;
     }
 
@@ -627,11 +507,13 @@ export class PartInfoSystem extends createSystem({
     if (this.hasActiveDetailForPart(part)) return false;
     if (nameTag.hasComponent(PartNameTagSwappingOut)) return false;
     if (!nameTag.object3D) return false;
-    return (
-      !nameTag.object3D.visible ||
-      nameTag.hasComponent(PopOut2D) ||
-      nameTag.object3D.scale.x < 0.05
-    );
+    // UI still loading — initial spawn is in progress, not a restore case.
+    if (!nameTag.hasComponent(PanelDocument)) return false;
+    // 2D pop-in animates the UIKit root; object3D scale stays at 0.001.
+    if (nameTag.hasComponent(PopIn2D) || nameTag.hasComponent(PopOut2D)) {
+      return false;
+    }
+    return !nameTag.object3D.visible;
   }
 
   private trySpawnActionNameTag(part: Entity): void {
@@ -651,26 +533,6 @@ export class PartInfoSystem extends createSystem({
     if (!part.hasComponent(PartActionNameTagPendingSpawn)) {
       part.addComponent(PartActionNameTagPendingSpawn);
     }
-  }
-
-  private canSpawnNameTag(part: Entity): boolean {
-    if (!isPartPopInComplete(part)) return false;
-
-    const remaining =
-      part.getValue(PartNameTag, "panelSpawnDelayRemainingMs") ??
-      PANEL_SPAWN_DELAY_PENDING;
-    if (remaining < 0) return false;
-    return remaining <= 0;
-  }
-
-  private canSpawnActionNameTag(part: Entity): boolean {
-    if (!isPartPopInComplete(part)) return false;
-
-    const remaining =
-      part.getValue(PartActionNameTag, "panelSpawnDelayRemainingMs") ??
-      PANEL_SPAWN_DELAY_PENDING;
-    if (remaining < 0) return false;
-    return remaining <= 0;
   }
 
   private partPanelOffset(
@@ -697,15 +559,6 @@ export class PartInfoSystem extends createSystem({
       part.getValue(PartActionNameTag, "offsetX") ?? 0,
       part.getValue(PartActionNameTag, "offsetY") ?? PANEL_OFFSET_Y,
       part.getValue(PartActionNameTag, "offsetZ") ?? 0,
-    );
-  }
-
-  private microInstructionPanelOffset(part: Entity): [number, number, number] {
-    return this.partPanelOffset(
-      part,
-      part.getValue(PartMicroInstruction, "offsetX") ?? 0,
-      part.getValue(PartMicroInstruction, "offsetY") ?? MICRO_INSTRUCTION_OFFSET_Y,
-      part.getValue(PartMicroInstruction, "offsetZ") ?? 0,
     );
   }
 
@@ -742,38 +595,6 @@ export class PartInfoSystem extends createSystem({
       .addComponent(
         Follower,
         this.partPanelFollower(part, partObj, this.nameTagPanelOffset(part)),
-      )
-      .addComponent(Billboard);
-
-    panel.object3D!.scale.setScalar(0.001);
-    panel.object3D!.visible = true;
-  }
-
-  private spawnMicroInstruction(part: Entity): void {
-    const partObj = part.object3D;
-    if (!partObj?.visible) return;
-
-    const existing = this.findMicroInstructionForPart(part);
-    if (existing) {
-      this.teardownMicroInstruction(existing);
-    }
-
-    const config = part.getValue(PartMicroInstruction, "panelConfig")!;
-    const maxWidth =
-      part.getValue(PartMicroInstruction, "maxWidth") ??
-      MICRO_INSTRUCTION_MAX_WIDTH;
-
-    const panel = this.world
-      .createTransformEntity(undefined, { parent: this.world.sceneEntity })
-      .addComponent(PanelUI, { config, maxWidth })
-      .addComponent(PartMicroInstructionInstance, { part })
-      .addComponent(
-        Follower,
-        this.partPanelFollower(
-          part,
-          partObj,
-          this.microInstructionPanelOffset(part),
-        ),
       )
       .addComponent(Billboard);
 
@@ -942,11 +763,6 @@ export class PartInfoSystem extends createSystem({
       this.popOutPanelOnGrab(nameTag);
     }
 
-    const microInstruction = this.findMicroInstructionForPart(part);
-    if (microInstruction) {
-      this.popOutPanelOnGrab(microInstruction);
-    }
-
     this.hideActionNameTag(part);
   }
 
@@ -978,40 +794,19 @@ export class PartInfoSystem extends createSystem({
       }
     }
 
-    const microInstruction = this.findMicroInstructionForPart(part);
-    if (
-      microInstruction?.object3D &&
-      !this.isMicroInstructionHidden(part)
-    ) {
-      microInstruction.object3D.visible = true;
-      if (
-        microInstruction.hasComponent(PopOut2D) ||
-        !microInstruction.hasComponent(PopIn2D)
-      ) {
-        this.popInPanel(microInstruction);
-      }
-    }
-
     this.showActionNameTag(part);
   }
 
-  private isMicroInstructionHidden(part: Entity): boolean {
-    return this.hasActiveDetailForPart(part);
-  }
-
   private onInfoDetailOpened(part: Entity): void {
-    const binding = this.infoTutorialBindingForPart(part);
-    if (binding?.flow !== "info-tutorial") return;
+    const taskId = this.getActiveTaskId();
+    const task = taskId ? TASK_BY_ID[taskId] : undefined;
+    if (!task?.completeOnInfoDetailClose) return;
 
-    if (binding.completeTaskOnInfoClose) {
-      // Mark the active task entity so it knows to complete when the panel closes.
-      for (const task of this.queries.activeTask.entities) {
-        if (!task.hasComponent(InfoTutorialCompleteOnDetailClose)) {
-          task.addComponent(InfoTutorialCompleteOnDetailClose);
-        }
+    for (const taskEntity of this.queries.activeTask.entities) {
+      if (!taskEntity.hasComponent(InfoTutorialCompleteOnDetailClose)) {
+        taskEntity.addComponent(InfoTutorialCompleteOnDetailClose);
       }
     }
-    this.destroyMicroInstructionForPart(part);
   }
 
   private onInfoDetailClosed(part: Entity): void {
@@ -1039,12 +834,9 @@ export class PartInfoSystem extends createSystem({
    * `onInfoDetailClosed` completes it.
    */
   private finalizeInfoTutorialBeforeDetailClose(part: Entity): void {
-    const binding = this.infoTutorialBindingForPart(part);
-    if (!(binding?.flow === "info-tutorial" && binding.completeTaskOnInfoClose)) {
-      return;
-    }
-
-    this.removePartMicroInstruction(part);
+    const taskId = this.getActiveTaskId();
+    const task = taskId ? TASK_BY_ID[taskId] : undefined;
+    if (!task?.completeOnInfoDetailClose) return;
 
     const nameTag = this.findNameTagForPart(part);
     if (nameTag) this.teardownNameTag(nameTag);
@@ -1103,17 +895,8 @@ export class PartInfoSystem extends createSystem({
     return [...this.queries.infoTutorialTask.entities].length > 0;
   }
 
-  /** Info-tutorial binding from the active task (micro instruction may already be torn down). */
-  private infoTutorialBindingForPart(part: Entity) {
-    const taskId = this.getActiveTaskId();
-    const partId = part.getValue(PhonographPart, "id") ?? "";
-    if (!taskId || !partId) return undefined;
-    return microInstructionBindingForTaskPart(taskId, partId);
-  }
-
   private destroyPanelsForPart(part: Entity): void {
     this.destroyNameTagPanelsForPart(part);
-    this.destroyMicroInstructionForPart(part);
   }
 
   private destroyNameTagPanelsForPart(part: Entity): void {
@@ -1130,27 +913,6 @@ export class PartInfoSystem extends createSystem({
     if (detail && !detail.hasComponent(PartInfoDetailSwappingOut)) {
       this.teardownDetailPanel(detail);
     }
-  }
-
-  private destroyMicroInstructionForPart(part: Entity): void {
-    part.removeComponent(PartMicroInstructionPendingSpawn);
-
-    const panel = this.findMicroInstructionForPart(part);
-    if (panel) this.teardownMicroInstruction(panel);
-  }
-
-  private partNameTagSpawnDelayMs(part: Entity): number {
-    const partId = part.getValue(PhonographPart, "id");
-    if (!partId) return PANEL_SPAWN_AFTER_PART_POP_IN_MS;
-
-    for (const task of this.queries.activeTask.entities) {
-      const taskId = task.getValue(Task, "id");
-      if (taskId === TaskId.RecordingSpeak && partId === "brake") {
-        return recordingStopUiDelayMs();
-      }
-    }
-
-    return PANEL_SPAWN_AFTER_PART_POP_IN_MS;
   }
 
   private applyNameTagForTask(taskId: string): void {
@@ -1174,12 +936,7 @@ export class PartInfoSystem extends createSystem({
       const spec = nameTagSpecForTaskPart(taskId, partId);
       if (!spec) continue;
 
-      part.addComponent(PartNameTag, {
-        ...spec,
-        panelSpawnDelayRemainingMs: isPartPopInComplete(part)
-          ? this.partNameTagSpawnDelayMs(part)
-          : PANEL_SPAWN_DELAY_PENDING,
-      });
+      part.addComponent(PartNameTag, spec);
     }
   }
 
@@ -1197,6 +954,35 @@ export class PartInfoSystem extends createSystem({
     if (!part.hasComponent(PartNameTag)) return;
     this.destroyNameTagPanelsForPart(part);
     part.removeComponent(PartNameTag);
+  }
+
+  private isRecordingSpeakNarrateActive(): boolean {
+    for (const task of this.queries.activeTask.entities) {
+      if (task.getValue(Task, "id") === TaskId.RecordingSpeakNarrate) return true;
+    }
+    return false;
+  }
+
+  private applyRecordingBrakeNameTag(brake: Entity): void {
+    if (brake.hasComponent(Snapped) || brake.hasComponent(PartNameTag)) return;
+
+    const spec = nameTagSpecForTaskPart(TaskId.RecordingSpeakNarrate, "brake");
+    if (!spec) return;
+
+    this.defer(() => {
+      if (!brake.active || brake.hasComponent(PartNameTag)) return;
+      brake.addComponent(PartNameTag, spec);
+    });
+  }
+
+  private removeRecordingBrakeNameTag(brake: Entity): void {
+    if (!brake.hasComponent(PartNameTag)) return;
+    this.removePartNameTag(brake);
+  }
+
+  /** Avoid ECS mutations during query qualify/disqualify callbacks. */
+  private defer(fn: () => void): void {
+    queueMicrotask(fn);
   }
 
   private applyActionNameTagForTask(taskId: string): void {
@@ -1220,12 +1006,7 @@ export class PartInfoSystem extends createSystem({
       const spec = actionNameTagSpecForTaskPart(taskId, partId);
       if (!spec) continue;
 
-      part.addComponent(PartActionNameTag, {
-        ...spec,
-        panelSpawnDelayRemainingMs: isPartPopInComplete(part)
-          ? PANEL_SPAWN_AFTER_PART_POP_IN_MS
-          : PANEL_SPAWN_DELAY_PENDING,
-      });
+      part.addComponent(PartActionNameTag, spec);
     }
   }
 
@@ -1249,119 +1030,6 @@ export class PartInfoSystem extends createSystem({
     part.removeComponent(PartActionNameTagPendingSpawn);
     const actionTag = this.findActionNameTagForPart(part);
     if (actionTag) this.teardownActionNameTag(actionTag);
-  }
-
-  private tickActionNameTagSpawnDelay(part: Entity, dtMs: number): void {
-    const remaining =
-      part.getValue(PartActionNameTag, "panelSpawnDelayRemainingMs") ??
-      PANEL_SPAWN_DELAY_PENDING;
-
-    if (remaining === PANEL_SPAWN_DELAY_PENDING) {
-      if (isPartPopInComplete(part)) {
-        part.setValue(
-          PartActionNameTag,
-          "panelSpawnDelayRemainingMs",
-          PANEL_SPAWN_AFTER_PART_POP_IN_MS,
-        );
-      }
-      return;
-    }
-
-    if (remaining > 0) {
-      part.setValue(
-        PartActionNameTag,
-        "panelSpawnDelayRemainingMs",
-        Math.max(0, remaining - dtMs),
-      );
-    }
-  }
-
-  private applyMicroInstructionForTask(taskId: string): void {
-    const partIds = MICRO_INSTRUCTIONS_BY_TASK[taskId];
-    const activeIds = new Set(partIds ?? []);
-    for (const part of [...this.queries.microInstructionParts.entities]) {
-      const partId = part.getValue(PhonographPart, "id");
-      if (!partId || !activeIds.has(partId)) {
-        this.removePartMicroInstruction(part);
-      }
-    }
-
-    if (!partIds?.length) return;
-
-    for (const partId of partIds) {
-      const part = this.partById(partId);
-      if (
-        !part ||
-        part.hasComponent(Snapped) ||
-        part.hasComponent(PartMicroInstruction)
-      ) {
-        continue;
-      }
-
-      const binding = microInstructionBindingForTaskPart(taskId, partId);
-      if (!binding?.steps.length) continue;
-
-      const firstStep = binding.steps[0];
-      part.addComponent(PartMicroInstruction, {
-        taskId,
-        stepIndex: 0,
-        panelConfig: firstStep.panelConfig,
-        maxWidth: firstStep.maxWidth,
-        offsetX: firstStep.offsetX,
-        offsetY: firstStep.offsetY,
-        offsetZ: firstStep.offsetZ,
-        spawnDelayRemainingMs: PANEL_SPAWN_DELAY_PENDING,
-      });
-    }
-  }
-
-  private removeMicroInstructionForTask(taskId: string): void {
-    const partIds = MICRO_INSTRUCTIONS_BY_TASK[taskId];
-    if (!partIds?.length) return;
-
-    for (const partId of partIds) {
-      const part = this.partById(partId);
-      if (part) this.removePartMicroInstruction(part);
-    }
-  }
-
-  private removePartMicroInstruction(part: Entity): void {
-    if (!part.hasComponent(PartMicroInstruction)) return;
-    this.cancelDetailAutoClose?.();
-    this.cancelDetailAutoClose = null;
-    this.destroyMicroInstructionForPart(part);
-    part.removeComponent(PartMicroInstruction);
-  }
-
-  private trySpawnMicroInstruction(part: Entity): void {
-    if (!part.object3D?.visible) {
-      if (!part.hasComponent(PartMicroInstructionPendingSpawn)) {
-        part.addComponent(PartMicroInstructionPendingSpawn);
-      }
-      return;
-    }
-
-    if (
-      this.canSpawnNameTag(part) &&
-      !this.findMicroInstructionForPart(part) &&
-      !this.isMicroInstructionHidden(part) &&
-      this.isMicroInstructionSpawnReady(part)
-    ) {
-      part.removeComponent(PartMicroInstructionPendingSpawn);
-      this.spawnMicroInstruction(part);
-      return;
-    }
-
-    if (!part.hasComponent(PartMicroInstructionPendingSpawn)) {
-      part.addComponent(PartMicroInstructionPendingSpawn);
-    }
-  }
-
-  private isMicroInstructionSpawnReady(part: Entity): boolean {
-    const remaining =
-      part.getValue(PartMicroInstruction, "spawnDelayRemainingMs") ??
-      PANEL_SPAWN_DELAY_PENDING;
-    return remaining >= 0 && remaining <= 0;
   }
 
   private partById(id: string): Entity | undefined {
@@ -1393,11 +1061,6 @@ export class PartInfoSystem extends createSystem({
       .removeComponent(PartInfoDetailWired)
       .removeComponent(PartInfoDetailSwappingOut)
       .removeComponent(PartInfoDetailInstance);
-    hidePanelEntity(panel);
-  }
-
-  private teardownMicroInstruction(panel: Entity): void {
-    panel.removeComponent(PartMicroInstructionInstance);
     hidePanelEntity(panel);
   }
 
@@ -1435,15 +1098,6 @@ export class PartInfoSystem extends createSystem({
   private findDetailForPart(part: Entity): Entity | undefined {
     for (const panel of this.queries.detailInstances.entities) {
       if (panel.getValue(PartInfoDetailInstance, "part") === part) {
-        return panel;
-      }
-    }
-    return undefined;
-  }
-
-  private findMicroInstructionForPart(part: Entity): Entity | undefined {
-    for (const panel of this.queries.microInstructionInstances.entities) {
-      if (panel.getValue(PartMicroInstructionInstance, "part") === part) {
         return panel;
       }
     }

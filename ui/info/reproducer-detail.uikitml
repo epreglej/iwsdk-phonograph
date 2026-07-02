@@ -38,6 +38,6 @@
 </style>
 
 <div id="panel-root" class="info-tag">
-  <p class="title-label">REPRODUCER</p>
+  <p class="title-label">Reproducer</p>
   <p class="body-text">Turns the carvings in the cylinder back into sound.</p>
 </div>

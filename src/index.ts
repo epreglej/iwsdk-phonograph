@@ -25,6 +25,7 @@ import { InteractionGateSystem } from "./systems/interaction-gate.js";
 import { RecordingSystem } from "./systems/recording.js";
 import { CarriageSystem } from "./systems/carriage.js";
 import { HidePokeCursorSystem } from "./systems/poke-cursor.js";
+import { InstructionSystem } from "./systems/instruction.js";
 
 const assets: AssetManifest = {
   phonograph: {
@@ -112,6 +113,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       .registerSystem(TaskFlowSystem)
       .registerSystem(BillboardSystem)
       .registerSystem(TaskPanelSystem)
+      .registerSystem(InstructionSystem)
       .registerSystem(AssemblyIntroSystem)
       .registerSystem(ChapterChecklistSystem)
       .registerSystem(InteractionGateSystem)

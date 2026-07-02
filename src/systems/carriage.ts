@@ -108,10 +108,10 @@ const CARRIAGE_MOVE_DURATION_MS = 300;
 const CARRIAGE_TRAVEL_DURATION_MS = CARRIAGE_LAYOUT.travelDurationS * 1000;
 
 export class CarriageSystem extends createSystem({
-  activeRecordingSpeakTask: {
+  activeRecordingSpeakNarrateTask: {
     required: [Task, ActiveTask],
     excluded: [CompletedTask],
-    where: [eq(Task, "id", TaskId.RecordingSpeak)],
+    where: [eq(Task, "id", TaskId.RecordingSpeakNarrate)],
   },
   activePlaybackTask: {
     required: [Task, ActiveTask],
@@ -154,6 +154,7 @@ export class CarriageSystem extends createSystem({
     required: [Carriage, MoveDone, CarriageTraveling],
   },
   startCarriageRecording: { required: [StartCarriageRecording] },
+  stopRecordingRequested: { required: [StopRecording] },
 }) {
   init() {
     this.resetCarriageToRest();
@@ -165,7 +166,11 @@ export class CarriageSystem extends createSystem({
         this.startCarriageTravel();
       }),
 
-      this.queries.activeRecordingSpeakTask.subscribe("disqualify", () => {
+      this.queries.stopRecordingRequested.subscribe("qualify", () => {
+        this.stopCarriageTravel();
+      }),
+
+      this.queries.activeRecordingSpeakNarrateTask.subscribe("disqualify", () => {
         this.stopCarriageTravel();
       }),
 
@@ -187,7 +192,7 @@ export class CarriageSystem extends createSystem({
 
       this.queries.carriageTravelDone.subscribe("qualify", (rig) => {
         rig.removeComponent(CarriageTraveling);
-        if (this.queries.activeRecordingSpeakTask.entities.size > 0) {
+        if (this.queries.activeRecordingSpeakNarrateTask.entities.size > 0) {
           this.world.sceneEntity.addComponent(StopRecording);
         }
       }),

@@ -17,8 +17,6 @@ import { PhonographPart, PhonographSpawnAnchor } from "./phonograph.js";
 import { Crank, CrankingComplete } from "./crank.js";
 import {
   isPartPopInComplete,
-  PANEL_SPAWN_AFTER_PART_POP_IN_MS,
-  PANEL_SPAWN_DELAY_PENDING,
   PopIn2D,
   PopOut2D,
 } from "./animation.js";
@@ -44,7 +42,6 @@ export const Placard = createComponent("Placard", {
   dismissOnSnap: { type: Types.Boolean, default: true },
   autoDismissMs: { type: Types.Float32, default: 0 },
   skipPartPopInWait: { type: Types.Boolean, default: false },
-  spawnDelayRemainingMs: { type: Types.Float32, default: -1 },
 });
 
 export const PlacardDismissed = createComponent("PlacardDismissed", {});
@@ -181,28 +178,6 @@ export class PlacardSystem extends createSystem({
 
       target.removeComponent(PlacardPendingSpawn);
 
-      const remaining =
-        target.getValue(Placard, "spawnDelayRemainingMs") ??
-        PANEL_SPAWN_DELAY_PENDING;
-
-      if (remaining === PANEL_SPAWN_DELAY_PENDING) {
-        target.setValue(
-          Placard,
-          "spawnDelayRemainingMs",
-          PANEL_SPAWN_AFTER_PART_POP_IN_MS,
-        );
-        continue;
-      }
-
-      if (remaining > 0) {
-        target.setValue(
-          Placard,
-          "spawnDelayRemainingMs",
-          Math.max(0, remaining - dtMs),
-        );
-        continue;
-      }
-
       this.spawnPlacard(target);
     }
 
@@ -284,9 +259,6 @@ export class PlacardSystem extends createSystem({
       dismissOnSnap: spec.dismissOnSnap ?? true,
       autoDismissMs: spec.autoDismissMs ?? 0,
       skipPartPopInWait: spec.skipPartPopInWait ?? false,
-      spawnDelayRemainingMs: spec.skipPartPopInWait
-        ? 0
-        : PANEL_SPAWN_DELAY_PENDING,
     });
   }
 

@@ -1,6 +1,5 @@
 import { publicUrl } from "../assets/public-url.js";
 import { getAudioContext, resumeAudioContext } from "./context.js";
-import { NARRATION_POST_DELAY_MS } from "../systems/task-config.js";
 
 let activeSource: AudioBufferSourceNode | null = null;
 let activeGain: GainNode | null = null;
@@ -34,7 +33,6 @@ export function playInfoDetailNarration(
   onEnded: () => void,
 ): () => void {
   let cancelled = false;
-  let timeout: ReturnType<typeof setTimeout> | null = null;
 
   const finish = () => {
     if (cancelled) return;
@@ -42,21 +40,14 @@ export function playInfoDetailNarration(
     onEnded();
   };
 
-  const scheduleClose = () => {
-    timeout = setTimeout(finish, NARRATION_POST_DELAY_MS);
-  };
-
   if (!url) {
-    scheduleClose();
+    finish();
   } else {
-    // playTaskNarration fetches + caches internally and calls scheduleClose when done
-    // (or on error), so no separate pre-fetch is needed.
-    playTaskNarration(url, 1, scheduleClose);
+    playTaskNarration(url, 1, finish);
   }
 
   return () => {
     cancelled = true;
-    if (timeout) clearTimeout(timeout);
     stopTaskNarration();
   };
 }

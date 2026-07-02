@@ -18,7 +18,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "Phonograph’s recording medium made out of wax."
+          "Recording medium made out of wax."
         ],
         "properties": {
           "class": "body-text"
@@ -131,7 +131,7 @@
       },
       "end": {
         "line": 41,
-        "column": 73
+        "column": 60
       }
     }
   }

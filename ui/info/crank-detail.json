@@ -18,7 +18,7 @@
         "sourceTag": "p",
         "type": "custom",
         "children": [
-          "Powers the motor that spins the cylinder."
+          "Powers the internal motor that spins the cylinder."
         ],
         "properties": {
           "class": "body-text"
@@ -131,7 +131,7 @@
       },
       "end": {
         "line": 41,
-        "column": 68
+        "column": 77
       }
     }
   }

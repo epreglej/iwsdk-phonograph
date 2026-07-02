@@ -17,13 +17,13 @@ export const PHONOGRAPH_ABOVE_OFFSET_Y = 0.55;
 /** Chapter intro card above the phonograph (meters). */
 export const PHONOGRAPH_CHAPTER_OFFSET_Y = 0.48;
 /** Chapter intro card offset on Z relative to the phonograph (meters). */
-export const PHONOGRAPH_CHAPTER_OFFSET_Z = -0.1;
+export const PHONOGRAPH_CHAPTER_OFFSET_Z = 0;
 /** World-space max width for the assembly chapter intro card (meters). */
 export const PHONOGRAPH_CHAPTER_PANEL_MAX_WIDTH = 0.3;
 /** Forward distance from the user when the phonograph appears (meters). */
 export const PHONOGRAPH_SPAWN_FORWARD_M = 0.8;
 /** Eye-height fraction for phonograph spawn Y. */
-export const PHONOGRAPH_SPAWN_HEIGHT_FACTOR = 0.5;
+export const PHONOGRAPH_SPAWN_HEIGHT_FACTOR = 0.45;
 /** Clamped world Y range for phonograph spawn height (meters). */
 export const PHONOGRAPH_SPAWN_HEIGHT_MIN_M = 0.6;
 export const PHONOGRAPH_SPAWN_HEIGHT_MAX_M = 0.85;
@@ -220,6 +220,7 @@ const TASKS: TaskDef[] = [
   },
   {
     id: TaskId.PlaybackChapterIntro,
+    nameTagPartIds: ["recorder", "recording_horn"],
     panel: {
       panelConfig: "./ui/chapters/chapter-3.json",
       maxWidth: PHONOGRAPH_CHAPTER_PANEL_MAX_WIDTH,
@@ -300,8 +301,13 @@ const TASKS: TaskDef[] = [
   {
     id: TaskId.ExperienceComplete,
     panel: {
-      ...HEAD_MENU_PANEL,
       panelConfig: "./ui/menus/experience-complete.json",
+      maxWidth: PHONOGRAPH_CHAPTER_PANEL_MAX_WIDTH,
+      anchor: "phonograph",
+      offsetY: PHONOGRAPH_CHAPTER_OFFSET_Y,
+      offsetZ: PHONOGRAPH_CHAPTER_OFFSET_Z,
+      faceTarget: true,
+      billboard: true,
       buttonId: "experience-complete-try-again-button",
       deferCompleteOnDismiss: true,
     },

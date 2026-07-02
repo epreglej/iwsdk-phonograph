@@ -33,6 +33,7 @@ import { PhonographPart } from "./phonograph.js";
 import { Snapped } from "./snap.js";
 import { Task, ActiveTask, CompletedTask } from "./task.js";
 import { ACTION_NAME_TAGS_BY_TASK, NAME_TAGS_BY_TASK, TASK_BY_ID, TaskId } from "./task-config.js";
+import { DismissTaskInstruction } from "./instruction.js";
 import { BrakeRecordingStopArmed } from "./recording.js";
 import {
   actionNameTagSpecForTaskPart,
@@ -125,6 +126,9 @@ export const PartActionNameTagPendingSpawn = createComponent(
   "PartActionNameTagPendingSpawn",
   {},
 );
+
+/** TEMP: disable name-tag pop-out while grabbing for layout testing. */
+const DISABLE_NAME_TAG_GRAB_POPOUT = true;
 
 export class PartInfoSystem extends createSystem({
   parts: { required: [PhonographPart] },
@@ -704,6 +708,12 @@ export class PartInfoSystem extends createSystem({
       return;
     }
 
+    if (this.getActiveTaskId() === TaskId.AssemblyPhonographInfo) {
+      this.world.sceneEntity.addComponent(DismissTaskInstruction, {
+        taskId: TaskId.AssemblyPhonographInfo,
+      });
+    }
+
     nameTagPanel.addComponent(PartNameTagSwappingOut, {
       part,
       popOutStarted: true,
@@ -743,11 +753,13 @@ export class PartInfoSystem extends createSystem({
   }
 
   private hideActionNameTag(part: Entity): void {
+    if (DISABLE_NAME_TAG_GRAB_POPOUT) return;
     const actionTag = this.findActionNameTagForPart(part);
     if (actionTag) this.popOutPanelOnGrab(actionTag);
   }
 
   private showActionNameTag(part: Entity): void {
+    if (DISABLE_NAME_TAG_GRAB_POPOUT) return;
     const actionTag = this.findActionNameTagForPart(part);
     if (!actionTag?.object3D) return;
 
@@ -758,6 +770,8 @@ export class PartInfoSystem extends createSystem({
   }
 
   private hidePartPanels(part: Entity): void {
+    if (DISABLE_NAME_TAG_GRAB_POPOUT) return;
+
     const nameTag = this.findNameTagForPart(part);
     if (nameTag && !nameTag.hasComponent(PartNameTagSwappingOut)) {
       this.popOutPanelOnGrab(nameTag);
@@ -785,6 +799,8 @@ export class PartInfoSystem extends createSystem({
       }
       return;
     }
+
+    if (DISABLE_NAME_TAG_GRAB_POPOUT) return;
 
     const nameTag = this.findNameTagForPart(part);
     if (nameTag?.object3D && !nameTag.hasComponent(PartNameTagSwappingOut)) {

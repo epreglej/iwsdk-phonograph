@@ -26,7 +26,13 @@ import {
   type InstructionSpec,
 } from "./instruction-config.js";
 
-export const InstructionPanel = createComponent("InstructionPanel", {});
+export const InstructionPanel = createComponent("InstructionPanel", {
+  taskId: { type: Types.String, default: "" },
+});
+
+export const DismissTaskInstruction = createComponent("DismissTaskInstruction", {
+  taskId: { type: Types.String, default: "" },
+});
 
 export const InstructionPanelAnchor = createComponent("InstructionPanelAnchor", {
   part: { type: Types.Entity, default: null },
@@ -44,6 +50,7 @@ export class InstructionSystem extends createSystem({
     required: [InstructionPanel, InstructionPanelAnchor],
   },
   instructionGrabbedParts: { required: [PhonographPart, Grabbed] },
+  dismissRequested: { required: [DismissTaskInstruction] },
 }) {
   init() {
     this.cleanupFuncs.push(
@@ -73,6 +80,15 @@ export class InstructionSystem extends createSystem({
       this.queries.instructionGrabbedParts.subscribe("disqualify", (part) => {
         this.popInInstructionForPart(part);
       }),
+
+      this.queries.dismissRequested.subscribe("qualify", () => {
+        const taskId = this.world.sceneEntity.getValue(
+          DismissTaskInstruction,
+          "taskId",
+        );
+        this.world.sceneEntity.removeComponent(DismissTaskInstruction);
+        if (taskId) this.defer(() => this.popOutInstructionForTask(taskId));
+      }),
     );
   }
 
@@ -95,7 +111,7 @@ export class InstructionSystem extends createSystem({
         config: spec.panelConfig,
         maxWidth: spec.maxWidth,
       })
-      .addComponent(InstructionPanel)
+      .addComponent(InstructionPanel, { taskId })
       .addComponent(Follower, {
         behavior: FollowBehavior.NoRotation,
         target,
@@ -118,6 +134,16 @@ export class InstructionSystem extends createSystem({
       if (!panel.active) continue;
       hidePanelEntity(panel);
       panel.dispose();
+    }
+  }
+
+  private popOutInstructionForTask(taskId: string): void {
+    for (const panel of this.queries.instructionPanels.entities) {
+      if (panel.getValue(InstructionPanel, "taskId") !== taskId) continue;
+      if (!panel.active || !panel.object3D?.visible) return;
+      if (panel.hasComponent(PopOut2D)) return;
+      beginPanelPopOut(panel);
+      return;
     }
   }
 

@@ -62,14 +62,32 @@ export const PART_NAME_TAG_SPECS: Record<string, PartNameTagSpec> = {
   brake: spec("brake"),
   carriage: spec("carriage", { offsetY: 0.17 }),
   reproducer: spec("reproducer"),
-  listening_horn: spec("listening-horn", { offsetY: HORN_PANEL_OFFSET_Y }),
+  listening_horn: spec("listening-horn", { offsetY: HORN_PANEL_OFFSET_Y + 0.03 }),
 };
+
+const labelOnlyNameTag = (
+  slug: string,
+  labelSlug: string,
+  overrides: Partial<PartNameTagSpec> = {},
+): PartNameTagSpec => ({
+  ...spec(slug, overrides),
+  nameTagConfig: `./ui/info/${labelSlug}-name-tag.json`,
+  infoButtonId: "",
+  detailConfig: "",
+  detailNarration: "",
+});
 
 /** Task-specific name tag overrides (e.g. phonograph intro above the body). */
 export const TASK_NAME_TAG_SPECS: Record<
   string,
   Record<string, PartNameTagSpec>
 > = {
+  [TaskId.PlaybackChapterIntro]: {
+    recorder: labelOnlyNameTag("recorder", "recorder-label"),
+    recording_horn: labelOnlyNameTag("recording-horn", "recording-horn-label", {
+      offsetY: HORN_PANEL_OFFSET_Y,
+    }),
+  },
   [TaskId.RecordingSpeakNarrate]: {
     brake: {
       ...spec("brake"),
@@ -80,22 +98,12 @@ export const TASK_NAME_TAG_SPECS: Record<
     },
   },
   [TaskId.PlaybackSetupRecordingHornUnmount]: {
-    recording_horn: {
-      ...spec("recording-horn", { offsetY: HORN_PANEL_OFFSET_Y }),
-      nameTagConfig: "./ui/info/recording-horn-label-name-tag.json",
-      infoButtonId: "",
-      detailConfig: "",
-      detailNarration: "",
-    },
+    recording_horn: labelOnlyNameTag("recording-horn", "recording-horn-label", {
+      offsetY: HORN_PANEL_OFFSET_Y,
+    }),
   },
   [TaskId.PlaybackSetupRecorderUnmount]: {
-    recorder: {
-      ...spec("recorder"),
-      nameTagConfig: "./ui/info/recorder-label-name-tag.json",
-      infoButtonId: "",
-      detailConfig: "",
-      detailNarration: "",
-    },
+    recorder: labelOnlyNameTag("recorder", "recorder-label"),
   },
   [TaskId.PlaybackSetupCarriageReturn]: {
     carriage: {

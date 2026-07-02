@@ -52,7 +52,7 @@ const INTRO_OFFSET: [number, number, number] = [
 
 /** Slightly below and to the right of the chapter-0 panel. */
 const STEP1_INSTRUCTION_OFFSET: [number, number, number] = [
-  INTRO_OFFSET[0] + 0.14,
+  INTRO_OFFSET[0] + 0.13,
   INTRO_OFFSET[1] - 0.12,
   PHONOGRAPH_CHAPTER_OFFSET_Z,
 ];

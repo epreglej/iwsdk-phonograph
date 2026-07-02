@@ -19,6 +19,7 @@ import { hidePanelEntity, stripPanelSurface } from "./panel-lifecycle.js";
 const RECORDING_PANEL_CONFIG = "./ui/panels/recording-panel.json";
 const RECORDING_STOP_HINT_CONFIG = "./ui/panels/recording-stop-hint.json";
 const RECORDING_PANEL_MAX_WIDTH = 0.175;
+const RECORDING_STOP_HINT_MAX_WIDTH = RECORDING_PANEL_MAX_WIDTH * 0.9;
 const RECORDING_PANEL_OFFSET: [number, number, number] = [0, 0.5, 0];
 const RECORDING_STOP_HINT_OFFSET: [number, number, number] = [0, 0.43, 0];
 const RECORDING_STOP_ARM_DELAY_MS = 7000;
@@ -416,7 +417,7 @@ export class RecordingSystem extends createSystem({
       .createTransformEntity(undefined, { parent: this.world.sceneEntity })
       .addComponent(PanelUI, {
         config: RECORDING_STOP_HINT_CONFIG,
-        maxWidth: RECORDING_PANEL_MAX_WIDTH,
+        maxWidth: RECORDING_STOP_HINT_MAX_WIDTH,
       })
       .addComponent(RecordingStopHintPanel)
       .addComponent(Follower, {

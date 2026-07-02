@@ -19,8 +19,8 @@ export const INSTRUCTION_BY_TASK: Record<string, InstructionSpec> = {
     panelConfig: "./ui/instructions/read-more-instruction.json",
     maxWidth: 0.16,
     anchor: "phonograph",
-    offsetX: 0.06,
-    offsetY: 0.52,
+    offsetX: 0.05,
+    offsetY: 0.5,
     offsetZ: 0,
   },
   [TaskId.AssemblyCylinderMount]: {

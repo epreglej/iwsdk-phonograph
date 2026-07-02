@@ -48,7 +48,7 @@ const PLAYBACK_LISTEN_CHECKLIST_CONFIGS = [
  * so text size does not inflate when reducing panel width.
  */
 const CHECKLIST_MAX_WIDTH = PHONOGRAPH_CHAPTER_PANEL_MAX_WIDTH * 0.85;
-const CHECKLIST_OFFSET: [number, number, number] = [0, 0.44, 0];
+const CHECKLIST_OFFSET: [number, number, number] = [0, 0.44, -0.2];
 
 const ASSEMBLY_CHECKLIST_ORDER = [
   TaskId.AssemblyCylinderMount,

@@ -234,6 +234,11 @@ export class PartInfoSystem extends createSystem({
       }),
 
       this.queries.snappedParts.subscribe("qualify", (part) => {
+        const partId = part.getValue(PhonographPart, "id");
+        const taskId = this.getActiveTaskId();
+        if (partId && taskId && this.allowsSnappedNameTag(taskId, partId)) {
+          return;
+        }
         this.removePartNameTag(part);
         this.removePartActionNameTag(part);
       }),
@@ -865,6 +870,11 @@ export class PartInfoSystem extends createSystem({
     return undefined;
   }
 
+  /** Mount tasks hide tags once snapped; unmount / chapter intro need tags on mounted parts. */
+  private allowsSnappedNameTag(taskId: string, partId: string): boolean {
+    return NAME_TAGS_BY_TASK[taskId]?.includes(partId) ?? false;
+  }
+
   private startDetailAutoClose(part: Entity, panel: Entity): void {
     if (panel.hasComponent(PartInfoDetailNarrationActive)) return;
 
@@ -945,7 +955,10 @@ export class PartInfoSystem extends createSystem({
 
     for (const partId of partIds) {
       const part = this.partById(partId);
-      if (!part || part.hasComponent(Snapped) || part.hasComponent(PartNameTag)) {
+      if (!part || part.hasComponent(PartNameTag)) {
+        continue;
+      }
+      if (part.hasComponent(Snapped) && !this.allowsSnappedNameTag(taskId, partId)) {
         continue;
       }
 

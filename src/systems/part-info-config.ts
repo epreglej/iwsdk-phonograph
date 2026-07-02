@@ -82,12 +82,6 @@ export const TASK_NAME_TAG_SPECS: Record<
   string,
   Record<string, PartNameTagSpec>
 > = {
-  [TaskId.PlaybackChapterIntro]: {
-    recorder: labelOnlyNameTag("recorder", "recorder-label"),
-    recording_horn: labelOnlyNameTag("recording-horn", "recording-horn-label", {
-      offsetY: HORN_PANEL_OFFSET_Y,
-    }),
-  },
   [TaskId.RecordingSpeakNarrate]: {
     brake: {
       ...spec("brake"),

@@ -214,13 +214,11 @@ const TASKS: TaskDef[] = [
   },
   {
     id: TaskId.RecordingSpeakNarrate,
-    nameTagPartId: "recording_horn",
     startRecordingOnStart: true,
     interactive: true,
   },
   {
     id: TaskId.PlaybackChapterIntro,
-    nameTagPartIds: ["recorder", "recording_horn"],
     panel: {
       panelConfig: "./ui/chapters/chapter-3.json",
       maxWidth: PHONOGRAPH_CHAPTER_PANEL_MAX_WIDTH,

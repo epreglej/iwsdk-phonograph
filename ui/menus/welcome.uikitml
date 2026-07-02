@@ -63,7 +63,7 @@
 
 <div id="panel-root" class="container">
   <span class="title">Phonograph</span>
-  <span class="subtitle">Record your voice on wax, then hear it play back.</span>
+  <span class="subtitle"></span>
   <button id="welcome-begin-button" class="menu-button">
     <span class="menu-button-label">Start</span>
   </button>
